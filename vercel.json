@@ -8,7 +8,10 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/main.py" },
     { "source": "/login", "destination": "/main.py" },
-    { "source": "/auth/(.*)", "destination": "/main.py" }
-  ],
-  "cleanUrls": true
+    { "source": "/auth/(.*)", "destination": "/main.py" },
+    
+    { "source": "/dashboard", "destination": "/public/dashboard.html" },
+    { "source": "/overlay", "destination": "/public/overlay.html" },
+    { "source": "/", "destination": "/public/dashboard.html" }
+  ]
 }
