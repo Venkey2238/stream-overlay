@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+authlib
+supabase
+pydantic
+httpx
+httpx2
+python-dotenv

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Status Overlay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void-obsidian: #030008;
+            --void-deep: #0a011a;
+            --purple-core: #2b00ff;
+            --purple-rich: #4d0099;
+            --purple-neon: #9000ff;
+            
+            --gold-dark: #b38600;
+            --gold-pure: #ffd700;
+            --gold-bright: #ffea75;
+            --gold-white: #fffdf5;
+
+            --text-pure: #ffffff;
+            --text-silver: #d4d4dd;
+            --text-dark: #111116;
+
+            --overlay-width: 740px; 
+            --overlay-height: 64px;  
+            --logo-size: 84px;       
+            
+            --sweep-progress: 0%; 
+            --ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            --ease-cinematic: cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            width: 100vw; height: 100vh;
+            background-color: transparent; 
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden; color: white;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .scene-container {
+            position: relative; 
+            width: var(--overlay-width); 
+            height: var(--overlay-height);
+            display: flex; align-items: center; z-index: 10;
+        }
+
+        .ambient-backlight {
+            position: absolute; top: 50%; left: var(--sweep-progress);
+            transform: translate(-50%, -50%); width: 250px; height: 90px;
+            background: radial-gradient(circle at center, rgba(144, 0, 255, 0.4) 0%, rgba(255, 215, 0, 0.1) 40%, transparent 70%);
+            z-index: 0; pointer-events: none; mix-blend-mode: screen; will-change: left;
+        }
+
+        .master-overlay-wrapper {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            padding: 2px; border-radius: 40px;
+            display: flex; flex-direction: column;
+            background: linear-gradient(90deg, var(--void-obsidian), var(--purple-rich), var(--purple-core), var(--purple-neon), var(--purple-rich), var(--void-obsidian));
+            background-size: 400% 100%; animation: borderFlow 12s linear infinite;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.9), 0 0 15px rgba(144, 0, 255, 0.4), inset 0 0 10px rgba(144, 0, 255, 0.2);
+            clip-path: inset(0 calc(100% - var(--sweep-progress)) 0 0);
+            z-index: 1; will-change: clip-path;
+        }
+
+        .overlay-core {
+            position: relative; width: 100%; height: 100%;
+            background-color: var(--void-obsidian);
+            border-radius: 38px;
+            overflow: hidden; 
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px 0 50px; 
+            gap: 20px; z-index: 2;
+        }
+
+        #plasma-canvas, #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        #plasma-canvas { opacity: 0.85; mix-blend-mode: screen; }
+        #particle-canvas { z-index: 3; pointer-events: none; mix-blend-mode: color-dodge; }
+
+        .screen-texture {
+            position: absolute; inset: 0; z-index: 4; pointer-events: none;
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 0, 0, 0.6) 1px, rgba(0, 0, 0, 0.6) 2px);
+            box-shadow: inset 0 0 30px rgba(0,0,0,1);
+        }
+
+        .logo-sweeper {
+            position: absolute; top: 50%; left: var(--sweep-progress);
+            transform: translate(-50%, -50%); 
+            width: var(--logo-size); height: var(--logo-size); z-index: 100;
+            background-color: var(--void-deep); border-radius: 50%; padding: 4px;
+            box-shadow: 0 0 8px rgba(144, 0, 255, 0.9), inset 0 0 10px rgba(255, 215, 0, 0.8), 0 5px 10px rgba(0, 0, 0, 0.9);
+            display: flex; justify-content: center; align-items: center;
+            will-change: left;
+        }
+        .logo-inner-ring {
+            width: 100%; height: 100%; border-radius: 50%; padding: 3px;
+            background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark));
+            display: flex; justify-content: center; align-items: center;
+        }
+        .brand-logo {
+            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+            background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
+        }
+
+        .data-module {
+            position: relative; z-index: 5;
+            display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+            height: 100%; min-width: 65px;
+        }
+
+        .data-label {
+            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-dark); 
+            background: linear-gradient(90deg, #ffffff, #d8d8df); 
+            padding: 2px 6px; border-radius: 3px; margin-bottom: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.9);
+            transform-origin: left center;
+        }
+
+        .data-value {
+            font-family: 'Montserrat', sans-serif; font-size: 1.6rem; font-weight: 900;
+            line-height: 0.9; letter-spacing: 0.02em;
+            background: linear-gradient(180deg, var(--text-pure) 0%, #f4f4f9 45%, var(--text-silver) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 1)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+            position: relative; transform-origin: left center;
+        }
+
+        .hit-ripple {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            width: 80px; height: 80px; border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.9) 0%, transparent 60%);
+            opacity: 0; z-index: -1; pointer-events: none; mix-blend-mode: color-dodge;
+        }
+        .lens-flare {
+            position: absolute; top: 50%; left: -50%; transform: translateY(-50%);
+            width: 200%; height: 2px; background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 10px #fff, 0 0 20px var(--purple-neon);
+            opacity: 0; pointer-events: none; mix-blend-mode: screen; z-index: 10;
+        }
+
+        .dopamine-strike { animation: kineticShake 0.4s var(--ease-dopamine) forwards; }
+        .dopamine-strike .data-value { animation: dopaminePunch 0.8s var(--ease-dopamine) forwards; }
+        .dopamine-strike .data-label { animation: labelFlash 0.8s var(--ease-dopamine) forwards; }
+        .dopamine-strike .hit-ripple { animation: rippleBurst 0.6s ease-out forwards; }
+        .dopamine-strike .lens-flare { animation: flareSlash 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        .separator {
+            position: relative; z-index: 5; width: 2px; height: 35px;
+            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.5), rgba(144, 0, 255, 1), transparent);
+            box-shadow: 0 0 8px rgba(144, 0, 255, 0.9); border-radius: 1px;
+        }
+
+        .goal-module {
+            display: flex; flex-direction: column; justify-content: center;
+            flex-grow: 1; min-width: 180px; max-width: 200px; z-index: 5;
+        }
+
+        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; }
+
+        .goal-title {
+            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+            color: var(--text-dark); background: linear-gradient(90deg, #ffffff, #d8d8df);
+            padding: 2px 6px; border-radius: 3px; letter-spacing: 0.15em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.9);
+        }
+
+        .goal-numbers {
+            font-size: 0.75rem; font-weight: 900; color: #ffffff; letter-spacing: 1px;
+            text-shadow: 0 2px 5px rgba(0,0,0,1), 0 0 8px rgba(255, 255, 255, 0.4);
+        }
+
+        .progress-track {
+            position: relative; width: 100%; height: 12px;
+            background: linear-gradient(90deg, #110522, #000);
+            border-radius: 10px; overflow: hidden;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,1), 0 0 0 1px rgba(144, 0, 255, 0.4);
+        }
+
+        .progress-track::before {
+            content: ''; position: absolute; inset: 0;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(144,0,255,0.2) 10px, rgba(144,0,255,0.2) 20px);
+            animation: borderFlow 20s linear infinite; z-index: 0;
+        }
+
+        .progress-fill {
+            position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
+            background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), #ffffff, var(--purple-neon));
+            background-size: 300% 100%; border-radius: 10px;
+            box-shadow: 0 0 15px rgba(144, 0, 255, 0.9);
+            animation: borderFlow 3s linear infinite;
+            will-change: width; transition: width 1.5s var(--ease-dopamine);
+        }
+
+        .ticker-module {
+            display: flex; align-items: center;
+            background: rgba(10, 1, 26, 0.85); border-left: 2px solid var(--purple-neon);
+            padding: 0 15px; height: 100%; width: 180px;
+            overflow: hidden; position: relative; z-index: 5;
+            box-shadow: inset 10px 0 15px rgba(0,0,0,0.8);
+        }
+
+        .ticker-content {
+            font-size: 0.75rem; font-weight: 900; color: #ffffff;
+            letter-spacing: 1px; white-space: nowrap; transform: translateX(100%); will-change: transform;
+            text-shadow: 0 2px 6px rgba(0,0,0,1);
+        }
+
+        @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        
+        @keyframes kineticShake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-3px) rotate(-1deg); }
+            40% { transform: translateX(3px) rotate(1deg); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes dopaminePunch {
+            0% { transform: scale(1); filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 1)) brightness(1); }
+            15% { transform: scale(1.15) translateY(-2px); filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 1)) brightness(1.5) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)); }
+            100% { transform: scale(1) translateY(0); filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 1)) brightness(1); }
+        }
+        @keyframes labelFlash {
+            0% { background: linear-gradient(90deg, #ffffff, #d8d8df); color: var(--text-dark); }
+            15% { background: linear-gradient(90deg, var(--purple-neon), var(--purple-core)); color: #fff; box-shadow: 0 0 15px var(--purple-neon); }
+            100% { background: linear-gradient(90deg, #ffffff, #d8d8df); color: var(--text-dark); }
+        }
+        @keyframes rippleBurst {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+        @keyframes flareSlash {
+            0% { left: -50%; opacity: 0; }
+            30% { opacity: 1; }
+            100% { left: 150%; opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scene-container" id="scene-wrapper">
+        <div class="ambient-backlight"></div>
+
+        <div class="logo-sweeper" id="logo-sweeper">
+            <div class="logo-inner-ring">
+                <img src="kk.jpg" alt="Logo" class="brand-logo" id="brand-logo" onerror="this.style.display='none'">
+            </div>
+        </div>
+
+        <div class="master-overlay-wrapper" id="overlay">
+            <div class="overlay-core">
+                <canvas id="plasma-canvas"></canvas>
+                <canvas id="particle-canvas"></canvas>
+                <div class="screen-texture"></div>
+
+                <div class="data-module" id="mod-subs">
+                    <div class="data-label">SUBS</div>
+                    <div class="data-value" id="val-subs">0<div class="lens-flare"></div></div>
+                    <div class="hit-ripple"></div>
+                </div>
+
+                <div class="separator"></div>
+
+                <div class="data-module" id="mod-likes">
+                    <div class="data-label">LIKES</div>
+                    <div class="data-value" id="val-likes">0<div class="lens-flare"></div></div>
+                    <div class="hit-ripple"></div>
+                </div>
+
+                <div class="separator"></div>
+
+                <div class="goal-module">
+                    <div class="goal-header">
+                        <span class="goal-title">SUB GOAL</span>
+                        <span class="goal-numbers" id="val-goal">0 / 5,000</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="goal-bar"></div>
+                    </div>
+                </div>
+
+                <div class="ticker-module">
+                    <div class="ticker-content" id="ticker-text">
+                        CONNECTING TO LIVE FEED...
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SimplexMath = (function() {
+            const F2 = 0.5 * (Math.sqrt(3.0) - 1.0), G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+            const p = new Uint8Array(256); for (let i = 0; i < 256; i++) p[i] = Math.floor(Math.random() * 256);
+            const perm = new Uint8Array(512), permMod12 = new Uint8Array(512);
+            for (let i = 0; i < 512; i++) { perm[i] = p[i & 255]; permMod12[i] = (perm[i] % 12); }
+            const grad3 = new Float32Array([1,1,0,-1,1,0,1,-1,0,-1,-1,0,1,0,1,-1,0,1,1,0,-1,-1,0,-1,0,1,1,0,-1,1,0,1,-1,0,-1,-1]);
+            return {
+                noise2D: function(xin, yin) {
+                    let n0, n1, n2; const s = (xin + yin) * F2; const i = Math.floor(xin + s), j = Math.floor(yin + s);
+                    const t = (i + j) * G2; const x0 = xin - (i - t), y0 = yin - (j - t);
+                    let i1, j1; if (x0 > y0) { i1 = 1; j1 = 0; } else { i1 = 0; j1 = 1; }
+                    const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2, x2 = x0 - 1.0 + 2.0 * G2, y2 = y0 - 1.0 + 2.0 * G2;
+                    const ii = i & 255, jj = j & 255;
+                    let t0 = 0.5 - x0 * x0 - y0 * y0; if (t0 < 0) n0 = 0.0; else { t0 *= t0; const gi0 = permMod12[ii + perm[jj]] * 3; n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0); }
+                    let t1 = 0.5 - x1 * x1 - y1 * y1; if (t1 < 0) n1 = 0.0; else { t1 *= t1; const gi1 = permMod12[ii + i1 + perm[jj + j1]] * 3; n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1); }
+                    let t2 = 0.5 - x2 * x2 - y2 * y2; if (t2 < 0) n2 = 0.0; else { t2 *= t2; const gi2 = permMod12[ii + 1 + perm[jj + 1]] * 3; n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2); }
+                    return 70.0 * (n0 + n1 + n2);
+                }
+            };
+        })();
+
+        class PlasmaEngine {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId); this.ctx = this.canvas.getContext('2d', { alpha: false });
+                this.time = 0; this.colors = { baseR: 10, baseG: 1, baseB: 26, midR: 144, midG: 0, midB: 255, highR: 255, highG: 215, highB: 0 };
+                this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
+            }
+            resize() {
+                this.width = this.canvas.clientWidth / 2; this.height = this.canvas.clientHeight / 2;
+                this.canvas.width = this.width; this.canvas.height = this.height;
+                this.imgData = this.ctx.createImageData(this.width, this.height); this.pixels = this.imgData.data;
+            }
+            render() {
+                this.time += 0.003; 
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        const nx = x / 100, ny = y / 100;
+                        let intensity = (SimplexMath.noise2D(nx + this.time, ny - this.time) + (SimplexMath.noise2D(nx * 2 - this.time, ny * 2 + this.time) * 0.5) + 1.5) / 3;
+                        intensity = Math.max(0, Math.min(1, intensity));
+                        const idx = (y * this.width + x) * 4;
+                        if (intensity < 0.6) {
+                            const blend = intensity / 0.6;
+                            this.pixels[idx] = this.colors.baseR + (this.colors.midR - this.colors.baseR) * blend;
+                            this.pixels[idx+1] = this.colors.baseG + (this.colors.midG - this.colors.baseG) * blend;
+                            this.pixels[idx+2] = this.colors.baseB + (this.colors.midB - this.colors.baseB) * blend;
+                        } else {
+                            const blend = (intensity - 0.6) / 0.4;
+                            this.pixels[idx] = this.colors.midR + (this.colors.highR - this.colors.midR) * blend;
+                            this.pixels[idx+1] = this.colors.midG + (this.colors.highG - this.colors.midG) * blend;
+                            this.pixels[idx+2] = this.colors.midB + (this.colors.highB - this.colors.midB) * blend;
+                        }
+                        this.pixels[idx+3] = 255; 
+                    }
+                }
+                this.ctx.putImageData(this.imgData, 0, 0); requestAnimationFrame(() => this.render());
+            }
+        }
+
+        class ParticleEngine {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId); this.ctx = this.canvas.getContext('2d');
+                this.particles = []; this.isSweeping = false; this.sweepX = 0;
+                this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
+            }
+            resize() { this.canvas.width = this.canvas.clientWidth; this.canvas.height = this.canvas.clientHeight; }
+            setSweeping(active, xPosition) { this.isSweeping = active; this.sweepX = xPosition; }
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                if (this.isSweeping) {
+                    const px = (this.sweepX / 100) * this.canvas.width, py = this.canvas.height / 2;
+                    for(let i=0; i<2; i++) this.particles.push({ x: px, y: py + (Math.random()*60-30), vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 1.0, decay: Math.random()*0.04+0.02, size: Math.random()*2+1 });
+                }
+                for(let i = this.particles.length - 1; i >= 0; i--) {
+                    let p = this.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+                    if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+                    this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(255, 215, 0, ${p.life})`; this.ctx.shadowBlur = 10; this.ctx.shadowColor = '#ffd700'; this.ctx.fill();
+                }
+                requestAnimationFrame(() => this.render());
+            }
+        }
+
+        class OverlayState {
+            constructor() {
+                this.state = { subs: 0, likes: 0, goal: 5000 };
+                this.elements = { 
+                    subsVal: document.getElementById('val-subs'), subMod: document.getElementById('mod-subs'),
+                    likesVal: document.getElementById('val-likes'), likeMod: document.getElementById('mod-likes'),
+                    goalText: document.getElementById('val-goal'), goalBar: document.getElementById('goal-bar') 
+                };
+            }
+            format(num) { return (num || 0).toLocaleString('en-US'); }
+            
+            scrambleNumber(moduleElement, valueElement, targetValue, duration = 400) {
+                let start = Date.now();
+                moduleElement.classList.remove('dopamine-strike');
+                void moduleElement.offsetWidth; 
+                moduleElement.classList.add('dopamine-strike');
+
+                const scrambleInterval = setInterval(() => {
+                    let randomVal = Math.floor(targetValue * (0.8 + Math.random() * 0.4));
+                    valueElement.innerHTML = `${this.format(randomVal)}<div class="lens-flare"></div>`;
+                    if (Date.now() - start > duration) {
+                        clearInterval(scrambleInterval);
+                        valueElement.innerHTML = `${this.format(targetValue)}<div class="lens-flare"></div>`;
+                    }
+                }, 40);
+            }
+
+            updateData(newSubs, newLikes, newGoal) {
+                if (newGoal) this.state.goal = newGoal;
+
+                if (newSubs !== this.state.subs) { 
+                    this.scrambleNumber(this.elements.subMod, this.elements.subsVal, newSubs);
+                    this.state.subs = newSubs; 
+                }
+                if (newLikes !== this.state.likes) { 
+                    this.scrambleNumber(this.elements.likeMod, this.elements.likesVal, newLikes);
+                    this.state.likes = newLikes; 
+                }
+                
+                let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
+                this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
+                this.elements.goalBar.style.width = `${percentage}%`;
+            }
+        }
+
+        class TickerEngine {
+            constructor() {
+                this.element = document.getElementById('ticker-text'); 
+                this.container = this.element.parentElement;
+                this.queue = ["AWAITING DATA..."];
+                this.currentIndex = 0; 
+                this.pos = this.container.offsetWidth; 
+                this.speed = 1.5; 
+                this.animate();
+            }
+            setMessages(messageString) {
+                const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
+                if(parts.length > 0) this.queue = parts;
+            }
+            animate() {
+                this.pos -= this.speed;
+                if (this.pos < -this.element.offsetWidth - 50) {
+                    this.currentIndex = (this.currentIndex + 1) % this.queue.length;
+                    this.element.innerText = this.queue[this.currentIndex]; 
+                    this.pos = this.container.offsetWidth;
+                }
+                this.element.style.transform = `translateX(${this.pos}px)`; 
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        class CinematicSweepController {
+            constructor(particleEngine) {
+                this.scene = document.getElementById('scene-wrapper'); this.particleEngine = particleEngine;
+                this.easeInOutExpo = (t) => t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+                this.runCycle();
+            }
+            sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+            tweenSweep(startPct, endPct, duration) {
+                return new Promise(resolve => {
+                    let startTime = null; this.particleEngine.setSweeping(true, startPct);
+                    const update = (currentTime) => {
+                        if (!startTime) startTime = currentTime;
+                        let progress = Math.min((currentTime - startTime) / duration, 1);
+                        const currentPct = startPct + (endPct - startPct) * this.easeInOutExpo(progress);
+                        this.scene.style.setProperty('--sweep-progress', `${currentPct}%`);
+                        this.particleEngine.setSweeping(true, currentPct);
+                        if (progress < 1) requestAnimationFrame(update); else {
+                            this.scene.style.setProperty('--sweep-progress', `${endPct}%`);
+                            this.particleEngine.setSweeping(false, endPct); resolve();
+                        }
+                    };
+                    requestAnimationFrame(update);
+                });
+            }
+            async runCycle() {
+                await this.sleep(1000);
+                while(true) {
+                    await this.tweenSweep(0, 100, 2500); 
+                    await this.sleep(15000);
+                    await this.tweenSweep(100, 0, 2500); 
+                    await this.sleep(2000); 
+                }
+            }
+        }
+
+        // Live Feed Polling Engine connected to Render Backend
+        class MultiStreamerLiveEngine {
+            constructor(state, ticker) {
+                this.state = state;
+                this.ticker = ticker;
+                const urlParams = new URLSearchParams(window.location.search);
+                this.username = urlParams.get('user') || '';
+
+                if (!this.username) {
+                    this.ticker.setMessages("ERROR: NO USER SPECIFIED IN URL (?user=name)");
+                    return;
+                }
+
+                this.pollData();
+                // Check server every 10 seconds
+                setInterval(() => this.pollData(), 10000);
+            }
+
+            async pollData() {
+                try {
+                    const res = await fetch(`/api/streamer/${this.username}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    
+                    this.state.updateData(data.subs, data.likes, data.sub_goal);
+                    if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
+                } catch(e) {
+                    console.error("Failed to poll streamer stats:", e);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const particles = new ParticleEngine('particle-canvas');
+            const state = new OverlayState();
+            const ticker = new TickerEngine();
+            new PlasmaEngine('plasma-canvas');
+            new CinematicSweepController(particles);
+            new MultiStreamerLiveEngine(state, ticker);
+        });
+    </script>
+</body>
+</html>

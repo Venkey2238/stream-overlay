@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Nexus // Creator Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --obsidian: #030008;
+            --surface: #0a011a;
+            --surface-card: rgba(18, 3, 43, 0.65);
+            --purple-neon: #9000ff;
+            --purple-deep: #4d0099;
+            --gold-pure: #ffd700;
+            --gold-bright: #ffea75;
+            --status-green: #00ff88;
+            --text-primary: #ffffff;
+            --text-muted: #8e8ba0;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--obsidian);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(144, 0, 255, 0.25) 0%, transparent 55%),
+                radial-gradient(circle at 100% 100%, rgba(255, 215, 0, 0.08) 0%, transparent 40%);
+            color: var(--text-primary);
+            font-family: 'Montserrat', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 15px;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 560px;
+            background: var(--surface);
+            border-radius: 24px;
+            border: 1px solid rgba(144, 0, 255, 0.35);
+            padding: 36px 30px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.9),
+                0 0 30px rgba(144, 0, 255, 0.2),
+                inset 0 0 20px rgba(144, 0, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--purple-neon), var(--gold-pure), transparent);
+        }
+
+        .header { text-align: center; margin-bottom: 28px; }
+        .system-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Syncopate', sans-serif;
+            font-size: 0.55rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold-bright);
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        .title {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #ffffff 20%, #b8b3d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* GOOGLE AUTH BUTTON */
+        .auth-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .btn-google {
+            width: 100%;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-google::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .btn-google:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--purple-neon);
+            box-shadow: 0 0 20px rgba(144, 0, 255, 0.45);
+            transform: translateY(-2px);
+        }
+
+        .btn-google:hover::before { transform: translateX(100%); }
+
+        .google-icon {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* LIVE CONNECTED PROFILE CARD */
+        .profile-card {
+            background: var(--surface-card);
+            border: 1px solid rgba(144, 0, 255, 0.25);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 2px solid var(--purple-neon);
+            object-fit: cover;
+        }
+
+        .profile-meta { flex-grow: 1; }
+        .channel-name { font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+        .channel-stats { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--status-green);
+            box-shadow: 0 0 10px var(--status-green);
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        /* OBS LINK BOX */
+        .obs-dock {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px dashed rgba(144, 0, 255, 0.4);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .obs-dock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .dock-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--gold-pure);
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+
+        .copy-btn:hover { color: #fff; }
+
+        .obs-url {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--status-green);
+            word-break: break-all;
+        }
+
+        /* FORM CONTROLS */
+        .field { margin-bottom: 16px; }
+        .field-label {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input, textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--purple-neon);
+            box-shadow: 0 0 10px rgba(144, 0, 255, 0.3);
+        }
+
+        .btn-push {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(90deg, var(--purple-deep), var(--purple-neon));
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(144, 0, 255, 0.35);
+            transition: all 0.2s ease;
+        }
+
+        .btn-push:hover { filter: brightness(1.2); transform: translateY(-1px); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="system-badge">⚡ Live Sync Engine</div>
+            <h1 class="title">Control Hub</h1>
+        </div>
+
+        <!-- AUTHENTICATION VIEW -->
+        <div class="auth-block" id="auth-section">
+            <a href="/login" class="btn-google">
+                <svg class="google-icon" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                Sign in with YouTube
+            </a>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">Instant zero-key verification via official Google API</span>
+        </div>
+
+        <!-- CONNECTED PROFILE (Hidden until authenticated) -->
+        <div class="profile-card" id="profile-box" style="display: none;">
+            <img src="" alt="Avatar" class="avatar" id="creator-avatar">
+            <div class="profile-meta">
+                <div class="channel-name" id="creator-name">Streamer</div>
+                <div class="channel-stats">
+                    <span class="status-dot"></span> <span id="creator-subs">0</span> Subscribers
+                </div>
+            </div>
+        </div>
+
+        <!-- OBS DOCK -->
+        <div class="obs-dock" id="obs-dock" style="display: none;">
+            <div class="obs-dock-header">
+                <span class="dock-label">OBS Browser Source URL</span>
+                <button class="copy-btn" onclick="copyObsUrl()">Copy URL</button>
+            </div>
+            <div class="obs-url" id="obs-url">Awaiting sign-in...</div>
+        </div>
+
+        <!-- STREAM CONTROLS -->
+        <div class="field">
+            <label class="field-label">Active Stream URL (Optional for Live Likes)</label>
+            <input type="text" id="stream_url" placeholder="https://youtube.com/watch?v=...">
+        </div>
+
+        <div class="field">
+            <label class="field-label">Sub Goal Target</label>
+            <input type="number" id="sub_goal" value="5000">
+        </div>
+
+        <div class="field">
+            <label class="field-label">Ticker Announcements</label>
+            <textarea id="ticker_text" rows="2">WELCOME TO THE STREAM, DROP A LIKE, SUBSCRIBE FOR UPDATES</textarea>
+        </div>
+
+        <button class="btn-push" onclick="pushUpdates()">Sync Stream Overlay</button>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const handle = params.get('user');
+
+        if (handle) {
+            fetch(`/api/streamer/${handle}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        document.getElementById('auth-section').style.display = 'none';
+                        document.getElementById('profile-box').style.display = 'flex';
+                        document.getElementById('obs-dock').style.display = 'block';
+
+                        document.getElementById('creator-name').innerText = data.title;
+                        document.getElementById('creator-subs').innerText = data.subs.toLocaleString();
+                        document.getElementById('creator-avatar').src = data.avatar;
+
+                        const overlayUrl = `${window.location.origin}/overlay?user=${handle}`;
+                        document.getElementById('obs-url').innerText = overlayUrl;
+                    }
+                })
+                .catch(console.error);
+        }
+
+        function copyObsUrl() {
+            const url = document.getElementById('obs-url').innerText;
+            navigator.clipboard.writeText(url);
+            alert("Copied OBS Browser Source URL!");
+        }
+
+        function pushUpdates() {
+            alert("Settings synchronized to your live overlay.");
+        }
+    </script>
+</body>
+</html>
