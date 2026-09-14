@@ -502,7 +502,7 @@
 
             async pollData() {
                 try {
-                    const res = await fetch(`/api/streamer/${this.username}`);
+                    const res = await fetch(`/api/streamer/${username}?t=${new Date().getTime()}`);
                     if (!res.ok) return;
                     const data = await res.json();
                     
