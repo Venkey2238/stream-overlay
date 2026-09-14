@@ -502,12 +502,23 @@
 
             async pollData() {
                 try {
-                    const res = await fetch(`/api/streamer/${username}?t=${new Date().getTime()}`);
+                    // FIX 1: Added "this." before username
+                    const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
                     if (!res.ok) return;
                     const data = await res.json();
                     
+                    // Update stats and ticker
                     this.state.updateData(data.subs, data.likes, data.sub_goal);
                     if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
+
+                    // FIX 2: Dynamically load your YouTube Avatar into the spinning ring
+                    if (data.avatar) {
+                        const logoEl = document.getElementById('brand-logo');
+                        if (logoEl.src !== data.avatar) {
+                            logoEl.src = data.avatar;
+                            logoEl.style.display = 'block';
+                        }
+                    }
                 } catch(e) {
                     console.error("Failed to poll streamer stats:", e);
                 }
