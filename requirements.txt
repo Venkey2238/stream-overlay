@@ -6,3 +6,4 @@ pydantic
 httpx
 httpx2
 python-dotenv
+itsdangerous
