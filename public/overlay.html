@@ -3,27 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream Status overlay</title>
+    <title>Ultra-Premium Stream Status Overlay V5 - Kinetic Polish</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --void-obsidian: #030008;
-            --void-deep: #0a011a;
-            --purple-core: #2b00ff;
-            --purple-rich: #4d0099;
-            --purple-neon: #9000ff;
+            /* Existing Premium Cinematic Palette - NO NEW COLORS */
+            --void-obsidian: #020005;
+            --void-deep: #05010a;
+            --purple-core: #3a00ff;
+            --purple-rich: #1d003b;
+            --purple-neon: #a200ff;
+            --cyan-neon: #00f3ff;
+            --gold-dark: #8c6a00;
+            --gold-pure: #ffcc00;
             
-            --gold-dark: #b38600;
-            --gold-pure: #ffd700;
-            --gold-bright: #ffea75;
-
-            --overlay-width: 760px; 
-            --overlay-height: 64px;  
-            --logo-size: 84px;       
+            --overlay-width: 840px; 
+            --overlay-height: 72px;  
+            --logo-size: 96px;       
             
             --sweep-progress: 0%; 
-            --border-speed: 12s;
-            --ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            --logo-rot: 0deg; 
+            --ease-premium: cubic-bezier(0.25, 1, 0.3, 1); 
+            --ease-slot: cubic-bezier(0.34, 1.56, 0.64, 1); /* Enhanced physical snap */
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,298 +35,327 @@
             font-family: 'Montserrat', sans-serif;
             overflow: hidden; color: white;
             display: flex; align-items: center; justify-content: center;
+            padding: 50px; 
+            -webkit-font-smoothing: antialiased; /* Sharper text */
         }
 
-        /* FEATURE 7: Magnetic Levitation */
         .scene-container {
             position: relative; 
             width: var(--overlay-width); 
             height: var(--overlay-height);
             display: flex; align-items: center; z-index: 10;
-            animation: floatParallax 6s ease-in-out infinite;
         }
 
+        /* Ambient Cinematic Backlight */
         .ambient-backlight {
             position: absolute; top: 50%; left: var(--sweep-progress);
-            transform: translate(-50%, -50%); width: 250px; height: 90px;
-            background: radial-gradient(circle at center, rgba(144, 0, 255, 0.5) 0%, rgba(255, 215, 0, 0.15) 40%, transparent 70%);
+            transform: translate(-50%, -50%); width: 450px; height: 160px;
+            background: radial-gradient(ellipse at center, rgba(162, 0, 255, 0.3) 0%, rgba(0, 243, 255, 0.08) 40%, transparent 70%);
             z-index: 0; pointer-events: none; mix-blend-mode: screen; will-change: left;
         }
 
         .master-overlay-wrapper {
             position: absolute; left: 0; top: 0; width: 100%; height: 100%;
             padding: 2px; border-radius: 40px;
-            display: flex; flex-direction: column;
-            background: linear-gradient(90deg, var(--void-obsidian), var(--purple-rich), var(--purple-core), var(--purple-neon), var(--purple-rich), var(--void-obsidian));
-            background-size: 400% 100%; 
-            animation: borderFlow var(--border-speed) linear infinite;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.95), 0 0 20px rgba(144, 0, 255, 0.5);
+            background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), var(--cyan-neon), var(--purple-neon), var(--purple-rich));
+            background-size: 200% 100%; 
+            animation: borderFlow 6s linear infinite;
+            filter: drop-shadow(0 25px 35px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 15px rgba(162, 0, 255, 0.4));
             clip-path: inset(0 calc(100% - var(--sweep-progress)) 0 0);
-            z-index: 1; will-change: clip-path; transition: --border-speed 0.5s ease;
+            z-index: 1; will-change: clip-path;
         }
 
-        /* FEATURE 9: Deep Vignette Core */
+        /* Frosted Glass Core with Idle Breathe */
         .overlay-core {
             position: relative; width: 100%; height: 100%;
-            background-color: var(--void-obsidian);
+            background-color: rgba(3, 0, 8, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 38px;
             overflow: hidden; 
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 30px 0 50px; 
+            padding: 0 25px 0 75px; 
             gap: 20px; z-index: 2;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.9), inset 0 0 10px rgba(144,0,255,0.2);
+            animation: coreBreathe 6s ease-in-out infinite alternate;
         }
 
-        #plasma-canvas, #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        #plasma-canvas { opacity: 0.85; mix-blend-mode: screen; }
-        #particle-canvas { z-index: 3; pointer-events: none; mix-blend-mode: color-dodge; }
-
-        .screen-texture {
-            position: absolute; inset: 0; z-index: 4; pointer-events: none;
-            background-image: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 0, 0, 0.6) 1px, rgba(0, 0, 0, 0.6) 2px);
+        /* Physical Glass Noise Texture for true premium optics */
+        .overlay-core::before {
+            content: ""; position: absolute; inset: 0; z-index: 0; opacity: 0.04; mix-blend-mode: overlay; pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        /* FEATURE 1: Logo Coin Roll System */
+        /* Dynamic Light Sweep across the glass */
+        .glass-reflection {
+            position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            transform: skewX(-25deg);
+            z-index: 9; pointer-events: none;
+            animation: lightSweep 8s var(--ease-premium) infinite;
+        }
+
+        #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; mix-blend-mode: color-dodge; }
+
+        /* Sleek Logo Sweeper */
         .logo-sweeper {
             position: absolute; top: 50%; left: var(--sweep-progress);
-            transform: translate(-50%, -50%); /* Rotation is handled by JS dynamically */
+            transform: translate(-50%, -50%); 
             width: var(--logo-size); height: var(--logo-size); z-index: 100;
             background-color: var(--void-deep); border-radius: 50%; padding: 4px;
-            box-shadow: 0 0 15px rgba(144, 0, 255, 1), inset 0 0 15px rgba(255, 215, 0, 0.8), 0 5px 15px rgba(0, 0, 0, 0.9);
+            box-shadow: 0 15px 30px rgba(0,0,0,1), 0 0 20px rgba(162, 0, 255, 0.7), inset 0 0 15px rgba(0, 243, 255, 0.4);
             display: flex; justify-content: center; align-items: center;
-            will-change: left, transform;
+            will-change: left, transform, box-shadow;
+            transition: box-shadow 0.5s ease;
         }
         
+        /* Idle floating animation applies only when resting */
+        .logo-sweeper.is-resting { animation: floatLogo 5s ease-in-out infinite alternate; }
+
         .logo-inner-ring {
             width: 100%; height: 100%; border-radius: 50%; padding: 3px;
-            background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-bright));
+            background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--cyan-neon));
             display: flex; justify-content: center; align-items: center;
+            transform: rotate(var(--logo-rot)); will-change: transform;
         }
         
         .brand-logo {
             width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
-            background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
+            background-color: var(--void-obsidian); 
+            border: 2px solid var(--void-deep);
+            box-shadow: inset 0 0 12px rgba(0,0,0,1);
         }
 
-        /* FEATURE 10: Shockwave Ring */
-        .shockwave {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1);
-            width: var(--logo-size); height: var(--logo-size);
-            border: 2px solid var(--gold-pure); border-radius: 50%;
-            z-index: 99; opacity: 0; pointer-events: none;
-        }
-        .shockwave.fire { animation: shockwaveExpand 0.8s ease-out forwards; }
-
+        /* DATA MODULES */
         .data-module {
-            position: relative; z-index: 5;
+            position: relative; z-index: 10;
             display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-            height: 100%; min-width: 80px;
+            height: 100%; min-width: 85px; 
         }
 
-        .label-row {
-            display: flex; align-items: center; gap: 5px; margin-bottom: 2px;
-        }
-
-        /* FEATURE 6: Title Aura Pulses */
         .data-label {
             font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
-            text-transform: uppercase; letter-spacing: 0.2em; color: var(--void-obsidian); 
-            background: linear-gradient(90deg, #ffffff, #e0e0e0); 
-            padding: 2px 6px; border-radius: 3px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.9);
-            animation: titleAura 3s infinite alternate;
+            text-transform: uppercase; letter-spacing: 0.35em; color: var(--void-obsidian); 
+            background: #ffffff; padding: 2px 6px; border-radius: 2px; margin-bottom: 4px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 0 8px rgba(255,255,255,0.4);
         }
 
-        /* FEATURE 4: Calculations LED */
-        .calc-led {
-            width: 6px; height: 6px; border-radius: 50%;
-            background-color: #333; box-shadow: inset 0 0 2px #000;
-            transition: all 0.2s ease;
-        }
-        .calc-led.active {
-            background-color: var(--purple-neon);
-            box-shadow: 0 0 8px var(--purple-neon), 0 0 15px #fff;
-            animation: ledBlink 0.15s infinite alternate;
-        }
-
-        /* FEATURE 5: Premium White Clarity */
         .data-value {
             font-family: 'Montserrat', sans-serif; font-size: 1.6rem; font-weight: 900;
-            line-height: 0.9; letter-spacing: 0.05em;
-            color: #ffffff; /* PURE WHITE FOR MAX VISIBILITY */
-            font-variant-numeric: tabular-nums; 
-            text-shadow: 0 4px 8px rgba(0, 0, 0, 1), 0 0 15px rgba(255, 255, 255, 0.3);
-            position: relative; transform-origin: left center;
+            line-height: 1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; 
+            color: #ffffff; 
+            /* Hard black shadow for perfect scaling visibility, glowing neon shadow for effect */
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 1), 0 0 15px rgba(162, 0, 255, 0.7);
+            height: 1em; overflow: hidden; display: flex; align-items: center;
+            padding-bottom: 2px; /* Fixes descender clipping during spins */
         }
 
-        .glitch-strike { animation: chromaticGlitch 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        /* ====== TRUE SLOT MACHINE CSS ====== */
+        .slot-wrapper { display: inline-flex; height: 1em; line-height: 1; overflow: hidden; position: relative; padding: 0 1px; }
+        .slot-wrapper::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 0.3em; z-index: 5;
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%); pointer-events: none;
+        }
+        .slot-wrapper::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 0.3em; z-index: 5;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%); pointer-events: none;
+        }
+        .slot-reel { display: inline-flex; flex-direction: column; will-change: transform, filter; transform-origin: center; }
+        .slot-num, .slot-comma { 
+            display: flex; align-items: center; justify-content: center; height: 1em; 
+            filter: blur(0px); transition: filter 0.1s, transform 0.1s;
+        }
         
-        .lens-flare {
-            position: absolute; top: 50%; left: -50%; transform: translateY(-50%);
-            width: 200%; height: 2px; background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 0 15px #fff, 0 0 30px var(--purple-neon);
-            opacity: 0; pointer-events: none; mix-blend-mode: screen; z-index: 10;
-        }
-
-        .dopamine-strike { animation: kineticShake 0.4s var(--ease-dopamine) forwards; }
-        .dopamine-strike .data-value { animation: dopaminePunch 0.8s var(--ease-dopamine) forwards; }
-        .dopamine-strike .lens-flare { animation: flareSlash 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        /* Elastic stretch & motion blur during spin */
+        .slot-reel.is-rolling { filter: blur(1.5px); transform-origin: center; }
+        .slot-reel.is-rolling .slot-num { transform: scaleY(1.3); color: var(--cyan-neon); text-shadow: 0 0 10px var(--cyan-neon); }
+        /* =================================== */
 
         .separator {
-            position: relative; z-index: 5; width: 2px; height: 35px;
-            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.9), rgba(144, 0, 255, 1), transparent);
-            box-shadow: 0 0 10px rgba(144, 0, 255, 1); border-radius: 1px;
+            position: relative; z-index: 10; width: 2px; height: 32px;
+            background: rgba(255, 255, 255, 0.1); border-radius: 2px;
+            box-shadow: inset 0 0 5px rgba(255,255,255,0.3), 0 0 12px rgba(162, 0, 255, 0.6);
         }
 
+        /* Cyber-Track Goal Bar */
         .goal-module {
             display: flex; flex-direction: column; justify-content: center;
-            flex-grow: 1; min-width: 190px; max-width: 220px; z-index: 5;
-            animation: heartbeatPulse 4s infinite ease-in-out;
+            flex-grow: 1; min-width: 190px; z-index: 10; position: relative;
         }
 
-        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; }
+        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; }
 
         .goal-title {
             font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
-            color: var(--void-obsidian); background: linear-gradient(90deg, #ffffff, #e0e0e0);
-            padding: 2px 6px; border-radius: 3px; letter-spacing: 0.15em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.9);
-            animation: titleAura 3s infinite alternate reverse;
+            color: var(--void-obsidian); background: var(--cyan-neon);
+            padding: 2px 6px; border-radius: 2px; letter-spacing: 0.25em;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 0 12px rgba(0, 243, 255, 0.5);
         }
 
         .goal-numbers {
-            font-size: 0.8rem; font-weight: 900; color: #ffffff; letter-spacing: 1px;
-            font-variant-numeric: tabular-nums;
-            text-shadow: 0 3px 6px rgba(0,0,0,1), 0 0 10px rgba(255, 255, 255, 0.5);
+            font-size: 0.85rem; font-weight: 900; color: #ffffff; letter-spacing: 1px;
+            font-variant-numeric: tabular-nums; 
+            text-shadow: 0 2px 5px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.5);
+            transition: transform 0.3s var(--ease-premium);
         }
 
         .progress-track {
             position: relative; width: 100%; height: 14px;
-            background: linear-gradient(90deg, #0a0214, #000);
-            border-radius: 10px; overflow: hidden;
-            box-shadow: inset 0 3px 8px rgba(0,0,0,1), 0 0 0 1px rgba(144, 0, 255, 0.5);
+            background: rgba(0,0,0,0.85); overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            box-shadow: inset 0 3px 8px rgba(0,0,0,1), 0 1px 0 rgba(255,255,255,0.1);
         }
 
         .progress-fill {
             position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
-            background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), #ffffff);
-            background-size: 300% 100%; border-radius: 10px;
-            box-shadow: 0 0 20px rgba(144, 0, 255, 1);
-            animation: borderFlow 2s linear infinite;
-            will-change: width; transition: width 1.5s var(--ease-dopamine);
-        }
-        .progress-fill::after {
-            content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 6px;
-            background: var(--gold-pure); border-radius: 10px;
-            box-shadow: 0 0 15px var(--gold-pure), 0 0 30px #fff;
-            animation: sparkPulse 0.5s infinite alternate;
+            background: linear-gradient(90deg, var(--purple-core), var(--cyan-neon));
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.8);
+            transition: width 1s var(--ease-premium);
+            overflow: hidden;
         }
 
+        /* Kinetic energy flow inside the bar */
+        .progress-fill::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 200%; height: 100%;
+            background: repeating-linear-gradient(
+                -45deg, 
+                transparent, transparent 8px, 
+                rgba(255,255,255,0.25) 8px, rgba(255,255,255,0.25) 16px
+            );
+            animation: kineticFlow 1s linear infinite;
+        }
+
+        /* NEW: Glowing Laser Scan effect sweeping across the filled bar */
+        .progress-laser {
+            position: absolute; top: 0; left: -30px; height: 100%; width: 30px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+            filter: blur(2px); mix-blend-mode: overlay;
+            animation: laserSweep 3s infinite;
+        }
+
+        /* Laser Spark Edge */
+        .progress-fill::after {
+            content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 4px;
+            background: #ffffff; border-radius: 2px;
+            box-shadow: -2px 0 12px #ffffff, 0 0 25px var(--cyan-neon);
+        }
+
+        .goal-flash .progress-fill { filter: brightness(1.5); box-shadow: 0 0 40px var(--cyan-neon); }
+        .goal-flash .goal-numbers { transform: scale(1.15); color: var(--cyan-neon); text-shadow: 0 0 20px var(--cyan-neon); }
+
+        /* Ticker Module */
         .ticker-module {
             display: flex; align-items: center;
-            background: rgba(10, 1, 26, 0.95); border-left: 3px solid var(--purple-neon);
-            padding: 0 15px; height: 100%; width: 180px;
-            overflow: hidden; position: relative; z-index: 5;
-            box-shadow: inset 15px 0 20px rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.5); border-left: 2px solid var(--cyan-neon);
+            padding: 0 15px; height: 100%; width: 230px;
+            position: relative; z-index: 10;
         }
-        .ticker-module::after {
-            content: ''; position: absolute; inset: 0;
-            background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.4) 1px, rgba(0,0,0,0.4) 2px);
-            pointer-events: none; z-index: 6;
+
+        /* Live Audio EQ */
+        .live-eq-container {
+            display: flex; align-items: flex-end; gap: 3px;
+            height: 14px; margin-right: 12px; flex-shrink: 0;
         }
+        .eq-bar {
+            width: 4px; background: var(--cyan-neon); border-radius: 2px;
+            box-shadow: 0 0 10px var(--cyan-neon);
+            transition: height 0.1s ease;
+        }
+
+        /* Gradient Mask for silky smooth text appearing/disappearing */
+        .ticker-wrapper { 
+            overflow: hidden; width: 100%; position: relative; height: 100%; display: flex; align-items: center;
+            mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+        }
+
+        /* Glowing text animation */
         .ticker-content {
             font-size: 0.75rem; font-weight: 900; color: #ffffff;
             letter-spacing: 1px; white-space: nowrap; transform: translateX(100%); will-change: transform;
-            text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 5px rgba(144, 0, 255, 0.8);
+            /* Base dark shadow for structure + glowing pulse animation */
+            text-shadow: 0 2px 4px rgba(0,0,0,1);
+            animation: textGlowPulse 2s ease-in-out infinite alternate;
         }
 
-        @keyframes floatParallax { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
-        @keyframes sparkPulse { 0% { opacity: 0.7; filter: brightness(1); } 100% { opacity: 1; filter: brightness(1.5); } }
-        @keyframes heartbeatPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-        @keyframes titleAura { 0% { box-shadow: 0 2px 5px rgba(0,0,0,0.9); } 100% { box-shadow: 0 2px 15px rgba(255, 215, 0, 0.6); } }
-        @keyframes ledBlink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
-        @keyframes shockwaveExpand { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; border-width: 4px; } 100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; border-width: 0px; } }
+        /* Premium Animations */
+        @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: -200% 50%; } }
+        @keyframes lightSweep { 0%, 65% { left: -100%; } 100% { left: 200%; } }
+        @keyframes kineticFlow { 0% { transform: translateX(0); } 100% { transform: translateX(-32px); } }
+        @keyframes laserSweep { 0%, 20% { left: -30px; opacity: 0; } 50% { opacity: 1; } 80%, 100% { left: 100%; opacity: 0; } }
+        
+        /* Pulse for marquee visibility */
+        @keyframes textGlowPulse {
+            0% { text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 5px rgba(255,255,255,0.4), 0 0 10px var(--cyan-neon); }
+            100% { text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 12px rgba(255,255,255,0.9), 0 0 20px var(--cyan-neon), 0 0 30px var(--cyan-neon); }
+        }
 
-        @keyframes chromaticGlitch {
-            0% { text-shadow: 0 4px 8px rgba(0,0,0,1); transform: translate(0); }
-            20% { text-shadow: -3px 0 5px #0ff, 3px 0 5px #f0f; transform: translate(-2px, 1px); }
-            40% { text-shadow: 3px 0 5px #0ff, -3px 0 5px #f0f; transform: translate(2px, -1px); }
-            60% { text-shadow: -2px 0 2px #0ff, 2px 0 2px #f0f; transform: translate(-1px, 1px); }
-            100% { text-shadow: 0 4px 8px rgba(0,0,0,1), 0 0 15px rgba(255,255,255,0.4); transform: translate(0); }
+        /* Float effects */
+        @keyframes floatLogo {
+            0% { transform: translate(-50%, -50%); box-shadow: 0 15px 30px rgba(0,0,0,1), 0 0 20px rgba(162, 0, 255, 0.7), inset 0 0 15px rgba(0, 243, 255, 0.4); }
+            100% { transform: translate(-50%, calc(-50% - 6px)); box-shadow: 0 25px 40px rgba(0,0,0,0.8), 0 0 35px rgba(162, 0, 255, 0.9), inset 0 0 25px rgba(0, 243, 255, 0.6); }
+        }
+        @keyframes coreBreathe {
+            0% { box-shadow: inset 0 0 40px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.1); }
+            100% { box-shadow: inset 0 0 60px rgba(0,0,0,1), inset 0 1px 0 rgba(255,255,255,0.25), 0 5px 15px rgba(0,0,0,0.4); }
         }
         
-        @keyframes kineticShake {
-            0% { transform: translateX(0); }
-            20% { transform: translateX(-3px) rotate(-1deg); }
-            40% { transform: translateX(3px) rotate(1deg); }
-            60% { transform: translateX(-2px); }
-            80% { transform: translateX(2px); }
-            100% { transform: translateX(0); }
-        }
-        @keyframes dopaminePunch {
-            0% { transform: scale(1); }
-            15% { transform: scale(1.15) translateY(-2px); }
-            100% { transform: scale(1) translateY(0); }
-        }
-        @keyframes flareSlash {
-            0% { left: -50%; opacity: 0; }
-            30% { opacity: 1; }
-            100% { left: 150%; opacity: 0; }
-        }
     </style>
 </head>
 <body>
 
     <div class="scene-container" id="scene-wrapper">
         <div class="ambient-backlight"></div>
-        <div class="shockwave" id="shockwave"></div>
 
+        <!-- Sleek Logo: Rotates via JS during sweep, floats gracefully during idle -->
         <div class="logo-sweeper" id="logo-sweeper">
             <div class="logo-inner-ring">
-                <img src="../public/kk.jpg" alt="Logo" class="brand-logo" id="brand-logo" onerror="this.style.display='none'">
+                <img src="../public/kk.jpg" alt="Logo" class="brand-logo" id="brand-logo" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
             </div>
         </div>
 
         <div class="master-overlay-wrapper" id="overlay">
             <div class="overlay-core">
-                <canvas id="plasma-canvas"></canvas>
-                <canvas id="particle-canvas"></canvas>
-                <div class="screen-texture"></div>
+                <div class="glass-reflection"></div>
+                <canvas id="particle-canvas"></canvas> 
 
                 <div class="data-module" id="mod-subs">
-                    <div class="label-row">
-                        <div class="data-label">SUBS</div>
-                        <div class="calc-led"></div>
-                    </div>
-                    <div class="data-value" id="val-subs">0<div class="lens-flare"></div></div>
+                    <div class="data-label">SUBS</div>
+                    <!-- Slot Machine Target Div -->
+                    <div class="data-value" id="val-subs">0</div>
                 </div>
 
                 <div class="separator"></div>
 
                 <div class="data-module" id="mod-likes">
-                    <div class="label-row">
-                        <div class="data-label">LIKES</div>
-                        <div class="calc-led"></div>
-                    </div>
-                    <div class="data-value" id="val-likes">0<div class="lens-flare"></div></div>
+                    <div class="data-label">LIKES</div>
+                    <div class="data-value" id="val-likes">0</div>
                 </div>
 
                 <div class="separator"></div>
 
-                <div class="goal-module">
+                <div class="goal-module" id="mod-goal">
                     <div class="goal-header">
                         <span class="goal-title">SUB GOAL</span>
                         <span class="goal-numbers" id="val-goal">0 / 5,000</span>
                     </div>
                     <div class="progress-track">
-                        <div class="progress-fill" id="goal-bar"></div>
+                        <div class="progress-fill" id="goal-bar">
+                            <div class="progress-laser"></div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="ticker-module">
-                    <div class="ticker-content" id="ticker-text">
-                        INITIALIZING SECURE LINK...
+                    <div class="live-eq-container" id="live-eq">
+                        <div class="eq-bar" style="height: 4px;"></div>
+                        <div class="eq-bar" style="height: 10px;"></div>
+                        <div class="eq-bar" style="height: 6px;"></div>
+                    </div>
+                    <div class="ticker-wrapper">
+                        <div class="ticker-content" id="ticker-text">
+                            INITIALIZING SYSTEM...
+                        </div>
                     </div>
                 </div>
 
@@ -334,197 +364,189 @@
     </div>
 
     <script>
-        // Global state for Particle Engine overdrive
-        window.isSlotRolling = false;
-
-        const SimplexMath = (function() {
-            const F2 = 0.5 * (Math.sqrt(3.0) - 1.0), G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-            const p = new Uint8Array(256); for (let i = 0; i < 256; i++) p[i] = Math.floor(Math.random() * 256);
-            const perm = new Uint8Array(512), permMod12 = new Uint8Array(512);
-            for (let i = 0; i < 512; i++) { perm[i] = p[i & 255]; permMod12[i] = (perm[i] % 12); }
-            const grad3 = new Float32Array([1,1,0,-1,1,0,1,-1,0,-1,-1,0,1,0,1,-1,0,1,1,0,-1,-1,0,-1,0,1,1,0,-1,1,0,1,-1,0,-1,-1]);
-            return {
-                noise2D: function(xin, yin) {
-                    let n0, n1, n2; const s = (xin + yin) * F2; const i = Math.floor(xin + s), j = Math.floor(yin + s);
-                    const t = (i + j) * G2; const x0 = xin - (i - t), y0 = yin - (j - t);
-                    let i1, j1; if (x0 > y0) { i1 = 1; j1 = 0; } else { i1 = 0; j1 = 1; }
-                    const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2, x2 = x0 - 1.0 + 2.0 * G2, y2 = y0 - 1.0 + 2.0 * G2;
-                    const ii = i & 255, jj = j & 255;
-                    let t0 = 0.5 - x0 * x0 - y0 * y0; if (t0 < 0) n0 = 0.0; else { t0 *= t0; const gi0 = permMod12[ii + perm[jj]] * 3; n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0); }
-                    let t1 = 0.5 - x1 * x1 - y1 * y1; if (t1 < 0) n1 = 0.0; else { t1 *= t1; const gi1 = permMod12[ii + i1 + perm[jj + j1]] * 3; n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1); }
-                    let t2 = 0.5 - x2 * x2 - y2 * y2; if (t2 < 0) n2 = 0.0; else { t2 *= t2; const gi2 = permMod12[ii + 1 + perm[jj + 1]] * 3; n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2); }
-                    return 70.0 * (n0 + n1 + n2);
-                }
-            };
-        })();
-
-        class PlasmaEngine {
-            constructor(canvasId) {
-                this.canvas = document.getElementById(canvasId); this.ctx = this.canvas.getContext('2d', { alpha: false });
-                this.time = 0; this.colors = { baseR: 10, baseG: 1, baseB: 26, midR: 144, midG: 0, midB: 255, highR: 255, highG: 215, highB: 0 };
-                this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
-            }
-            resize() {
-                this.width = this.canvas.clientWidth / 2; this.height = this.canvas.clientHeight / 2;
-                this.canvas.width = this.width; this.canvas.height = this.height;
-                this.imgData = this.ctx.createImageData(this.width, this.height); this.pixels = this.imgData.data;
-            }
-            render() {
-                this.time += 0.003; 
-                for (let y = 0; y < this.height; y++) {
-                    for (let x = 0; x < this.width; x++) {
-                        const nx = x / 100, ny = y / 100;
-                        let intensity = (SimplexMath.noise2D(nx + this.time, ny - this.time) + (SimplexMath.noise2D(nx * 2 - this.time, ny * 2 + this.time) * 0.5) + 1.5) / 3;
-                        intensity = Math.max(0, Math.min(1, intensity));
-                        const idx = (y * this.width + x) * 4;
-                        if (intensity < 0.6) {
-                            const blend = intensity / 0.6;
-                            this.pixels[idx] = this.colors.baseR + (this.colors.midR - this.colors.baseR) * blend;
-                            this.pixels[idx+1] = this.colors.baseG + (this.colors.midG - this.colors.baseG) * blend;
-                            this.pixels[idx+2] = this.colors.baseB + (this.colors.midB - this.colors.baseB) * blend;
-                        } else {
-                            const blend = (intensity - 0.6) / 0.4;
-                            this.pixels[idx] = this.colors.midR + (this.colors.highR - this.colors.midR) * blend;
-                            this.pixels[idx+1] = this.colors.midG + (this.colors.highG - this.colors.midG) * blend;
-                            this.pixels[idx+2] = this.colors.midB + (this.colors.highB - this.colors.midB) * blend;
-                        }
-                        this.pixels[idx+3] = 255; 
-                    }
-                }
-                this.ctx.putImageData(this.imgData, 0, 0); requestAnimationFrame(() => this.render());
-            }
-        }
-
+        // High-Fidelity Particle Engine
         class ParticleEngine {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId); this.ctx = this.canvas.getContext('2d');
                 this.particles = []; this.isSweeping = false; this.sweepX = 0;
+                window.particleEngineInstance = this; 
                 this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
             }
             resize() { this.canvas.width = this.canvas.clientWidth; this.canvas.height = this.canvas.clientHeight; }
             setSweeping(active, xPosition) { this.isSweeping = active; this.sweepX = xPosition; }
+            
+            spawnBurst(x, y) {
+                for(let i=0; i<15; i++) {
+                    this.particles.push({ 
+                        x: x, y: y, 
+                        vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12, 
+                        life: 1.0, decay: Math.random()*0.03+0.015, 
+                        size: Math.random()*3.5+1.5,
+                        color: Math.random() > 0.4 ? '#00f3ff' : '#ffffff',
+                        isSquare: true
+                    });
+                }
+            }
+
             render() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                // Ambient Embers Feature
-                if(Math.random() > 0.8) {
-                    this.particles.push({ 
-                        x: Math.random() * this.canvas.width, 
-                        y: this.canvas.height + 10, 
-                        vx: (Math.random()-0.5)*1, 
-                        vy: -(Math.random()*1+0.5), 
-                        life: 1.0, decay: Math.random()*0.02+0.01, size: Math.random()*1.5+0.5 
-                    });
-                }
-
-                // FEATURE 8: Overdrive Sparks during slot roll
-                if(window.isSlotRolling && Math.random() > 0.5) {
-                    this.particles.push({ 
-                        x: (Math.random() * 200) + 400, // Spawn around the goal bar area
-                        y: this.canvas.height / 2 + (Math.random()*20-10), 
-                        vx: (Math.random()*4+2), // Shoot right
-                        vy: (Math.random()-0.5)*2, 
-                        life: 1.0, decay: Math.random()*0.06+0.03, size: Math.random()*2+1 
+                // Ambient cinematic embers
+                if(Math.random() > 0.6) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width, y: this.canvas.height + 5,
+                        vx: (Math.random() - 0.5) * 1, vy: -(Math.random() * 2 + 1),
+                        life: 1.0, decay: 0.015, size: Math.random() * 2 + 0.5,
+                        color: 'rgba(0, 243, 255, 0.7)', isSquare: false
                     });
                 }
 
                 if (this.isSweeping) {
                     const px = (this.sweepX / 100) * this.canvas.width, py = this.canvas.height / 2;
-                    for(let i=0; i<3; i++) this.particles.push({ 
-                        x: px, y: py + (Math.random()*60-30), 
-                        vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, 
-                        life: 1.0, decay: Math.random()*0.04+0.02, size: Math.random()*2.5+1 
+                    for(let i=0; i<4; i++) this.particles.push({ 
+                        x: px, y: py + (Math.random()*50-25), 
+                        vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6, 
+                        life: 1.0, decay: Math.random()*0.05+0.02, size: Math.random()*2.5+1, color: '#a200ff', isSquare: true
                     });
                 }
 
                 for(let i = this.particles.length - 1; i >= 0; i--) {
                     let p = this.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
                     if (p.life <= 0) { this.particles.splice(i, 1); continue; }
-                    this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    this.ctx.fillStyle = `rgba(255, 215, 0, ${p.life})`; 
-                    this.ctx.shadowBlur = 12; this.ctx.shadowColor = '#ffd700'; this.ctx.fill();
+                    
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.shadowBlur = 15; this.ctx.shadowColor = p.color;
+                    this.ctx.globalAlpha = p.life;
+
+                    if (p.isSquare) { this.ctx.fillRect(p.x, p.y, p.size, p.size); } 
+                    else { this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); this.ctx.fill(); }
                 }
+                this.ctx.globalAlpha = 1.0;
                 requestAnimationFrame(() => this.render());
+            }
+        }
+
+        // Slot Machine Number Engine
+        class SlotMachineOdometer {
+            constructor(elementId) {
+                this.el = document.getElementById(elementId);
+                this.currentValStr = "";
+            }
+
+            update(newValue) {
+                const newStr = newValue.toLocaleString('en-US');
+                if (this.currentValStr === newStr) return;
+
+                let html = `<div class="slot-wrapper">`;
+                
+                // Build a slot reel for every digit
+                for (let i = 0; i < newStr.length; i++) {
+                    const char = newStr[i];
+                    if (char === ',') {
+                        html += `<div class="slot-comma">,</div>`;
+                    } else {
+                        let spinCount = Math.floor(Math.random() * 5) + 6; // 6 to 10 digits to blur past
+                        let reelHtml = '';
+                        for(let j=0; j < spinCount; j++) {
+                            reelHtml += `<div class="slot-num">${Math.floor(Math.random()*10)}</div>`;
+                        }
+                        reelHtml += `<div class="slot-num">${char}</div>`; 
+                        html += `<div class="slot-reel" data-spins="${spinCount}">${reelHtml}</div>`;
+                    }
+                }
+                html += `</div>`;
+                
+                this.el.innerHTML = html;
+                const reels = this.el.querySelectorAll('.slot-reel');
+                
+                void this.el.offsetHeight; // Force reflow
+
+                reels.forEach((reel, index) => {
+                    reel.classList.add('is-rolling');
+                    const spins = parseInt(reel.getAttribute('data-spins'));
+                    const targetY = -(spins * 100); 
+                    
+                    // Stagger and snap physics
+                    const delay = index * 0.035; 
+                    const duration = 0.7 + (Math.random() * 0.3); 
+                    
+                    reel.style.transition = `transform ${duration}s var(--ease-slot) ${delay}s`;
+                    reel.style.transform = `translateY(${targetY}%)`;
+
+                    // Remove elastic state once settled
+                    setTimeout(() => {
+                        reel.classList.remove('is-rolling');
+                    }, (duration + delay) * 1000);
+                });
+
+                // Spark Emitter on updated target
+                if(window.particleEngineInstance) {
+                    const rect = this.el.getBoundingClientRect();
+                    const containerRect = document.getElementById('particle-canvas').getBoundingClientRect();
+                    window.particleEngineInstance.spawnBurst(
+                        (rect.left - containerRect.left) + rect.width/2, 
+                        (rect.top - containerRect.top) + rect.height/2
+                    );
+                }
+
+                this.currentValStr = newStr;
+            }
+        }
+
+        // Live Audio Visualizer Simulator
+        class AudioEQSimulator {
+            constructor() {
+                this.bars = document.querySelectorAll('.eq-bar');
+                this.animate();
+            }
+            animate() {
+                setInterval(() => {
+                    this.bars.forEach(bar => {
+                        const height = Math.floor(Math.random() * 12) + 3;
+                        bar.style.height = `${height}px`;
+                    });
+                }, 100); 
             }
         }
 
         class OverlayState {
             constructor() {
                 this.state = { subs: 0, likes: 0, goal: 5000 };
+                this.subsSlot = new SlotMachineOdometer('val-subs');
+                this.likesSlot = new SlotMachineOdometer('val-likes');
                 this.elements = { 
-                    overlayWrapper: document.getElementById('overlay'),
-                    subsVal: document.getElementById('val-subs'), subMod: document.getElementById('mod-subs'),
-                    likesVal: document.getElementById('val-likes'), likeMod: document.getElementById('mod-likes'),
-                    goalText: document.getElementById('val-goal'), goalBar: document.getElementById('goal-bar') 
+                    goalMod: document.getElementById('mod-goal'), 
+                    goalText: document.getElementById('val-goal'), 
+                    goalBar: document.getElementById('goal-bar') 
                 };
             }
-            format(num) { return (num || 0).toLocaleString('en-US'); }
             
-            // FEATURE 2: Addictive, Slow Slot-Machine Engine (0-9 Digits)
-            scrambleNumber(moduleElement, valueElement, targetValue, duration = 1600) {
-                let start = Date.now();
-                let chars = '0123456789';
-                let targetStr = this.format(targetValue);
-                
-                moduleElement.classList.remove('dopamine-strike');
-                void moduleElement.offsetWidth; 
-                moduleElement.classList.add('dopamine-strike');
-                
-                // Activate LED and Global State for Overdrive
-                const led = moduleElement.querySelector('.calc-led');
-                if(led) led.classList.add('active');
-                window.isSlotRolling = true;
-                
-                this.elements.overlayWrapper.style.setProperty('--border-speed', '2s');
-
-                const scrambleInterval = setInterval(() => {
-                    let now = Date.now();
-                    let progress = (now - start) / duration;
-                    
-                    if (progress >= 1) {
-                        clearInterval(scrambleInterval);
-                        valueElement.innerHTML = `${targetStr}<div class="lens-flare"></div>`;
-                        valueElement.classList.add('glitch-strike');
-                        
-                        // Clean up
-                        setTimeout(() => valueElement.classList.remove('glitch-strike'), 400);
-                        if(led) led.classList.remove('active');
-                        window.isSlotRolling = false;
-                        this.elements.overlayWrapper.style.setProperty('--border-speed', '12s'); 
-                        return;
-                    }
-
-                    // Strict Left-to-Right slow lock-in logic
-                    let currentStr = '';
-                    for (let i = 0; i < targetStr.length; i++) {
-                        if (targetStr[i] === ',') {
-                            currentStr += ',';
-                        } else if (progress > (i / targetStr.length)) {
-                            currentStr += targetStr[i]; 
-                        } else {
-                            currentStr += chars[Math.floor(Math.random() * chars.length)]; 
-                        }
-                    }
-                    valueElement.innerHTML = `${currentStr}<div class="lens-flare"></div>`;
-                }, 80); // 80ms tick rate makes it visible, premium, and suspenseful
+            triggerSubGoalAnimation() {
+                this.elements.goalMod.classList.remove('goal-flash');
+                void this.elements.goalMod.offsetWidth; 
+                this.elements.goalMod.classList.add('goal-flash');
+                setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 800);
             }
 
             updateData(newSubs, newLikes, newGoal) {
                 if (newGoal) this.state.goal = newGoal;
 
+                let subChanged = false;
                 if (newSubs !== this.state.subs) { 
-                    this.scrambleNumber(this.elements.subMod, this.elements.subsVal, newSubs);
+                    if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
+                    this.subsSlot.update(newSubs);
                     this.state.subs = newSubs; 
                 }
                 if (newLikes !== this.state.likes) { 
-                    this.scrambleNumber(this.elements.likeMod, this.elements.likesVal, newLikes);
+                    this.likesSlot.update(newLikes);
                     this.state.likes = newLikes; 
                 }
                 
-                // Sub goal text is kept pure and un-scrambled for clarity
                 let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
-                this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
+                this.elements.goalText.innerText = `${this.state.subs.toLocaleString()} / ${this.state.goal.toLocaleString()}`;
                 this.elements.goalBar.style.width = `${percentage}%`;
+
+                if (subChanged) this.triggerSubGoalAnimation();
             }
         }
 
@@ -532,16 +554,13 @@
             constructor() {
                 this.element = document.getElementById('ticker-text'); 
                 this.container = this.element.parentElement;
-                this.queue = ["SYSTEM ONLINE • AWAITING DATA..."];
+                this.queue = ["WELCOME TO THE STREAM • DROP A LIKE"];
                 this.currentIndex = 0; 
                 this.pos = this.container.offsetWidth; 
-                this.speed = 1.2; 
+                this.speed = 0.7; 
                 this.animate();
             }
-            setMessages(messageString) {
-                const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
-                if(parts.length > 0) this.queue = parts;
-            }
+            pushAlert(msg) { this.queue.splice(this.currentIndex + 1, 0, msg); }
             animate() {
                 this.pos -= this.speed;
                 if (this.pos < -this.element.offsetWidth - 50) {
@@ -557,8 +576,7 @@
         class CinematicSweepController {
             constructor(particleEngine) {
                 this.scene = document.getElementById('scene-wrapper'); 
-                this.logoSweeper = document.getElementById('logo-sweeper');
-                this.shockwave = document.getElementById('shockwave');
+                this.logo = document.getElementById('logo-sweeper');
                 this.particleEngine = particleEngine;
                 this.easeInOutExpo = (t) => t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
                 this.runCycle();
@@ -567,7 +585,9 @@
             
             tweenSweep(startPct, endPct, duration) {
                 return new Promise(resolve => {
-                    let startTime = null; this.particleEngine.setSweeping(true, startPct);
+                    let startTime = null; 
+                    this.particleEngine.setSweeping(true, startPct);
+                    this.logo.classList.remove('is-resting'); // Disable float during sweep
                     
                     const update = (currentTime) => {
                         if (!startTime) startTime = currentTime;
@@ -576,22 +596,17 @@
                         
                         this.scene.style.setProperty('--sweep-progress', `${currentPct}%`);
                         this.particleEngine.setSweeping(true, currentPct);
-
-                        // FEATURE 1: Logo physical rolling sync (rotates as it sweeps, stops when stable)
-                        // 720 degrees (2 full spins) during the sweep.
-                        let rotation = startPct === 0 ? (progress * 720) : ((1 - progress) * 720);
-                        this.logoSweeper.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+                        
+                        // LOGO ROTATION TIED DIRECTLY TO SWEEP PROGRESS
+                        const rotDegrees = (currentPct / 100) * 1080; 
+                        document.documentElement.style.setProperty('--logo-rot', `${rotDegrees}deg`);
 
                         if (progress < 1) requestAnimationFrame(update); else {
                             this.scene.style.setProperty('--sweep-progress', `${endPct}%`);
-                            this.particleEngine.setSweeping(false, endPct);
+                            this.particleEngine.setSweeping(false, endPct); 
                             
-                            // FEATURE 10: Trigger shockwave when fully opened
-                            if(endPct === 100) {
-                                this.shockwave.classList.remove('fire');
-                                void this.shockwave.offsetWidth;
-                                this.shockwave.classList.add('fire');
-                            }
+                            // Re-enable floating idle animation if fully revealed
+                            if(endPct === 100) this.logo.classList.add('is-resting');
                             
                             resolve();
                         }
@@ -603,81 +618,35 @@
             async runCycle() {
                 await this.sleep(1000);
                 while(true) {
-                    await this.tweenSweep(0, 100, 2500); 
-                    await this.sleep(15000);
-                    await this.tweenSweep(100, 0, 2500); 
-                    await this.sleep(2000); 
+                    await this.tweenSweep(0, 100, 2200); 
+                    await this.sleep(25000); 
+                    await this.tweenSweep(100, 0, 2200); 
+                    await this.sleep(3000); 
                 }
             }
         }
 
-        class MultiStreamerLiveEngine {
+        class LiveDemoEngine {
             constructor(state, ticker) {
-                this.state = state;
-                this.ticker = ticker;
-                const urlParams = new URLSearchParams(window.location.search);
-                this.username = urlParams.get('user') || '';
-
-                if (!this.username) {
-                    this.ticker.setMessages("DEMO MODE ACTIVE • ADD ?user=name TO URL");
-                    this.runDemoMode();
-                    return;
-                }
-
-                this.pollData();
-                setInterval(() => this.pollData(), 10000); // Actual Server Check
-
-                // FEATURE 3: Endless Dopamine Loop - Triggers the slot machine explicitly every 2.5s for Subs/Likes
-                setInterval(() => {
-                    if(this.state.state.subs > 0) {
-                        this.state.scrambleNumber(this.state.elements.subMod, this.state.elements.subsVal, this.state.state.subs, 1600);
-                    }
-                    if(this.state.state.likes > 0) {
-                        this.state.scrambleNumber(this.state.elements.likeMod, this.state.elements.likesVal, this.state.state.likes, 1600);
-                    }
-                }, 2500); // 1.6s rolling + 0.9s locked = highly addictive pacing
+                this.state = state; this.ticker = ticker;
+                this.runLiveSimulation();
             }
             
-            runDemoMode() {
-                let s = 1200; let l = 450;
-                this.state.updateData(s, l, 5000);
-                setInterval(() => {
-                    if(Math.random() > 0.3) s += Math.floor(Math.random() * 5) + 1;
-                    if(Math.random() > 0.1) l += Math.floor(Math.random() * 12) + 1;
-                    // Goal update omitted intentionally; handled by state update seamlessly
-                }, 8000); // Real data increments
+            runLiveSimulation() {
+                let s = 4280; let l = 950;
+                this.state.updateData(s, l, 5000); 
                 
-                // Start the 2.5s continuous slot loop
+                // Triggers exactly every 1.5s for the hyper-live feel
                 setInterval(() => {
-                    this.state.scrambleNumber(this.state.elements.subMod, this.state.elements.subsVal, s, 1600);
-                    this.state.scrambleNumber(this.state.elements.likeMod, this.state.elements.likesVal, l, 1600);
-                }, 2500); 
-            }
-
-            async pollData() {
-                try {
-                    const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
-                    if (!res.ok) return;
-                    const data = await res.json();
-                    
-                    // Note: Update data handles the actual slot machine trigger if numbers differ. 
-                    // But the continuous loop above will re-trigger it anyway for the "fake live" feel.
-                    this.state.state.goal = data.sub_goal; // silent update
-                    this.state.state.subs = data.subs;
-                    this.state.state.likes = data.likes;
-                    
-                    if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
-
-                    if (data.avatar) {
-                        const logoEl = document.getElementById('brand-logo');
-                        if (logoEl.src !== data.avatar) {
-                            logoEl.src = data.avatar;
-                            logoEl.style.display = 'block';
-                        }
+                    let updated = false;
+                    if(Math.random() > 0.25) { l += Math.floor(Math.random() * 5) + 1; updated = true; }
+                    if(Math.random() > 0.55) { 
+                        let newSubs = Math.floor(Math.random() * 2) + 1;
+                        s += newSubs; updated = true; 
+                        if(newSubs > 1) this.ticker.pushAlert("!!! SUB BOMB ALERT !!!");
                     }
-                } catch(e) {
-                    console.error("Failed to poll streamer stats:", e);
-                }
+                    if (updated) this.state.updateData(s, l);
+                }, 2500); 
             }
         }
 
@@ -685,9 +654,9 @@
             const particles = new ParticleEngine('particle-canvas');
             const state = new OverlayState();
             const ticker = new TickerEngine();
-            new PlasmaEngine('plasma-canvas');
+            new AudioEQSimulator();
             new CinematicSweepController(particles);
-            new MultiStreamerLiveEngine(state, ticker);
+            new LiveDemoEngine(state, ticker); 
         });
     </script>
 </body>
