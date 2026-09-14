@@ -263,21 +263,25 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
     return {"status": "success", "message": "Settings persisted to Supabase."}
 
 # ==========================================
-# 6. STATIC FILES
+# 6. STATIC FILES (Vercel Fix)
 # ==========================================
+import os
 
-
-# Get the absolute path to the directory where main.py lives
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
-@app.get("/dashboard")
-async def serve_dashboard():
-    return FileResponse(os.path.join(PUBLIC_DIR, "dashboard.html"))
+# Only mount the folder if it exists (i.e., running locally on your computer).
+# On Vercel, their Edge Network serves these files automatically, not Python.
+if os.path.exists(PUBLIC_DIR):
+    @app.get("/dashboard")
+    async def serve_dashboard():
+        return FileResponse(os.path.join(PUBLIC_DIR, "dashboard.html"))
 
-@app.get("/overlay")
-async def serve_overlay():
-    return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
+    @app.get("/overlay")
+    async def serve_overlay():
+        return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
+
+    app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
 
 # Mount public folder for static assets
 app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
