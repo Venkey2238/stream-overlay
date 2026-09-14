@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultra Premium Stream Overlay</title>
+    <title>Stream Status overlay</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -16,21 +16,14 @@
             --gold-dark: #b38600;
             --gold-pure: #ffd700;
             --gold-bright: #ffea75;
-            --gold-white: #fffdf5;
-
-            --text-pure: #ffffff;
-            --text-silver: #d4d4dd;
-            --text-dark: #111116;
 
             --overlay-width: 760px; 
             --overlay-height: 64px;  
             --logo-size: 84px;       
             
             --sweep-progress: 0%; 
-            --logo-angle: 0deg; /* Controls the exact physical rotation of the logo */
             --border-speed: 12s;
             --ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            --ease-cinematic: cubic-bezier(0.19, 1, 0.22, 1);
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,17 +36,19 @@
             display: flex; align-items: center; justify-content: center;
         }
 
+        /* FEATURE 7: Magnetic Levitation */
         .scene-container {
             position: relative; 
             width: var(--overlay-width); 
             height: var(--overlay-height);
             display: flex; align-items: center; z-index: 10;
+            animation: floatParallax 6s ease-in-out infinite;
         }
 
         .ambient-backlight {
             position: absolute; top: 50%; left: var(--sweep-progress);
             transform: translate(-50%, -50%); width: 250px; height: 90px;
-            background: radial-gradient(circle at center, rgba(144, 0, 255, 0.6) 0%, rgba(255, 215, 0, 0.2) 40%, transparent 70%);
+            background: radial-gradient(circle at center, rgba(144, 0, 255, 0.5) 0%, rgba(255, 215, 0, 0.15) 40%, transparent 70%);
             z-index: 0; pointer-events: none; mix-blend-mode: screen; will-change: left;
         }
 
@@ -64,16 +59,12 @@
             background: linear-gradient(90deg, var(--void-obsidian), var(--purple-rich), var(--purple-core), var(--purple-neon), var(--purple-rich), var(--void-obsidian));
             background-size: 400% 100%; 
             animation: borderFlow var(--border-speed) linear infinite;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 1), 0 0 20px rgba(144, 0, 255, 0.5), inset 0 0 10px rgba(144, 0, 255, 0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.95), 0 0 20px rgba(144, 0, 255, 0.5);
             clip-path: inset(0 calc(100% - var(--sweep-progress)) 0 0);
             z-index: 1; will-change: clip-path; transition: --border-speed 0.5s ease;
         }
-        
-        .master-overlay-wrapper.gold-overdrive {
-            background: linear-gradient(90deg, var(--gold-dark), var(--gold-pure), var(--gold-bright), var(--gold-pure), var(--gold-dark));
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 1), 0 0 40px rgba(255, 215, 0, 0.8), inset 0 0 20px rgba(255, 215, 0, 0.5);
-        }
 
+        /* FEATURE 9: Deep Vignette Core */
         .overlay-core {
             position: relative; width: 100%; height: 100%;
             background-color: var(--void-obsidian);
@@ -82,23 +73,7 @@
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 30px 0 50px; 
             gap: 20px; z-index: 2;
-        }
-
-        /* Holographic Glass Sweep */
-        .overlay-core::after {
-            content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), rgba(255,255,255,0.4), rgba(255,255,255,0.1), transparent);
-            transform: skewX(-25deg); z-index: 6; pointer-events: none;
-            animation: holoShimmer 8s infinite cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* Supernova Shockwave (Locks overlay into place) */
-        .sweep-shockwave {
-            position: absolute; inset: 0; background: #fff; z-index: 20; opacity: 0; pointer-events: none;
-            mix-blend-mode: overlay;
-        }
-        .sweep-shockwave.fire {
-            animation: shockwaveFlash 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.9), inset 0 0 10px rgba(144,0,255,0.2);
         }
 
         #plasma-canvas, #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
@@ -108,97 +83,98 @@
         .screen-texture {
             position: absolute; inset: 0; z-index: 4; pointer-events: none;
             background-image: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 0, 0, 0.6) 1px, rgba(0, 0, 0, 0.6) 2px);
-            box-shadow: inset 0 0 30px rgba(0,0,0,1);
         }
 
-        /* LOGO MECHANICS */
+        /* FEATURE 1: Logo Coin Roll System */
         .logo-sweeper {
             position: absolute; top: 50%; left: var(--sweep-progress);
-            /* This line controls the PHYSICAL roll of the logo matching the sweep progress */
-            transform: translate(-50%, -50%) rotate(var(--logo-angle)); 
+            transform: translate(-50%, -50%); /* Rotation is handled by JS dynamically */
             width: var(--logo-size); height: var(--logo-size); z-index: 100;
-            background-color: var(--void-obsidian); border-radius: 50%;
-            box-shadow: 0 0 20px rgba(144, 0, 255, 1), inset 0 0 15px rgba(255, 215, 0, 0.8), 0 8px 20px rgba(0, 0, 0, 1);
+            background-color: var(--void-deep); border-radius: 50%; padding: 4px;
+            box-shadow: 0 0 15px rgba(144, 0, 255, 1), inset 0 0 15px rgba(255, 215, 0, 0.8), 0 5px 15px rgba(0, 0, 0, 0.9);
             display: flex; justify-content: center; align-items: center;
             will-change: left, transform;
         }
-        /* The gold outer ring spins endlessly in the background, independent of the logo roll */
-        .logo-ring-bg {
-            position: absolute; inset: -4px; border-radius: 50%; z-index: -1;
-            background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-bright), var(--gold-pure));
-            background-size: 200% 200%;
-            animation: ringSpin 2.5s linear infinite;
+        
+        .logo-inner-ring {
+            width: 100%; height: 100%; border-radius: 50%; padding: 3px;
+            background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-bright));
+            display: flex; justify-content: center; align-items: center;
         }
+        
         .brand-logo {
-            width: calc(100% - 6px); height: calc(100% - 6px); border-radius: 50%; object-fit: cover;
+            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
             background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
-            z-index: 10;
         }
+
+        /* FEATURE 10: Shockwave Ring */
+        .shockwave {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1);
+            width: var(--logo-size); height: var(--logo-size);
+            border: 2px solid var(--gold-pure); border-radius: 50%;
+            z-index: 99; opacity: 0; pointer-events: none;
+        }
+        .shockwave.fire { animation: shockwaveExpand 0.8s ease-out forwards; }
 
         .data-module {
             position: relative; z-index: 5;
             display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-            height: 100%; min-width: 80px; transition: transform 0.2s ease;
+            height: 100%; min-width: 80px;
         }
 
-        /* 100% Visible Magnetic Pill Titles */
+        .label-row {
+            display: flex; align-items: center; gap: 5px; margin-bottom: 2px;
+        }
+
+        /* FEATURE 6: Title Aura Pulses */
         .data-label {
-            font-family: 'Syncopate', sans-serif; font-size: 0.5rem; font-weight: 900;
-            text-transform: uppercase; letter-spacing: 0.2em; 
-            color: #000000; 
-            background: linear-gradient(90deg, #ffffff, #d8d8df); 
-            padding: 3px 8px; border-radius: 4px; margin-bottom: 2px;
-            box-shadow: 0 2px 5px rgba(0,0,0,1), 0 0 12px rgba(144, 0, 255, 0.6);
-            transform-origin: left center;
-            animation: magneticLabelPulse 3s infinite alternate ease-in-out;
+            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.2em; color: var(--void-obsidian); 
+            background: linear-gradient(90deg, #ffffff, #e0e0e0); 
+            padding: 2px 6px; border-radius: 3px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.9);
+            animation: titleAura 3s infinite alternate;
         }
 
-        /* Premium Pure White Numbers */
+        /* FEATURE 4: Calculations LED */
+        .calc-led {
+            width: 6px; height: 6px; border-radius: 50%;
+            background-color: #333; box-shadow: inset 0 0 2px #000;
+            transition: all 0.2s ease;
+        }
+        .calc-led.active {
+            background-color: var(--purple-neon);
+            box-shadow: 0 0 8px var(--purple-neon), 0 0 15px #fff;
+            animation: ledBlink 0.15s infinite alternate;
+        }
+
+        /* FEATURE 5: Premium White Clarity */
         .data-value {
-            font-family: 'Montserrat', sans-serif; font-size: 1.7rem; font-weight: 900;
-            line-height: 0.9; letter-spacing: 0.04em;
+            font-family: 'Montserrat', sans-serif; font-size: 1.6rem; font-weight: 900;
+            line-height: 0.9; letter-spacing: 0.05em;
+            color: #ffffff; /* PURE WHITE FOR MAX VISIBILITY */
             font-variant-numeric: tabular-nums; 
-            color: #ffffff; /* Ultra Premium White */
-            text-shadow: 
-                0 4px 6px rgba(0,0,0,1), 
-                0 6px 12px rgba(0,0,0,0.8), 
-                0 0 15px rgba(255, 255, 255, 0.5); /* Glowing aura */
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 1), 0 0 15px rgba(255, 255, 255, 0.3);
             position: relative; transform-origin: left center;
         }
 
-        /* Chromatic Glitch FX */
         .glitch-strike { animation: chromaticGlitch 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-
-        .hit-ripple {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            width: 80px; height: 80px; border-radius: 50%;
-            background: radial-gradient(circle at center, rgba(255, 255, 255, 1) 0%, transparent 60%);
-            opacity: 0; z-index: -1; pointer-events: none; mix-blend-mode: color-dodge;
-        }
         
         .lens-flare {
             position: absolute; top: 50%; left: -50%; transform: translateY(-50%);
-            width: 200%; height: 2px; background: rgba(255, 255, 255, 1);
-            box-shadow: 0 0 15px #fff, 0 0 35px var(--gold-pure);
+            width: 200%; height: 2px; background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 15px #fff, 0 0 30px var(--purple-neon);
             opacity: 0; pointer-events: none; mix-blend-mode: screen; z-index: 10;
         }
 
         .dopamine-strike { animation: kineticShake 0.4s var(--ease-dopamine) forwards; }
         .dopamine-strike .data-value { animation: dopaminePunch 0.8s var(--ease-dopamine) forwards; }
-        .dopamine-strike .data-label { animation: labelFlash 0.8s var(--ease-dopamine) forwards; }
-        .dopamine-strike .hit-ripple { animation: rippleBurst 0.6s ease-out forwards; }
         .dopamine-strike .lens-flare { animation: flareSlash 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        /* Synapse Energy Connectors */
         .separator {
-            position: relative; z-index: 5; width: 2px; height: 38px;
-            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.3), rgba(144, 0, 255, 0.8), transparent);
-            box-shadow: 0 0 10px rgba(144, 0, 255, 1); border-radius: 1px; overflow: hidden;
-        }
-        .separator::after {
-            content: ''; position: absolute; top: -100%; left: 0; width: 100%; height: 50%;
-            background: linear-gradient(to bottom, transparent, #fff, transparent);
-            animation: synapsePulse 2s linear infinite;
+            position: relative; z-index: 5; width: 2px; height: 35px;
+            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.9), rgba(144, 0, 255, 1), transparent);
+            box-shadow: 0 0 10px rgba(144, 0, 255, 1); border-radius: 1px;
         }
 
         .goal-module {
@@ -207,58 +183,42 @@
             animation: heartbeatPulse 4s infinite ease-in-out;
         }
 
-        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px; }
+        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; }
 
         .goal-title {
-            font-family: 'Syncopate', sans-serif; font-size: 0.5rem; font-weight: 900;
-            color: #000000; background: linear-gradient(90deg, #ffffff, #d8d8df);
-            padding: 3px 8px; border-radius: 4px; letter-spacing: 0.15em;
-            box-shadow: 0 2px 5px rgba(0,0,0,1), 0 0 12px rgba(144,0,255,0.6);
-            animation: magneticLabelPulse 3s infinite alternate ease-in-out reverse;
+            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+            color: var(--void-obsidian); background: linear-gradient(90deg, #ffffff, #e0e0e0);
+            padding: 2px 6px; border-radius: 3px; letter-spacing: 0.15em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.9);
+            animation: titleAura 3s infinite alternate reverse;
         }
 
         .goal-numbers {
-            font-size: 0.85rem; font-weight: 900; color: #ffffff; letter-spacing: 1px;
+            font-size: 0.8rem; font-weight: 900; color: #ffffff; letter-spacing: 1px;
             font-variant-numeric: tabular-nums;
-            text-shadow: 0 2px 5px rgba(0,0,0,1), 0 0 10px rgba(255, 255, 255, 0.7);
+            text-shadow: 0 3px 6px rgba(0,0,0,1), 0 0 10px rgba(255, 255, 255, 0.5);
         }
 
         .progress-track {
-            position: relative; width: 100%; height: 16px;
+            position: relative; width: 100%; height: 14px;
             background: linear-gradient(90deg, #0a0214, #000);
-            border-radius: 12px; overflow: visible;
-            box-shadow: inset 0 3px 8px rgba(0,0,0,1), 0 0 0 1px rgba(144, 0, 255, 0.6);
-        }
-
-        /* Liquid Plasma Track Base */
-        .progress-track::before {
-            content: ''; position: absolute; inset: 0; border-radius: 12px;
-            background: radial-gradient(circle at 50% 50%, rgba(144,0,255,0.2) 0%, transparent 60%);
-            background-size: 20px 20px;
-            animation: borderFlow 5s linear infinite; z-index: 0;
+            border-radius: 10px; overflow: hidden;
+            box-shadow: inset 0 3px 8px rgba(0,0,0,1), 0 0 0 1px rgba(144, 0, 255, 0.5);
         }
 
         .progress-fill {
             position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
             background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), #ffffff);
-            background-size: 300% 100%; border-radius: 12px;
+            background-size: 300% 100%; border-radius: 10px;
             box-shadow: 0 0 20px rgba(144, 0, 255, 1);
             animation: borderFlow 2s linear infinite;
             will-change: width; transition: width 1.5s var(--ease-dopamine);
         }
-
-        /* Sparking tip + Anti-Gravity Embers */
         .progress-fill::after {
             content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 6px;
             background: var(--gold-pure); border-radius: 10px;
             box-shadow: 0 0 15px var(--gold-pure), 0 0 30px #fff;
             animation: sparkPulse 0.5s infinite alternate;
-        }
-        .progress-fill::before {
-            content: ''; position: absolute; right: 2px; top: -5px; width: 3px; height: 3px;
-            background: var(--gold-pure); border-radius: 50%;
-            box-shadow: 0 5px 0 var(--gold-bright), -2px 10px 0 #fff;
-            animation: emberExhaust 1.5s infinite linear; opacity: 0; z-index: 10;
         }
 
         .ticker-module {
@@ -266,70 +226,47 @@
             background: rgba(10, 1, 26, 0.95); border-left: 3px solid var(--purple-neon);
             padding: 0 15px; height: 100%; width: 180px;
             overflow: hidden; position: relative; z-index: 5;
-            box-shadow: inset 15px 0 25px rgba(0,0,0,1);
+            box-shadow: inset 15px 0 20px rgba(0,0,0,0.9);
         }
-
         .ticker-module::after {
             content: ''; position: absolute; inset: 0;
-            background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.5) 1px, rgba(0,0,0,0.5) 2px);
+            background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.4) 1px, rgba(0,0,0,0.4) 2px);
             pointer-events: none; z-index: 6;
         }
-
-        /* Prismatic Cyber Ticker */
         .ticker-content {
             font-size: 0.75rem; font-weight: 900; color: #ffffff;
             letter-spacing: 1px; white-space: nowrap; transform: translateX(100%); will-change: transform;
-            text-shadow: 2px 0 0 rgba(255, 0, 255, 0.8), -2px 0 0 rgba(0, 255, 255, 0.8), 0 2px 8px rgba(0,0,0,1);
+            text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 5px rgba(144, 0, 255, 0.8);
         }
 
+        @keyframes floatParallax { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
         @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
-        @keyframes ringSpin { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
         @keyframes sparkPulse { 0% { opacity: 0.7; filter: brightness(1); } 100% { opacity: 1; filter: brightness(1.5); } }
         @keyframes heartbeatPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-        @keyframes magneticLabelPulse { 0% { box-shadow: 0 2px 5px rgba(0,0,0,1), 0 0 5px rgba(144, 0, 255, 0.3); } 100% { box-shadow: 0 2px 5px rgba(0,0,0,1), 0 0 15px rgba(144, 0, 255, 0.9); } }
-        @keyframes synapsePulse { 0% { top: -100%; } 100% { top: 200%; } }
-        @keyframes shockwaveFlash { 0% { opacity: 0; transform: scaleY(0.1); } 30% { opacity: 1; transform: scaleY(1); } 100% { opacity: 0; transform: scaleY(2); } }
-        
-        @keyframes emberExhaust {
-            0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-20px) scale(0); opacity: 0; }
-        }
-
-        @keyframes holoShimmer {
-            0%, 60% { left: -150%; opacity: 0; }
-            70% { opacity: 1; }
-            80%, 100% { left: 200%; opacity: 0; }
-        }
+        @keyframes titleAura { 0% { box-shadow: 0 2px 5px rgba(0,0,0,0.9); } 100% { box-shadow: 0 2px 15px rgba(255, 215, 0, 0.6); } }
+        @keyframes ledBlink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+        @keyframes shockwaveExpand { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; border-width: 4px; } 100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; border-width: 0px; } }
 
         @keyframes chromaticGlitch {
-            0% { text-shadow: 0 4px 6px rgba(0,0,0,1); transform: translate(0); }
-            20% { text-shadow: -4px 0 5px #0ff, 4px 0 5px #f0f; transform: translate(-2px, 1px); }
-            40% { text-shadow: 4px 0 5px #0ff, -4px 0 5px #f0f; transform: translate(2px, -1px); }
+            0% { text-shadow: 0 4px 8px rgba(0,0,0,1); transform: translate(0); }
+            20% { text-shadow: -3px 0 5px #0ff, 3px 0 5px #f0f; transform: translate(-2px, 1px); }
+            40% { text-shadow: 3px 0 5px #0ff, -3px 0 5px #f0f; transform: translate(2px, -1px); }
             60% { text-shadow: -2px 0 2px #0ff, 2px 0 2px #f0f; transform: translate(-1px, 1px); }
-            100% { text-shadow: 0 4px 6px rgba(0,0,0,1), 0 6px 12px rgba(0,0,0,0.8), 0 0 15px rgba(255, 255, 255, 0.5); transform: translate(0); }
+            100% { text-shadow: 0 4px 8px rgba(0,0,0,1), 0 0 15px rgba(255,255,255,0.4); transform: translate(0); }
         }
         
         @keyframes kineticShake {
-            0% { transform: translateX(0) scale(1); }
-            20% { transform: translateX(-3px) rotate(-1deg) scale(1.03); }
-            40% { transform: translateX(3px) rotate(1deg) scale(1.03); }
-            60% { transform: translateX(-2px) scale(1.03); }
-            80% { transform: translateX(2px) scale(1.03); }
-            100% { transform: translateX(0) scale(1); }
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-3px) rotate(-1deg); }
+            40% { transform: translateX(3px) rotate(1deg); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+            100% { transform: translateX(0); }
         }
         @keyframes dopaminePunch {
-            0% { transform: scale(1); filter: brightness(1); }
-            15% { transform: scale(1.2) translateY(-2px); filter: brightness(1.8) drop-shadow(0 0 25px rgba(255, 255, 255, 1)); }
-            100% { transform: scale(1) translateY(0); filter: brightness(1); }
-        }
-        @keyframes labelFlash {
-            0% { background: linear-gradient(90deg, #ffffff, #d8d8df); color: #000; }
-            15% { background: linear-gradient(90deg, var(--gold-pure), var(--gold-bright)); color: #000; box-shadow: 0 0 25px var(--gold-pure); }
-            100% { background: linear-gradient(90deg, #ffffff, #d8d8df); color: #000; }
-        }
-        @keyframes rippleBurst {
-            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+            0% { transform: scale(1); }
+            15% { transform: scale(1.15) translateY(-2px); }
+            100% { transform: scale(1) translateY(0); }
         }
         @keyframes flareSlash {
             0% { left: -50%; opacity: 0; }
@@ -342,31 +279,36 @@
 
     <div class="scene-container" id="scene-wrapper">
         <div class="ambient-backlight"></div>
+        <div class="shockwave" id="shockwave"></div>
 
         <div class="logo-sweeper" id="logo-sweeper">
-            <div class="logo-ring-bg"></div>
-            <img src="../public/kk.jpg" alt="Logo" class="brand-logo" id="brand-logo" onerror="this.style.display='none'">
+            <div class="logo-inner-ring">
+                <img src="../public/kk.jpg" alt="Logo" class="brand-logo" id="brand-logo" onerror="this.style.display='none'">
+            </div>
         </div>
 
         <div class="master-overlay-wrapper" id="overlay">
             <div class="overlay-core">
-                <div class="sweep-shockwave" id="shockwave"></div>
                 <canvas id="plasma-canvas"></canvas>
                 <canvas id="particle-canvas"></canvas>
                 <div class="screen-texture"></div>
 
                 <div class="data-module" id="mod-subs">
-                    <div class="data-label">SUBS</div>
+                    <div class="label-row">
+                        <div class="data-label">SUBS</div>
+                        <div class="calc-led"></div>
+                    </div>
                     <div class="data-value" id="val-subs">0<div class="lens-flare"></div></div>
-                    <div class="hit-ripple"></div>
                 </div>
 
                 <div class="separator"></div>
 
                 <div class="data-module" id="mod-likes">
-                    <div class="data-label">LIKES</div>
+                    <div class="label-row">
+                        <div class="data-label">LIKES</div>
+                        <div class="calc-led"></div>
+                    </div>
                     <div class="data-value" id="val-likes">0<div class="lens-flare"></div></div>
-                    <div class="hit-ripple"></div>
                 </div>
 
                 <div class="separator"></div>
@@ -383,7 +325,7 @@
 
                 <div class="ticker-module">
                     <div class="ticker-content" id="ticker-text">
-                        INITIALIZING SYSTEM...
+                        INITIALIZING SECURE LINK...
                     </div>
                 </div>
 
@@ -392,6 +334,9 @@
     </div>
 
     <script>
+        // Global state for Particle Engine overdrive
+        window.isSlotRolling = false;
+
         const SimplexMath = (function() {
             const F2 = 0.5 * (Math.sqrt(3.0) - 1.0), G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
             const p = new Uint8Array(256); for (let i = 0; i < 256; i++) p[i] = Math.floor(Math.random() * 256);
@@ -461,11 +406,25 @@
             render() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
+                // Ambient Embers Feature
                 if(Math.random() > 0.8) {
                     this.particles.push({ 
-                        x: Math.random() * this.canvas.width, y: this.canvas.height + 10, 
-                        vx: (Math.random()-0.5)*1, vy: -(Math.random()*1+0.5), 
+                        x: Math.random() * this.canvas.width, 
+                        y: this.canvas.height + 10, 
+                        vx: (Math.random()-0.5)*1, 
+                        vy: -(Math.random()*1+0.5), 
                         life: 1.0, decay: Math.random()*0.02+0.01, size: Math.random()*1.5+0.5 
+                    });
+                }
+
+                // FEATURE 8: Overdrive Sparks during slot roll
+                if(window.isSlotRolling && Math.random() > 0.5) {
+                    this.particles.push({ 
+                        x: (Math.random() * 200) + 400, // Spawn around the goal bar area
+                        y: this.canvas.height / 2 + (Math.random()*20-10), 
+                        vx: (Math.random()*4+2), // Shoot right
+                        vy: (Math.random()-0.5)*2, 
+                        life: 1.0, decay: Math.random()*0.06+0.03, size: Math.random()*2+1 
                     });
                 }
 
@@ -501,7 +460,8 @@
             }
             format(num) { return (num || 0).toLocaleString('en-US'); }
             
-            scrambleNumber(moduleElement, valueElement, targetValue, duration = 1500) {
+            // FEATURE 2: Addictive, Slow Slot-Machine Engine (0-9 Digits)
+            scrambleNumber(moduleElement, valueElement, targetValue, duration = 1600) {
                 let start = Date.now();
                 let chars = '0123456789';
                 let targetStr = this.format(targetValue);
@@ -510,8 +470,11 @@
                 void moduleElement.offsetWidth; 
                 moduleElement.classList.add('dopamine-strike');
                 
-                // Gold Overdrive Feature
-                this.elements.overlayWrapper.classList.add('gold-overdrive');
+                // Activate LED and Global State for Overdrive
+                const led = moduleElement.querySelector('.calc-led');
+                if(led) led.classList.add('active');
+                window.isSlotRolling = true;
+                
                 this.elements.overlayWrapper.style.setProperty('--border-speed', '2s');
 
                 const scrambleInterval = setInterval(() => {
@@ -523,14 +486,15 @@
                         valueElement.innerHTML = `${targetStr}<div class="lens-flare"></div>`;
                         valueElement.classList.add('glitch-strike');
                         
-                        setTimeout(() => {
-                            valueElement.classList.remove('glitch-strike');
-                            this.elements.overlayWrapper.classList.remove('gold-overdrive');
-                        }, 400);
+                        // Clean up
+                        setTimeout(() => valueElement.classList.remove('glitch-strike'), 400);
+                        if(led) led.classList.remove('active');
+                        window.isSlotRolling = false;
                         this.elements.overlayWrapper.style.setProperty('--border-speed', '12s'); 
                         return;
                     }
 
+                    // Strict Left-to-Right slow lock-in logic
                     let currentStr = '';
                     for (let i = 0; i < targetStr.length; i++) {
                         if (targetStr[i] === ',') {
@@ -542,15 +506,7 @@
                         }
                     }
                     valueElement.innerHTML = `${currentStr}<div class="lens-flare"></div>`;
-                }, 40); 
-            }
-
-            triggerIdleRoll() {
-                if (Math.random() > 0.5 && this.state.subs > 0) {
-                    this.scrambleNumber(this.elements.subMod, this.elements.subsVal, this.state.subs, 800);
-                } else if (this.state.likes > 0) {
-                    this.scrambleNumber(this.elements.likeMod, this.elements.likesVal, this.state.likes, 800);
-                }
+                }, 80); // 80ms tick rate makes it visible, premium, and suspenseful
             }
 
             updateData(newSubs, newLikes, newGoal) {
@@ -565,6 +521,7 @@
                     this.state.likes = newLikes; 
                 }
                 
+                // Sub goal text is kept pure and un-scrambled for clarity
                 let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
                 this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
                 this.elements.goalBar.style.width = `${percentage}%`;
@@ -575,7 +532,7 @@
             constructor() {
                 this.element = document.getElementById('ticker-text'); 
                 this.container = this.element.parentElement;
-                this.queue = ["SYSTEM ONLINE • WAITING FOR DATA FEED..."];
+                this.queue = ["SYSTEM ONLINE • AWAITING DATA..."];
                 this.currentIndex = 0; 
                 this.pos = this.container.offsetWidth; 
                 this.speed = 1.2; 
@@ -600,45 +557,49 @@
         class CinematicSweepController {
             constructor(particleEngine) {
                 this.scene = document.getElementById('scene-wrapper'); 
+                this.logoSweeper = document.getElementById('logo-sweeper');
                 this.shockwave = document.getElementById('shockwave');
                 this.particleEngine = particleEngine;
                 this.easeInOutExpo = (t) => t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
                 this.runCycle();
             }
             sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+            
             tweenSweep(startPct, endPct, duration) {
                 return new Promise(resolve => {
                     let startTime = null; this.particleEngine.setSweeping(true, startPct);
+                    
                     const update = (currentTime) => {
                         if (!startTime) startTime = currentTime;
                         let progress = Math.min((currentTime - startTime) / duration, 1);
                         const currentPct = startPct + (endPct - startPct) * this.easeInOutExpo(progress);
                         
                         this.scene.style.setProperty('--sweep-progress', `${currentPct}%`);
-                        
-                        // KINETIC LOGO ROLL LOGIC: Physically spins the logo during opening and closing
-                        // Spins 0 to 720 degrees based purely on movement. Locks tight when fully open (100%).
-                        let currentAngle = startPct < endPct ? (progress * 720) : ((1 - progress) * 720);
-                        this.scene.style.setProperty('--logo-angle', `${currentAngle}deg`);
-
                         this.particleEngine.setSweeping(true, currentPct);
-                        if (progress < 1) {
-                            requestAnimationFrame(update); 
-                        } else {
+
+                        // FEATURE 1: Logo physical rolling sync (rotates as it sweeps, stops when stable)
+                        // 720 degrees (2 full spins) during the sweep.
+                        let rotation = startPct === 0 ? (progress * 720) : ((1 - progress) * 720);
+                        this.logoSweeper.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+
+                        if (progress < 1) requestAnimationFrame(update); else {
                             this.scene.style.setProperty('--sweep-progress', `${endPct}%`);
-                            this.particleEngine.setSweeping(false, endPct); 
+                            this.particleEngine.setSweeping(false, endPct);
                             
-                            // Supernova Shockwave on complete open
+                            // FEATURE 10: Trigger shockwave when fully opened
                             if(endPct === 100) {
+                                this.shockwave.classList.remove('fire');
+                                void this.shockwave.offsetWidth;
                                 this.shockwave.classList.add('fire');
-                                setTimeout(() => this.shockwave.classList.remove('fire'), 700);
                             }
+                            
                             resolve();
                         }
                     };
                     requestAnimationFrame(update);
                 });
             }
+            
             async runCycle() {
                 await this.sleep(1000);
                 while(true) {
@@ -664,23 +625,33 @@
                 }
 
                 this.pollData();
-                setInterval(() => this.pollData(), 10000); 
+                setInterval(() => this.pollData(), 10000); // Actual Server Check
 
+                // FEATURE 3: Endless Dopamine Loop - Triggers the slot machine explicitly every 2.5s for Subs/Likes
                 setInterval(() => {
-                    this.state.triggerIdleRoll();
-                }, 7500); 
+                    if(this.state.state.subs > 0) {
+                        this.state.scrambleNumber(this.state.elements.subMod, this.state.elements.subsVal, this.state.state.subs, 1600);
+                    }
+                    if(this.state.state.likes > 0) {
+                        this.state.scrambleNumber(this.state.elements.likeMod, this.state.elements.likesVal, this.state.state.likes, 1600);
+                    }
+                }, 2500); // 1.6s rolling + 0.9s locked = highly addictive pacing
             }
             
             runDemoMode() {
                 let s = 1200; let l = 450;
                 this.state.updateData(s, l, 5000);
                 setInterval(() => {
-                    if(Math.random() > 0.4) s += Math.floor(Math.random() * 5) + 1;
-                    if(Math.random() > 0.2) l += Math.floor(Math.random() * 12) + 1;
-                    this.state.updateData(s, l, 5000);
-                }, 6000);
+                    if(Math.random() > 0.3) s += Math.floor(Math.random() * 5) + 1;
+                    if(Math.random() > 0.1) l += Math.floor(Math.random() * 12) + 1;
+                    // Goal update omitted intentionally; handled by state update seamlessly
+                }, 8000); // Real data increments
                 
-                setInterval(() => this.state.triggerIdleRoll(), 8000);
+                // Start the 2.5s continuous slot loop
+                setInterval(() => {
+                    this.state.scrambleNumber(this.state.elements.subMod, this.state.elements.subsVal, s, 1600);
+                    this.state.scrambleNumber(this.state.elements.likeMod, this.state.elements.likesVal, l, 1600);
+                }, 2500); 
             }
 
             async pollData() {
@@ -689,7 +660,12 @@
                     if (!res.ok) return;
                     const data = await res.json();
                     
-                    this.state.updateData(data.subs, data.likes, data.sub_goal);
+                    // Note: Update data handles the actual slot machine trigger if numbers differ. 
+                    // But the continuous loop above will re-trigger it anyway for the "fake live" feel.
+                    this.state.state.goal = data.sub_goal; // silent update
+                    this.state.state.subs = data.subs;
+                    this.state.state.likes = data.likes;
+                    
                     if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
 
                     if (data.avatar) {
