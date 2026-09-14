@@ -64,7 +64,7 @@ oauth.register(
 class SettingsPayload(BaseModel):
     sub_goal: int
     video_id: Optional[str] = ""
-    ticker_text: str
+    ticker_text: Optional[str] = ""
 
 # ==========================================
 # 3. TOKEN MANAGEMENT
