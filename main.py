@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from fastapi import Response
 
 load_dotenv()
 
@@ -181,10 +182,12 @@ async def auth_callback(request: Request):
 # ==========================================
 
 @app.get("/api/streamer/{handle}")
-async def get_live_overlay_data(handle: str):
+async def get_live_overlay_data(handle: str, response: Response):
+    # STRICTLY block OBS, browsers, and Vercel from caching this API response
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    
     user = handle.strip().lower()
     now = time.time()
-
     # Quota Protection: Return cached data if requested within the TTL window
     if user in CACHE and CACHE[user]["expires_at"] > now:
         return CACHE[user]["data"]
