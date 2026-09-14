@@ -266,12 +266,18 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
 # 6. STATIC FILES
 # ==========================================
 
+
+# Get the absolute path to the directory where main.py lives
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+
 @app.get("/dashboard")
 async def serve_dashboard():
-    return FileResponse("public/dashboard.html")
+    return FileResponse(os.path.join(PUBLIC_DIR, "dashboard.html"))
 
 @app.get("/overlay")
 async def serve_overlay():
-    return FileResponse("public/overlay.html")
+    return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
 
-app.mount("/", StaticFiles(directory="public", html=True), name="public")
+# Mount public folder for static assets
+app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
