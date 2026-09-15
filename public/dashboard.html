@@ -136,10 +136,7 @@
 
         .btn-google:hover::before { transform: translateX(100%); }
 
-        .google-icon {
-            width: 22px;
-            height: 22px;
-        }
+        .google-icon { width: 22px; height: 22px; }
 
         /* LIVE CONNECTED PROFILE CARD */
         .profile-card {
@@ -182,84 +179,54 @@
         }
 
         .obs-dock-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 8px;
         }
 
         .dock-label {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            font-weight: 800;
-            color: var(--text-muted);
+            font-size: 0.65rem; text-transform: uppercase;
+            letter-spacing: 1.5px; font-weight: 800; color: var(--text-muted);
         }
 
         .copy-btn {
-            background: transparent;
-            border: none;
-            color: var(--gold-pure);
-            font-size: 0.7rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            cursor: pointer;
-            letter-spacing: 1px;
+            background: transparent; border: none; color: var(--gold-pure);
+            font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+            cursor: pointer; letter-spacing: 1px;
         }
 
         .copy-btn:hover { color: #fff; }
 
         .obs-url {
-            font-family: monospace;
-            font-size: 0.8rem;
-            color: var(--status-green);
-            word-break: break-all;
+            font-family: monospace; font-size: 0.8rem;
+            color: var(--status-green); word-break: break-all;
         }
 
         /* FORM CONTROLS */
         .field { margin-bottom: 16px; }
         .field-label {
-            font-size: 0.65rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-            display: block;
+            font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--text-muted);
+            margin-bottom: 6px; display: block;
         }
 
         input, textarea {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 0.85rem;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1); color: #ffffff;
+            padding: 12px 14px; border-radius: 8px;
+            font-family: 'Montserrat', sans-serif; font-size: 0.85rem;
+            outline: none; transition: border-color 0.2s;
         }
 
         input:focus, textarea:focus {
-            border-color: var(--purple-neon);
-            box-shadow: 0 0 10px rgba(144, 0, 255, 0.3);
+            border-color: var(--purple-neon); box-shadow: 0 0 10px rgba(144, 0, 255, 0.3);
         }
 
         .btn-push {
-            width: 100%;
-            padding: 14px;
-            border-radius: 10px;
-            border: none;
+            width: 100%; padding: 14px; border-radius: 10px; border: none;
             background: linear-gradient(90deg, var(--purple-deep), var(--purple-neon));
-            color: #fff;
-            font-weight: 800;
-            font-size: 0.85rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(144, 0, 255, 0.35);
-            transition: all 0.2s ease;
+            color: #fff; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px;
+            text-transform: uppercase; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(144, 0, 255, 0.35); transition: all 0.2s ease;
         }
 
         .btn-push:hover { filter: brightness(1.2); transform: translateY(-1px); }
@@ -287,7 +254,7 @@
             <span style="font-size: 0.7rem; color: var(--text-muted);">Instant zero-key verification via official Google API</span>
         </div>
 
-        <!-- CONNECTED PROFILE (Hidden until authenticated) -->
+        <!-- CONNECTED PROFILE -->
         <div class="profile-card" id="profile-box" style="display: none;">
             <img src="" alt="Avatar" class="avatar" id="creator-avatar">
             <div class="profile-meta">
@@ -323,7 +290,7 @@
             <textarea id="ticker_text" rows="2">WELCOME TO THE STREAM, DROP A LIKE, SUBSCRIBE FOR UPDATES</textarea>
         </div>
 
-        <button class="btn-push" onclick="pushUpdates()">Sync Stream Overlay</button>
+        <button class="btn-push" id="sync-btn" onclick="pushUpdates()">Sync Stream Overlay</button>
     </div>
 
     <script>
@@ -342,6 +309,10 @@
                         document.getElementById('creator-name').innerText = data.title;
                         document.getElementById('creator-subs').innerText = data.subs.toLocaleString();
                         document.getElementById('creator-avatar').src = data.avatar;
+                        
+                        document.getElementById('sub_goal').value = data.sub_goal || 5000;
+                        document.getElementById('ticker_text').value = data.ticker_text || "";
+                        if(data.video_id) document.getElementById('stream_url').value = `https://youtube.com/watch?v=${data.video_id}`;
 
                         const overlayUrl = `${window.location.origin}/overlay?user=${handle}`;
                         document.getElementById('obs-url').innerText = overlayUrl;
@@ -356,8 +327,49 @@
             alert("Copied OBS Browser Source URL!");
         }
 
-        function pushUpdates() {
-            alert("Settings synchronized to your live overlay.");
+        // CRITICAL FIX: This now actually sends your data to the Python backend!
+        async function pushUpdates() {
+            if (!handle) return alert("You must sign in first.");
+            
+            const btn = document.getElementById('sync-btn');
+            btn.innerText = "SYNCING...";
+            
+            let videoId = "";
+            const streamUrl = document.getElementById('stream_url').value;
+            if (streamUrl.includes("v=")) {
+                videoId = streamUrl.split("v=")[1].split("&")[0];
+            } else if (streamUrl.includes("youtu.be/")) {
+                videoId = streamUrl.split("youtu.be/")[1].split("?")[0];
+            }
+
+            const payload = {
+                sub_goal: parseInt(document.getElementById('sub_goal').value) || 5000,
+                video_id: videoId,
+                ticker_text: document.getElementById('ticker_text').value
+            };
+
+            try {
+                const res = await fetch(`/api/streamer/${handle}/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    btn.innerText = "SUCCESS! OVERLAY UPDATED";
+                    btn.style.background = "linear-gradient(90deg, #00b09b, #96c93d)";
+                    setTimeout(() => {
+                        btn.innerText = "Sync Stream Overlay";
+                        btn.style.background = "";
+                    }, 2500);
+                } else {
+                    alert("Failed to save settings. Check Vercel logs.");
+                    btn.innerText = "Sync Stream Overlay";
+                }
+            } catch (err) {
+                console.error(err);
+                btn.innerText = "Sync Stream Overlay";
+            }
         }
     </script>
 </body>
