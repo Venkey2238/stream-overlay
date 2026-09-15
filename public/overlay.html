@@ -34,74 +34,47 @@
             --ease-slot: cubic-bezier(0.2, 0.9, 0.1, 1);
         }
 
-        /* ==========================================================================
-           CORE RESET & OBS SAFE ZONE
-           ========================================================================== */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             width: 100vw; height: 100vh;
-            background-color: transparent; /* OBS Transparency */
+            background-color: transparent; 
             font-family: 'Montserrat', sans-serif;
             overflow: hidden; color: white;
             display: flex; align-items: center; justify-content: center;
         }
 
-        /* STRICT OBS SAFE ZONE: Prevents edge-bleed by containing drop-shadows internally */
         .obs-safe-zone {
-            width: 1000px;
-            height: 250px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            width: 1000px; height: 250px;
+            display: flex; align-items: center; justify-content: center; position: relative;
         }
 
         .scene-container {
-            position: relative; 
-            width: var(--overlay-width); 
-            height: var(--overlay-height);
+            position: relative; width: var(--overlay-width); height: var(--overlay-height);
             display: flex; align-items: center; z-index: 10;
         }
 
-        /* ==========================================================================
-           MASTER OVERLAY SHELL & CLIPPING REVEAL
-           ========================================================================== */
         .master-overlay-wrapper {
             position: absolute; left: 0; top: 0; width: 100%; height: 100%;
             padding: 3px; border-radius: 40px;
-            /* Outer border flow replaced with inset flow to prevent bleed */
             background: linear-gradient(90deg, var(--void-obsidian), var(--purple-rich), var(--purple-neon), var(--purple-rich), var(--void-obsidian));
-            background-size: 300% 100%; 
-            animation: borderFlow 8s linear infinite;
-            /* Hard inset clip-path controlled by JS for the 'scroll' unroll effect */
+            background-size: 300% 100%; animation: borderFlow 8s linear infinite;
             clip-path: inset(0 calc(100% - var(--sweep-progress)) 0 0);
-            z-index: 1; will-change: clip-path;
-            /* Confined Shadowing */
-            box-shadow: inset 0 0 10px rgba(0,0,0,1);
+            z-index: 1; will-change: clip-path; box-shadow: inset 0 0 10px rgba(0,0,0,1);
         }
 
         .overlay-core {
             position: relative; width: 100%; height: 100%;
-            background-color: var(--void-obsidian);
-            border-radius: 37px;
-            overflow: hidden; /* STRICT CONTAINMENT FOR ALL INTERNAL EFFECTS */
+            background-color: var(--void-obsidian); border-radius: 37px; overflow: hidden; 
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 25px 0 75px; 
-            gap: 25px; z-index: 2;
+            padding: 0 25px 0 75px; gap: 25px; z-index: 2;
             box-shadow: inset 0 0 50px rgba(0,0,0,1), inset 0 0 15px rgba(162, 0, 255, 0.2);
         }
 
-        /* ==========================================================================
-           INTERNAL HIGH-END VIRTUAL BACKGROUNDS
-           ========================================================================== */
         .holo-grid {
             position: absolute; inset: 0; z-index: 1; opacity: 0.35;
-            background-image: 
-                linear-gradient(var(--purple-glare) 1px, transparent 1px),
-                linear-gradient(90deg, var(--purple-glare) 1px, transparent 1px);
-            background-size: 20px 20px;
-            animation: panGrid 15s linear infinite;
+            background-image: linear-gradient(var(--purple-glare) 1px, transparent 1px), linear-gradient(90deg, var(--purple-glare) 1px, transparent 1px);
+            background-size: 20px 20px; animation: panGrid 15s linear infinite;
             mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
             -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
         }
@@ -120,18 +93,12 @@
 
         #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; mix-blend-mode: screen; }
 
-        /* ==========================================================================
-           LOGO SWEEPER & HUD RINGS
-           ========================================================================== */
         .logo-sweeper {
             position: absolute; top: 50%; left: var(--sweep-progress);
-            transform: translate(-50%, -50%); 
-            width: var(--logo-size); height: var(--logo-size); z-index: 100;
+            transform: translate(-50%, -50%); width: var(--logo-size); height: var(--logo-size); z-index: 100;
             background-color: var(--void-deep); border-radius: 50%; padding: 5px;
-            /* Minimal drop shadow, heavily feathered so it doesn't clip */
             filter: drop-shadow(0 0 10px rgba(162, 0, 255, 0.8));
-            display: flex; justify-content: center; align-items: center;
-            will-change: left;
+            display: flex; justify-content: center; align-items: center; will-change: left;
         }
 
         .logo-sweeper::before, .logo-sweeper::after {
@@ -144,8 +111,7 @@
         .logo-inner-ring {
             width: 100%; height: 100%; border-radius: 50%; padding: 3px;
             background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-pure), var(--gold-bright));
-            background-size: 200% 200%;
-            animation: borderFlow 4s ease infinite;
+            background-size: 200% 200%; animation: borderFlow 4s ease infinite;
             display: flex; justify-content: center; align-items: center;
             transform: rotate(var(--logo-rot)); will-change: transform;
         }
@@ -155,9 +121,6 @@
             background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
         }
 
-        /* ==========================================================================
-           SLOT MACHINE DIGIT ENGINE & TYPOGRAPHY
-           ========================================================================== */
         .data-module {
             position: relative; z-index: 10;
             display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
@@ -168,8 +131,7 @@
             font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
             text-transform: uppercase; letter-spacing: 0.3em; color: var(--void-obsidian); 
             background: var(--neon-white); padding: 3px 6px; border-radius: 2px; margin-bottom: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            position: relative; overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.8); position: relative; overflow: hidden;
         }
 
         .data-label::after {
@@ -178,7 +140,6 @@
             animation: glassShine 4s linear infinite;
         }
 
-        /* The window that hides the spinning reels */
         .slot-machine-container {
             display: flex; font-family: 'Montserrat', sans-serif; font-size: 1.7rem; font-weight: 900;
             line-height: 1; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; 
@@ -186,27 +147,16 @@
             height: 1.7rem; overflow: hidden; position: relative;
         }
 
-        .slot-digit-window {
-            position: relative; width: 1.1rem; height: 100%; text-align: center;
-        }
+        .slot-digit-window { position: relative; width: 1.1rem; height: 100%; text-align: center; }
         .slot-digit-window.comma { width: 0.5rem; text-align: left; }
 
         .slot-strip {
             position: absolute; top: 0; left: 0; width: 100%;
-            display: flex; flex-direction: column; align-items: center;
-            will-change: transform, filter;
+            display: flex; flex-direction: column; align-items: center; will-change: transform, filter;
         }
+        .slot-strip.rolling { transition: transform 1.5s var(--ease-slot), filter 1.5s var(--ease-slot); }
+        .slot-strip > span { height: 1.7rem; display: flex; justify-content: center; align-items: center; }
 
-        .slot-strip.rolling {
-            /* Handled dynamically by JS to hit target digit */
-            transition: transform 1.5s var(--ease-slot), filter 1.5s var(--ease-slot);
-        }
-
-        .slot-strip > span {
-            height: 1.7rem; display: flex; justify-content: center; align-items: center;
-        }
-
-        /* Dopamine Flare effect when reels lock in */
         .flare-layer {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%);
@@ -220,9 +170,6 @@
             box-shadow: inset 0 0 5px rgba(255,255,255,0.5), 0 0 10px rgba(162, 0, 255, 0.6);
         }
 
-        /* ==========================================================================
-           KINETIC REWARD SUB GOAL BAR
-           ========================================================================== */
         .goal-module {
             display: flex; flex-direction: column; justify-content: center;
             flex-grow: 1; min-width: 220px; z-index: 10; position: relative;
@@ -247,73 +194,46 @@
         .progress-track {
             position: relative; width: 100%; height: 16px;
             background: rgba(0,0,0,0.9); overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transform: skewX(-25deg);
-            box-shadow: inset 0 3px 8px rgba(0,0,0,1);
+            border: 1px solid rgba(255, 255, 255, 0.2); transform: skewX(-25deg); box-shadow: inset 0 3px 8px rgba(0,0,0,1);
         }
 
         .progress-fill {
             position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
             background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), var(--gold-dark));
-            background-size: 200% 100%;
-            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 0 20px rgba(162, 0, 255, 0.9);
-            transition: width 1.5s var(--ease-dopamine);
-            overflow: hidden;
-            animation: borderFlow 3s linear infinite;
+            background-size: 200% 100%; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 0 20px rgba(162, 0, 255, 0.9);
+            transition: width 1.5s var(--ease-dopamine); overflow: hidden; animation: borderFlow 3s linear infinite;
         }
 
-        /* High-energy interior flow */
         .progress-fill::before {
             content: ''; position: absolute; top: 0; left: 0; width: 300%; height: 100%;
-            background: repeating-linear-gradient(
-                -45deg, 
-                transparent, transparent 8px, 
-                rgba(255,255,255,0.4) 8px, rgba(255,255,255,0.4) 16px
-            );
+            background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.4) 8px, rgba(255,255,255,0.4) 16px);
             animation: kineticFlow 1s linear infinite;
         }
 
         .progress-fill::after {
             content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 5px;
-            background: var(--neon-white);
-            box-shadow: -3px 0 12px var(--neon-white), 0 0 25px var(--gold-pure);
+            background: var(--neon-white); box-shadow: -3px 0 12px var(--neon-white), 0 0 25px var(--gold-pure);
         }
 
         .goal-flash .progress-fill { filter: brightness(1.8); box-shadow: 0 0 40px var(--gold-pure); }
         .goal-flash .goal-numbers { transform: scale(1.2); color: var(--gold-pure); text-shadow: 0 0 20px var(--gold-pure); }
 
-        /* ==========================================================================
-           LIVE TICKER & AUDIO EQ SYSTEM
-           ========================================================================== */
         .ticker-module {
-            display: flex; align-items: center;
-            background: rgba(0, 0, 0, 0.75); border-left: 3px solid var(--purple-neon);
-            padding: 0 15px; height: 100%; width: 250px;
-            overflow: hidden; position: relative; z-index: 10;
+            display: flex; align-items: center; background: rgba(0, 0, 0, 0.75); border-left: 3px solid var(--purple-neon);
+            padding: 0 15px; height: 100%; width: 250px; overflow: hidden; position: relative; z-index: 10;
             box-shadow: inset 5px 0 15px rgba(0,0,0,0.8);
         }
 
-        .live-eq-container {
-            display: flex; align-items: flex-end; gap: 3px;
-            height: 16px; margin-right: 15px; flex-shrink: 0;
-        }
-        
-        .eq-bar {
-            width: 4px; background: #00ffcc; border-radius: 1px 1px 0 0;
-            box-shadow: 0 0 10px #00ffcc; transition: height 0.08s ease;
-        }
-
+        .live-eq-container { display: flex; align-items: flex-end; gap: 3px; height: 16px; margin-right: 15px; flex-shrink: 0; }
+        .eq-bar { width: 4px; background: #00ffcc; border-radius: 1px 1px 0 0; box-shadow: 0 0 10px #00ffcc; transition: height 0.08s ease; }
         .ticker-wrapper { overflow: hidden; width: 100%; position: relative; }
-
+        
         .ticker-content {
-            font-size: 0.8rem; font-weight: 900; color: var(--neon-white);
-            letter-spacing: 1.5px; white-space: nowrap; transform: translateX(100%); will-change: transform;
+            font-size: 0.8rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1.5px; white-space: nowrap; 
+            transform: translateX(100%); will-change: transform;
             text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 12px var(--purple-neon), 0 0 24px var(--purple-neon);
         }
 
-        /* ==========================================================================
-           KEYFRAME ANIMATION LIBRARY
-           ========================================================================== */
         @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
         @keyframes panGrid { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
         @keyframes spinCW { 100% { transform: rotate(360deg); } }
@@ -332,42 +252,32 @@
             
             <div class="logo-sweeper" id="logo-sweeper">
                 <div class="logo-inner-ring">
-                    <img src="kk.jpg" alt="Logo" class="brand-logo" id="brand-logo">
+                    <img src="" alt="Logo" class="brand-logo" id="brand-logo" style="display:none;">
                 </div>
             </div>
 
             <div class="master-overlay-wrapper" id="overlay">
                 <div class="overlay-core">
                     
-                    <!-- Atmospheric Background Layers -->
                     <div class="holo-grid"></div>
                     <div class="scanlines"></div>
                     <div class="glass-reflection"></div>
                     <canvas id="particle-canvas"></canvas> 
 
-                    <!-- Data Mod 1: SUBS (Slot Machine Enabled) -->
                     <div class="data-module" id="mod-subs">
                         <div class="data-label">SUBS</div>
-                        <div class="slot-machine-container" id="slot-subs">
-                            <!-- JS Injects Slots Here -->
-                        </div>
+                        <div class="slot-machine-container" id="slot-subs"></div>
                         <div class="flare-layer"></div>
                     </div>
-
                     <div class="separator"></div>
 
-                    <!-- Data Mod 2: LIKES (Slot Machine Enabled) -->
                     <div class="data-module" id="mod-likes">
                         <div class="data-label">LIKES</div>
-                        <div class="slot-machine-container" id="slot-likes">
-                            <!-- JS Injects Slots Here -->
-                        </div>
+                        <div class="slot-machine-container" id="slot-likes"></div>
                         <div class="flare-layer"></div>
                     </div>
-
                     <div class="separator"></div>
 
-                    <!-- Data Mod 3: GOAL BAR -->
                     <div class="goal-module" id="mod-goal">
                         <div class="goal-header">
                             <span class="goal-title">SUB GOAL</span>
@@ -378,7 +288,6 @@
                         </div>
                     </div>
 
-                    <!-- Data Mod 4: LIVE TICKER -->
                     <div class="ticker-module">
                         <div class="live-eq-container" id="live-eq">
                             <div class="eq-bar" style="height: 4px;"></div>
@@ -387,9 +296,7 @@
                             <div class="eq-bar" style="height: 12px;"></div>
                         </div>
                         <div class="ticker-wrapper">
-                            <div class="ticker-content" id="ticker-text">
-                                SYSTEM INITIALIZING... 
-                            </div>
+                            <div class="ticker-content" id="ticker-text">CONNECTING TO LIVE FEED...</div>
                         </div>
                     </div>
 
@@ -399,13 +306,11 @@
     </div>
 
     <script>
-     
         class ParticleEngine {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId); 
                 this.ctx = this.canvas.getContext('2d');
-                this.particles = []; 
-                this.isSweeping = false; this.sweepX = 0;
+                this.particles = []; this.isSweeping = false; this.sweepX = 0;
                 window.particleEngineInstance = this; 
                 this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
             }
@@ -415,60 +320,39 @@
             spawnBurst(x, y) {
                 for(let i=0; i<20; i++) {
                     this.particles.push({ 
-                        x: x, y: y, 
-                        vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
-                        life: 1.0, decay: Math.random()*0.04+0.02, 
-                        size: Math.random()*4+2, 
-                        color: Math.random() > 0.4 ? '#ffffff' : '#ffd700',
-                        isSquare: true
+                        x: x, y: y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
+                        life: 1.0, decay: Math.random()*0.04+0.02, size: Math.random()*4+2, 
+                        color: Math.random() > 0.4 ? '#ffffff' : '#ffd700', isSquare: true
                     });
                 }
             }
 
             render() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
                 if(Math.random() > 0.8) {
                     this.particles.push({
-                        x: -10, y: Math.random() * this.canvas.height,
-                        vx: Math.random() * 5 + 2, vy: (Math.random() - 0.5) * 1,
-                        life: 1.0, decay: 0.008, size: Math.random() * 2 + 1,
-                        color: 'rgba(162, 0, 255, 0.9)', isLine: true, length: Math.random() * 40 + 10
+                        x: -10, y: Math.random() * this.canvas.height, vx: Math.random() * 5 + 2, vy: (Math.random() - 0.5) * 1,
+                        life: 1.0, decay: 0.008, size: Math.random() * 2 + 1, color: 'rgba(162, 0, 255, 0.9)', isLine: true, length: Math.random() * 40 + 10
                     });
                 }
-
-                // Sweeper drag particles
                 if (this.isSweeping) {
                     const px = (this.sweepX / 100) * this.canvas.width, py = this.canvas.height / 2;
                     for(let i=0; i<3; i++) this.particles.push({ 
-                        x: px, y: py + (Math.random()*60-30), 
-                        vx: (Math.random()-0.5)*5 - 2, vy: (Math.random()-0.5)*5, 
+                        x: px, y: py + (Math.random()*60-30), vx: (Math.random()-0.5)*5 - 2, vy: (Math.random()-0.5)*5, 
                         life: 1.0, decay: Math.random()*0.05+0.03, size: Math.random()*3+2, color: '#a200ff', isSquare: true
                     });
                 }
 
                 for(let i = this.particles.length - 1; i >= 0; i--) {
-                    let p = this.particles[i]; 
-                    p.x += p.vx; p.y += p.vy; p.life -= p.decay;
-                    
+                    let p = this.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
                     if(p.y < 0 || p.y > this.canvas.height) p.vy *= -0.8;
-                    
                     if (p.life <= 0) { this.particles.splice(i, 1); continue; }
-                    
-                    this.ctx.fillStyle = p.color;
-                    this.ctx.shadowBlur = 12; this.ctx.shadowColor = p.color;
-                    this.ctx.globalAlpha = p.life;
-
-                    if (p.isLine) {
-                        this.ctx.fillRect(p.x, p.y, p.length, p.size);
-                    } else if (p.isSquare) {
-                        this.ctx.fillRect(p.x, p.y, p.size, p.size);
-                    } else {
-                        this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); this.ctx.fill();
-                    }
+                    this.ctx.fillStyle = p.color; this.ctx.shadowBlur = 12; this.ctx.shadowColor = p.color; this.ctx.globalAlpha = p.life;
+                    if (p.isLine) this.ctx.fillRect(p.x, p.y, p.length, p.size);
+                    else if (p.isSquare) this.ctx.fillRect(p.x, p.y, p.size, p.size);
+                    else { this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); this.ctx.fill(); }
                 }
-                this.ctx.globalAlpha = 1.0;
-                requestAnimationFrame(() => this.render());
+                this.ctx.globalAlpha = 1.0; requestAnimationFrame(() => this.render());
             }
         }
 
@@ -476,172 +360,89 @@
             constructor(char, delayOffset) {
                 this.element = document.createElement('div');
                 this.element.className = char === ',' ? 'slot-digit-window comma' : 'slot-digit-window';
-                this.strip = document.createElement('div');
-                this.strip.className = 'slot-strip';
+                this.strip = document.createElement('div'); this.strip.className = 'slot-strip';
                 this.element.appendChild(this.strip);
-                
-                this.isComma = char === ',';
-                this.currentChar = char;
-                this.delayOffset = delayOffset;
-                
+                this.isComma = char === ','; this.currentChar = char; this.delayOffset = delayOffset;
                 this.buildStrip(char);
             }
-
             buildStrip(targetChar) {
-                this.strip.innerHTML = '';
-                this.strip.style.transition = 'none';
-                this.strip.style.transform = 'translateY(0)';
-                this.strip.style.filter = 'blur(0px)';
-                
-                if (this.isComma) {
-                    const span = document.createElement('span');
-                    span.innerText = ',';
-                    this.strip.appendChild(span);
-                    return;
-                }
+                this.strip.innerHTML = ''; this.strip.style.transition = 'none';
+                this.strip.style.transform = 'translateY(0)'; this.strip.style.filter = 'blur(0px)';
+                if (this.isComma) { const span = document.createElement('span'); span.innerText = ','; this.strip.appendChild(span); return; }
 
-                // Build sequence: start digit -> sequence of 0-9 randoms -> target digit
                 const startDigit = parseInt(this.currentChar) || 0;
                 const targetDigit = parseInt(targetChar) || 0;
                 this.currentChar = targetChar;
                 
-                // Add current resting digit
                 let html = `<span>${startDigit}</span>`;
-                
-                // Add 15-20 random spinning digits to simulate rapid mechanical reel
-                const spinCount = 15;
-                for(let i=0; i<spinCount; i++) {
-                    html += `<span>${Math.floor(Math.random()*10)}</span>`;
-                }
-                
-                // Add final target digit
+                for(let i=0; i<15; i++) html += `<span>${Math.floor(Math.random()*10)}</span>`;
                 html += `<span>${targetDigit}</span>`;
-                this.strip.innerHTML = html;
-                
-                // Force reflow
-                void this.strip.offsetWidth; 
+                this.strip.innerHTML = html; void this.strip.offsetWidth; 
             }
-
             rollToTarget() {
                 if(this.isComma) return;
-                
-                // Calculate height to translate based on font size (1.7rem)
-                const digitHeight = this.element.offsetHeight;
-                const totalItems = this.strip.children.length;
-                const targetY = - (totalItems - 1) * digitHeight;
-
+                const targetY = - (this.strip.children.length - 1) * this.element.offsetHeight;
                 this.strip.style.transition = `transform 1.5s var(--ease-slot) ${this.delayOffset}s, filter 0.75s ease-in-out ${this.delayOffset}s`;
-                this.strip.style.filter = 'blur(4px)'; // Add vertical motion blur
-                this.strip.style.transform = `translateY(${targetY}px)`;
-                
-                // Remove blur at end of animation
-                setTimeout(() => {
-                    this.strip.style.filter = 'blur(0px)';
-                }, (1.0 + this.delayOffset) * 1000 - 400); // clear blur just before it rests
+                this.strip.style.filter = 'blur(4px)'; this.strip.style.transform = `translateY(${targetY}px)`;
+                setTimeout(() => { this.strip.style.filter = 'blur(0px)'; }, (1.0 + this.delayOffset) * 1000 - 400); 
             }
         }
 
         class NumberSlotEngine {
             constructor(containerId) {
-                this.container = document.getElementById(containerId);
-                this.moduleParent = this.container.parentElement;
-                this.digits = [];
-                this.currentString = "0";
-                
-                // Initial setup
-                this.updateDOM("0", true);
+                this.container = document.getElementById(containerId); this.moduleParent = this.container.parentElement;
+                this.digits = []; this.currentString = "0"; this.updateDOM("0", true);
             }
-
             format(num) { return (num || 0).toLocaleString('en-US'); }
-
             updateDOM(newStr, forceInstant = false) {
-                this.container.innerHTML = '';
-                this.digits = [];
-                
-                // Create new digit strips
+                this.container.innerHTML = ''; this.digits = [];
                 for(let i = 0; i < newStr.length; i++) {
-                    // Stagger the animation delay from right to left
                     const delay = (newStr.length - 1 - i) * 0.08; 
                     const digit = new SlotMachineDigit(newStr[i], delay);
-                    this.digits.push(digit);
-                    this.container.appendChild(digit.element);
+                    this.digits.push(digit); this.container.appendChild(digit.element);
                 }
                 this.currentString = newStr;
             }
-
             triggerRoll(newValue) {
                 const targetStr = this.format(newValue);
+                if(targetStr.length !== this.currentString.length) this.updateDOM(this.currentString);
                 
-                // If length changed (e.g. 999 -> 1,000), reconstruct DOM instantly
-                if(targetStr.length !== this.currentString.length) {
-                    this.updateDOM(this.currentString); // Rebuild with old string structure temporarily
-                }
-
-                // Re-build strips with new targets
                 for(let i=0; i<targetStr.length; i++) {
-                    // If lengths differ, we just mapped it out, safely assign
-                    let oldChar = this.digits[i] ? this.digits[i].currentChar : '0';
                     if(!this.digits[i]) {
                          const delay = (targetStr.length - 1 - i) * 0.08; 
                          const newDigit = new SlotMachineDigit(targetStr[i], delay);
-                         this.digits.push(newDigit);
-                         this.container.appendChild(newDigit.element);
-                    } else {
-                         this.digits[i].buildStrip(targetStr[i]);
-                    }
+                         this.digits.push(newDigit); this.container.appendChild(newDigit.element);
+                    } else { this.digits[i].buildStrip(targetStr[i]); }
                 }
                 this.currentString = targetStr;
-
-                // Execute Roll
                 this.digits.forEach(digit => digit.rollToTarget());
 
-                // Trigger Dopamine Flare when longest reel finishes
                 const maxDelay = (targetStr.length - 1) * 0.08;
                 setTimeout(() => {
-                    this.moduleParent.classList.remove('flare-active');
-                    void this.moduleParent.offsetWidth; 
-                    this.moduleParent.classList.add('flare-active');
-                    
-                    // Trigger particles
+                    this.moduleParent.classList.remove('flare-active'); void this.moduleParent.offsetWidth; this.moduleParent.classList.add('flare-active');
                     if(window.particleEngineInstance) {
-                        const rect = this.container.getBoundingClientRect();
-                        const pCanvas = document.getElementById('particle-canvas').getBoundingClientRect();
-                        window.particleEngineInstance.spawnBurst(
-                            (rect.left - pCanvas.left) + rect.width/2, 
-                            (rect.top - pCanvas.top) + rect.height/2
-                        );
+                        const rect = this.container.getBoundingClientRect(); const pCanvas = document.getElementById('particle-canvas').getBoundingClientRect();
+                        window.particleEngineInstance.spawnBurst((rect.left - pCanvas.left) + rect.width/2, (rect.top - pCanvas.top) + rect.height/2);
                     }
                 }, (1.5 + maxDelay) * 1000);
             }
         }
 
-
         class AudioEQSimulator {
-            constructor() {
-                this.bars = document.querySelectorAll('.eq-bar');
-                this.animate();
-            }
-            animate() {
-                setInterval(() => {
-                    this.bars.forEach(bar => {
-                        const height = Math.floor(Math.random() * 12) + 4;
-                        bar.style.height = `${height}px`;
-                    });
-                }, 100); 
-            }
+            constructor() { this.bars = document.querySelectorAll('.eq-bar'); this.animate(); }
+            animate() { setInterval(() => { this.bars.forEach(bar => { bar.style.height = `${Math.floor(Math.random() * 12) + 4}px`; }); }, 100); }
         }
 
         class TickerEngine {
             constructor() {
-                this.element = document.getElementById('ticker-text'); 
-                this.container = this.element.parentElement;
-                this.queue = ["BROADCAST FEED ACTIVE • OPTIMAL PERFORMANCE", "DROP A LIKE AND SUBSCRIBE TO SUPPORT THE CHANNEL"];
-                this.currentIndex = 0; 
-                this.pos = this.container.offsetWidth; 
-                this.speed = 1.5; 
-                this.animate();
+                this.element = document.getElementById('ticker-text'); this.container = this.element.parentElement;
+                this.queue = ["AWAITING LIVE FEED..."]; this.currentIndex = 0; 
+                this.pos = this.container.offsetWidth; this.speed = 1.5; this.animate();
             }
-            pushAlert(msg) { this.queue.splice(this.currentIndex + 1, 0, msg); }
+            setMessages(messageString) {
+                const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
+                if(parts.length > 0) this.queue = parts;
+            }
             animate() {
                 this.pos -= this.speed;
                 if (this.pos < -this.element.offsetWidth - 50) {
@@ -649,44 +450,25 @@
                     this.element.innerText = this.queue[this.currentIndex]; 
                     this.pos = this.container.offsetWidth;
                 }
-                this.element.style.transform = `translateX(${this.pos}px)`; 
-                requestAnimationFrame(() => this.animate());
+                this.element.style.transform = `translateX(${this.pos}px)`; requestAnimationFrame(() => this.animate());
             }
         }
 
-      
         class OverlayState {
             constructor() {
                 this.state = { subs: 0, likes: 0, goal: 5000 };
                 this.slotSubs = new NumberSlotEngine('slot-subs');
                 this.slotLikes = new NumberSlotEngine('slot-likes');
-                this.elements = { 
-                    goalMod: document.getElementById('mod-goal'), 
-                    goalText: document.getElementById('val-goal'), 
-                    goalBar: document.getElementById('goal-bar') 
-                };
+                this.elements = { goalMod: document.getElementById('mod-goal'), goalText: document.getElementById('val-goal'), goalBar: document.getElementById('goal-bar') };
                 
-                // Continuous 2.5s Roll Loop as requested
-                this.rollInterval = setInterval(() => {
-                    this.executeRoll();
-                }, 5500);
+                this.rollInterval = setInterval(() => { this.executeRoll(); }, 5500);
             }
-            
             format(num) { return (num || 0).toLocaleString('en-US'); }
-
             triggerSubGoalAnimation() {
-                this.elements.goalMod.classList.remove('goal-flash');
-                void this.elements.goalMod.offsetWidth; 
-                this.elements.goalMod.classList.add('goal-flash');
-                setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 1000);
+                this.elements.goalMod.classList.remove('goal-flash'); void this.elements.goalMod.offsetWidth; 
+                this.elements.goalMod.classList.add('goal-flash'); setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 1000);
             }
-
-            executeRoll() {
-                // Triggers the slot machine effect for both data points every 2.5s
-                this.slotSubs.triggerRoll(this.state.subs);
-                this.slotLikes.triggerRoll(this.state.likes);
-            }
-
+            executeRoll() { this.slotSubs.triggerRoll(this.state.subs); this.slotLikes.triggerRoll(this.state.likes); }
             updateData(newSubs, newLikes, newGoal) {
                 if (newGoal) this.state.goal = newGoal;
                 let subChanged = false;
@@ -695,113 +477,96 @@
                     if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
                     this.state.subs = newSubs; 
                 }
-                if (newLikes !== this.state.likes) { 
-                    this.state.likes = newLikes; 
-                }
+                if (newLikes !== this.state.likes) { this.state.likes = newLikes; }
                 
-                // Update Goal Bar Math
                 let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
                 this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
                 this.elements.goalBar.style.width = `${percentage}%`;
 
-                if (subChanged) {
-                    this.triggerSubGoalAnimation();
-                    // Optional: force an immediate roll out of cycle on sub change
-                    this.executeRoll(); 
-                }
+                if (subChanged) { this.triggerSubGoalAnimation(); this.executeRoll(); }
             }
         }
 
-        
         class CinematicSweepController {
-            constructor(particleEngine) {
-                this.scene = document.getElementById('scene-wrapper'); 
-                this.particleEngine = particleEngine;
-                this.runCycle();
-            }
+            constructor(particleEngine) { this.scene = document.getElementById('scene-wrapper'); this.particleEngine = particleEngine; this.runCycle(); }
             sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-            
             tweenSweep(startPct, endPct, duration) {
                 return new Promise(resolve => {
-                    let startTime = null; 
-                    this.particleEngine.setSweeping(true, startPct);
-                    
+                    let startTime = null; this.particleEngine.setSweeping(true, startPct);
                     const update = (currentTime) => {
-                        if (!startTime) startTime = currentTime;
-                        let progress = Math.min((currentTime - startTime) / duration, 1);
-                        
-                        // Custom cinematic easing curve (Slow start, fast middle, slow end)
+                        if (!startTime) startTime = currentTime; let progress = Math.min((currentTime - startTime) / duration, 1);
                         let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
                         const currentPct = startPct + (endPct - startPct) * ease;
                         
                         this.scene.style.setProperty('--sweep-progress', `${currentPct}%`);
                         this.particleEngine.setSweeping(true, currentPct);
-                        
-                        // Rotate Logo continuously during sweep
-                        const rotDegrees = (currentPct / 100) * 1440; 
-                        document.documentElement.style.setProperty('--logo-rot', `${rotDegrees}deg`);
+                        document.documentElement.style.setProperty('--logo-rot', `${(currentPct / 100) * 1440}deg`);
 
                         if (progress < 1) requestAnimationFrame(update); else {
-                            this.scene.style.setProperty('--sweep-progress', `${endPct}%`);
-                            this.particleEngine.setSweeping(false, endPct); resolve();
+                            this.scene.style.setProperty('--sweep-progress', `${endPct}%`); this.particleEngine.setSweeping(false, endPct); resolve();
                         }
-                    };
-                    requestAnimationFrame(update);
+                    }; requestAnimationFrame(update);
                 });
             }
-            
             async runCycle() {
-                await this.sleep(1000); // Initial delay
-                while(true) {
-                    // Open (Left to Right)
-                    await this.tweenSweep(0, 100, 2500); 
-                    await this.sleep(20000); // 
-                    // Close (Right to Left)
-                    await this.tweenSweep(100, 0, 2500); 
-                    await this.sleep(2000); // 
+                await this.sleep(1000); 
+                while(true) { await this.tweenSweep(0, 100, 2500); await this.sleep(20000); await this.tweenSweep(100, 0, 2500); await this.sleep(2000); }
+            }
+        }
+
+        // CRITICAL FIX: The Real Data Polling Engine
+        class MultiStreamerLiveEngine {
+            constructor(state, ticker) {
+                this.state = state;
+                this.ticker = ticker;
+                const urlParams = new URLSearchParams(window.location.search);
+                this.username = urlParams.get('user') || '';
+
+                if (!this.username) {
+                    this.ticker.setMessages("ERROR: NO USER SPECIFIED IN URL");
+                    return;
+                }
+
+                this.pollData();
+                setInterval(() => this.pollData(), 10000);
+            }
+
+            async pollData() {
+                try {
+                    const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    
+                    if (data.authenticated) {
+                        this.state.updateData(data.subs, data.likes, data.sub_goal);
+                        
+                        if (data.ticker_text) {
+                            this.ticker.setMessages(data.ticker_text);
+                        }
+                        
+                        if (data.avatar) {
+                            const logoEl = document.getElementById('brand-logo');
+                            if (logoEl.src !== data.avatar) {
+                                logoEl.src = data.avatar;
+                                logoEl.style.display = 'block';
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.error("Poll failed:", e);
                 }
             }
         }
 
-
-        class DataFeedSimulator {
-            constructor(state, ticker) {
-                this.state = state; this.ticker = ticker;
-                this.runFeed();
-            }
-            
-            runFeed() {
-                // Initial State
-                let s = 4280; let l = 950;
-                this.state.updateData(s, l, 5000);
-                
-                // Simulate incoming stream data
-                setInterval(() => {
-                    let updated = false;
-                    
-                    // Simulate Sub Event
-                    if(Math.random() > 0.7) { 
-                        let newSubs = Math.floor(Math.random() * 5) + 1;
-                        s += newSubs; updated = true; 
-                        if(newSubs >= 3) this.ticker.pushAlert(`>>> MASSIVE HYPE: ${newSubs} NEW SUBS <<<`);
-                    }
-                    
-                    // Simulate Likes
-                    if(Math.random() > 0.4) { l += Math.floor(Math.random() * 12) + 1; updated = true; }
-                    
-                    if (updated) this.state.updateData(s, l);
-                }, 7500);
-            }
-        }
-
-        // Initialize Core Systems on Load
         document.addEventListener('DOMContentLoaded', () => {
             const particles = new ParticleEngine('particle-canvas');
             const state = new OverlayState();
             const ticker = new TickerEngine();
             new AudioEQSimulator();
             new CinematicSweepController(particles);
-            new DataFeedSimulator(state, ticker);
+            
+            // Starts pulling real data instead of fake generator!
+            new MultiStreamerLiveEngine(state, ticker);
         });
     </script>
 </body>
