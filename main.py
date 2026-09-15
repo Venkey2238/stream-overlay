@@ -2,7 +2,7 @@ import os
 import time
 import httpx
 from typing import Optional
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +11,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from supabase import create_client, Client
 from dotenv import load_dotenv
-from fastapi import Response
 
 load_dotenv()
 
@@ -26,13 +25,11 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
-# Cache system to prevent hitting Google's 10,000/day API Quota limits
 CACHE = {}
-CACHE_TTL = 30  # Update live numbers every 30 seconds max
+CACHE_TTL = 30  
 
 app = FastAPI()
 
-# Middleware for Security and Session Management
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -83,14 +80,12 @@ async def get_valid_access_token(handle: str) -> str:
 
     now = int(time.time())
     
-    # Token valid for at least 2 more minutes
     if now < (expires_at - 120) and access_token:
         return access_token
 
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No refresh token available. Re-authenticate.")
 
-    # Token expired, exchange refresh token for a new one
     async with httpx.AsyncClient() as client:
         token_res = await client.post(
             GOOGLE_TOKEN_URL,
@@ -135,7 +130,6 @@ async def auth_callback(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
     except Exception:
-        # Handles scenario where user clicks "Cancel" on Google consent screen
         return RedirectResponse(url="/dashboard?error=auth_denied")
 
     access_token = token.get('access_token')
@@ -171,7 +165,6 @@ async def auth_callback(request: Request):
 
     supabase.table("streamers").upsert(record, on_conflict="handle").execute()
     
-    # Invalidate old cache on fresh login
     if handle in CACHE:
         del CACHE[handle]
 
@@ -183,12 +176,12 @@ async def auth_callback(request: Request):
 
 @app.get("/api/streamer/{handle}")
 async def get_live_overlay_data(handle: str, response: Response):
-    # STRICTLY block OBS, browsers, and Vercel from caching this API response
+    # CRITICAL: Prevent Vercel and OBS from caching this response
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     
     user = handle.strip().lower()
     now = time.time()
-    # Quota Protection: Return cached data if requested within the TTL window
+
     if user in CACHE and CACHE[user]["expires_at"] > now:
         return CACHE[user]["data"]
 
@@ -208,7 +201,6 @@ async def get_live_overlay_data(handle: str, response: Response):
     video_id = profile.get("video_id")
 
     async with httpx.AsyncClient() as client:
-        # Fetch Subs
         yt_res = await client.get(
             "https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true",
             headers={"Authorization": f"Bearer {token}"}
@@ -217,7 +209,6 @@ async def get_live_overlay_data(handle: str, response: Response):
             current_subs = int(yt_res.json()["items"][0]["statistics"].get("subscriberCount", current_subs))
             supabase.table("streamers").update({"current_subs": current_subs, "updated_at": "now()"}).eq("handle", user).execute()
 
-        # Fetch Likes if live video is linked
         if video_id:
             vid_res = await client.get(
                 f"https://www.googleapis.com/youtube/v3/videos?part=statistics&id={video_id}",
@@ -226,19 +217,17 @@ async def get_live_overlay_data(handle: str, response: Response):
             if vid_res.status_code == 200 and vid_res.json().get("items"):
                 likes = int(vid_res.json()["items"][0]["statistics"].get("likeCount", 0))
 
-    # Construct safe data payload
     response_data = {
         "authenticated": True,
         "title": profile["title"],
         "avatar": profile["avatar"],
         "subs": current_subs,
         "likes": likes,
-        "sub_goal": profile["sub_goal"],
+        "sub_goal": profile["sub_goal"] if profile["sub_goal"] else 5000,
         "video_id": video_id,
         "ticker_text": profile["ticker_text"]
     }
 
-    # Store in memory cache
     CACHE[user] = {
         "data": response_data,
         "expires_at": now + CACHE_TTL
@@ -259,31 +248,24 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
     if not res.data:
         raise HTTPException(status_code=404, detail="Streamer profile not found.")
     
-    # Invalidate cache so changes appear instantly on overlay
     if user in CACHE:
         del CACHE[user]
         
-    return {"status": "success", "message": "Settings persisted to Supabase."}
+    return {"status": "success"}
 
 # ==========================================
 # 6. STATIC FILES (Vercel Fix)
 # ==========================================
-import os
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
-@app.get("/dashboard")
-async def serve_dashboard():
-    return FileResponse(os.path.join(PUBLIC_DIR, "dashboard.html"))
+if os.path.exists(PUBLIC_DIR):
+    @app.get("/dashboard")
+    async def serve_dashboard():
+        return FileResponse(os.path.join(PUBLIC_DIR, "dashboard.html"))
 
-@app.get("/overlay")
-async def serve_overlay():
-    return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
+    @app.get("/overlay")
+    async def serve_overlay():
+        return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
 
-# Bulletproof check: wrap in try/except so Vercel never crashes
-try:
-    if os.path.isdir(PUBLIC_DIR):
-        app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
-except Exception:
-    pass
+    app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
