@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unified Multi-Platform Kinetic Chat</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
     <style>
         :root {
             --ease-punch: cubic-bezier(0.19, 1, 0.22, 1);
@@ -356,62 +357,48 @@
                 };
             }
 
-         // ==========================================
-            // KICK WEBSOCKET (PROPER PUSHER HANDSHAKE)
+        // ==========================================
+            // KICK WEBSOCKET (OFFICIAL PUSHER LIBRARY)
             // ==========================================
             connectKick(chatroomId) {
                 if (!/^\d+$/.test(chatroomId)) {
-                    console.error("[Kick] Invalid Chatroom ID. Open dashboard and sync again.");
+                    console.error("[Kick] Invalid Chatroom ID. Make sure it is purely numbers.");
                     return;
                 }
 
+                console.log(`[Kick] Initializing connection for Room ID: ${chatroomId}...`);
+
                 try {
-                    // Official Kick Pusher Key
-                    const ws = new WebSocket("wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false");
-                    
-                    ws.onopen = () => {
-                        console.log(`[Kick] Connecting to WebSocket... waiting for server handshake.`);
-                    };
+                    // Initialize the official Pusher client using Kick's public key & cluster
+                    const pusher = new Pusher('eb1d5f283081a78b932c', {
+                        cluster: 'us2',
+                        forceTLS: true
+                    });
 
-                    ws.onmessage = (event) => {
-                        const parsed = JSON.parse(event.data);
+                    pusher.connection.bind('connected', () => {
+                        console.log('[Kick] Pusher connected successfully to the US2 Cluster!');
+                    });
+
+                    // Subscribe to your specific chatroom
+                    const channel = pusher.subscribe(`chatrooms.${chatroomId}.v2`);
+
+                    channel.bind('pusher:subscription_succeeded', () => {
+                        console.log(`[Kick] SUCCESS! Officially listening to Chatroom ${chatroomId}`);
+                    });
+
+                    // Listen for Chat Messages
+                    channel.bind('App\\Events\\ChatMessageEvent', (data) => {
+                        console.log("[Kick] Message Received!", data.content);
                         
-                        // STEP 1: Wait for the server to formally establish the connection
-                        if (parsed.event === "pusher:connection_established") {
-                            console.log("[Kick] Handshake received. Sending subscription request...");
-                            ws.send(JSON.stringify({
-                                event: "pusher:subscribe",
-                                data: { auth: "", channel: `chatrooms.${chatroomId}.v2` }
-                            }));
-                        }
-
-                        // STEP 2: Confirm we are officially in the chatroom
-                        if (parsed.event === "pusher_internal:subscription_succeeded") {
-                            console.log(`[Kick] SUCCESS! Subscribed to Room ID: ${chatroomId}`);
-                        }
+                        const username = data.sender.username;
+                        const message = data.content;
+                        const avatar = data.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
                         
-                        // STEP 3: Listen for actual chat messages
-                        if (parsed.event === "App\\Events\\ChatMessageEvent") {
-                            const msgData = JSON.parse(parsed.data);
-                            const username = msgData.sender.username;
-                            const message = msgData.content;
-                            
-                            // Fetch Kick Avatar or fallback to clean typography
-                            const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-                            
-                            this.masterQueue.push({ username, message, avatar });
-                        }
-                    };
-
-                    // Anti-Disconnect Ping: Keeps the connection alive
-                    setInterval(() => {
-                        if(ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ event: "pusher:ping", data: {} }));
-                        }
-                    }, 120000);
+                        this.masterQueue.push({ username, message, avatar });
+                    });
 
                 } catch(e) {
-                    console.error("[Kick] Connection Error:", e);
+                    console.error("[Kick] Failed to initialize Pusher:", e);
                 }
             }
             // ==========================================
