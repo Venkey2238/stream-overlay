@@ -358,7 +358,7 @@
             }
 
         // ==========================================
-            // KICK WEBSOCKET (OFFICIAL PUSHER LIBRARY)
+            // KICK WEBSOCKET (MULTI-KEY ROTATION + DEBUG)
             // ==========================================
             connectKick(chatroomId) {
                 if (!/^\d+$/.test(chatroomId)) {
@@ -368,18 +368,39 @@
 
                 console.log(`[Kick] Initializing connection for Room ID: ${chatroomId}...`);
 
-                try {
-                    // Initialize the official Pusher client using Kick's public key & cluster
-                    const pusher = new Pusher('eb1d5f283081a78b932c', {
+                // Kick rotates these 3 keys globally. We will automatically cycle through them.
+                const kickKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
+                let keyIndex = 0;
+
+                const tryConnect = () => {
+                    if (keyIndex >= kickKeys.length) {
+                        console.error("[Kick] FATAL: All Pusher keys failed. (Check your AdBlocker!)");
+                        return;
+                    }
+
+                    const currentKey = kickKeys[keyIndex];
+                    console.log(`[Kick] Attempting connection with Key: ${currentKey}`);
+
+                    const pusher = new Pusher(currentKey, {
                         cluster: 'us2',
                         forceTLS: true
                     });
 
                     pusher.connection.bind('connected', () => {
-                        console.log('[Kick] Pusher connected successfully to the US2 Cluster!');
+                        console.log('[Kick] Pusher connected successfully to US2 Cluster!');
                     });
 
-                    // Subscribe to your specific chatroom
+                    // Automatically catch dead keys and rotate to the next one
+                    pusher.connection.bind('error', (err) => {
+                        console.error(`[Kick] Connection Error with key ${currentKey}:`, err);
+                        if (err && err.error && err.error.data && err.error.data.code === 4004) {
+                            console.log("[Kick] Key is dead. Rotating to next key...");
+                            pusher.disconnect();
+                            keyIndex++;
+                            tryConnect();
+                        }
+                    });
+
                     const channel = pusher.subscribe(`chatrooms.${chatroomId}.v2`);
 
                     channel.bind('pusher:subscription_succeeded', () => {
@@ -388,7 +409,7 @@
 
                     // Listen for Chat Messages
                     channel.bind('App\\Events\\ChatMessageEvent', (data) => {
-                        console.log("[Kick] Message Received!", data.content);
+                        console.log("[Kick] Raw Message Received!", data.content);
                         
                         const username = data.sender.username;
                         const message = data.content;
@@ -396,10 +417,10 @@
                         
                         this.masterQueue.push({ username, message, avatar });
                     });
+                };
 
-                } catch(e) {
-                    console.error("[Kick] Failed to initialize Pusher:", e);
-                }
+                // Start the connection loop
+                tryConnect();
             }
             // ==========================================
             // MASTER QUEUE DEPLOYMENT
