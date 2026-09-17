@@ -26,7 +26,7 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 CACHE = {}
-CACHE_TTL = 5  # CRITICAL UPDATE: Dropped to 5 seconds for hyper-fast real-time sync
+CACHE_TTL = 5  
 
 app = FastAPI()
 
@@ -62,6 +62,8 @@ class SettingsPayload(BaseModel):
     sub_goal: int
     video_id: Optional[str] = ""
     ticker_text: Optional[str] = ""
+    twitch_user: Optional[str] = ""
+    kick_user: Optional[str] = ""
 
 # ==========================================
 # 3. TOKEN MANAGEMENT
@@ -69,7 +71,6 @@ class SettingsPayload(BaseModel):
 
 async def get_valid_access_token(handle: str) -> str:
     res = supabase.table("streamers").select("access_token, refresh_token, token_expires_at").eq("handle", handle.lower()).execute()
-
     if not res.data:
         raise HTTPException(status_code=404, detail="Streamer record not found.")
 
@@ -77,7 +78,6 @@ async def get_valid_access_token(handle: str) -> str:
     access_token = record.get("access_token")
     refresh_token = record.get("refresh_token")
     expires_at = record.get("token_expires_at", 0)
-
     now = int(time.time())
     
     if now < (expires_at - 120) and access_token:
@@ -102,7 +102,6 @@ async def get_valid_access_token(handle: str) -> str:
         raise HTTPException(status_code=401, detail="Google rejected token refresh. Re-authenticate.")
 
     new_access_token = token_data["access_token"]
-    
     update_data = {
         "access_token": new_access_token,
         "token_expires_at": now + token_data.get("expires_in", 3600),
@@ -159,12 +158,10 @@ async def auth_callback(request: Request):
         "current_subs": int(channel["statistics"].get("subscriberCount", 0)),
         "updated_at": "now()"
     }
-    
     if refresh_token:
         record["refresh_token"] = refresh_token
 
     supabase.table("streamers").upsert(record, on_conflict="handle").execute()
-    
     if handle in CACHE:
         del CACHE[handle]
 
@@ -223,7 +220,9 @@ async def get_live_overlay_data(handle: str, response: Response):
         "likes": likes,
         "sub_goal": profile["sub_goal"] if profile["sub_goal"] else 5000,
         "video_id": video_id,
-        "ticker_text": profile["ticker_text"]
+        "ticker_text": profile["ticker_text"],
+        "twitch_user": profile.get("twitch_user", ""),
+        "kick_user": profile.get("kick_user", "")
     }
 
     if user not in CACHE:
@@ -244,7 +243,7 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
     
     video_id = res.data[0].get("video_id")
     if not video_id:
-        return {"error": "No active stream URL configured", "pollingIntervalMillis": 15000}
+        return {"error": "No stream URL", "pollingIntervalMillis": 15000}
 
     try:
         token = await get_valid_access_token(user)
@@ -264,8 +263,7 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
                 details = vid_res.json()["items"][0].get("liveStreamingDetails", {})
                 live_chat_id = details.get("activeLiveChatId")
                 if not live_chat_id:
-                    return {"error": "Video is not live or chat is disabled", "pollingIntervalMillis": 15000}
-                
+                    return {"error": "Chat is disabled", "pollingIntervalMillis": 15000}
                 CACHE[user]["live_chat_id"] = live_chat_id
                 CACHE[user]["cached_video_id"] = video_id
             else:
@@ -277,13 +275,22 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
             chat_url += f"&pageToken={pageToken}"
 
         chat_res = await client.get(chat_url, headers={"Authorization": f"Bearer {token}"})
-        
         if chat_res.status_code == 200:
             return chat_res.json()
         elif chat_res.status_code == 403:
             return {"error": "Quota limit reached", "pollingIntervalMillis": 30000}
         else:
             return {"error": "API Error", "pollingIntervalMillis": 10000}
+
+# Bypass Kick CORS Protection
+@app.get("/api/kick_id/{kick_username}")
+async def get_kick_id(kick_username: str):
+    async with httpx.AsyncClient() as client:
+        res = await client.get(f"https://kick.com/api/v1/channels/{kick_username}", headers={"User-Agent": "Mozilla/5.0"})
+        if res.status_code == 200:
+            data = res.json()
+            return {"chatroom_id": data.get("chatroom", {}).get("id")}
+    return {"error": "Failed to connect to Kick API"}
 
 @app.post("/api/streamer/{handle}/settings")
 async def save_streamer_settings(handle: str, payload: SettingsPayload):
@@ -292,6 +299,8 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
         "sub_goal": payload.sub_goal,
         "video_id": payload.video_id,
         "ticker_text": payload.ticker_text,
+        "twitch_user": payload.twitch_user,
+        "kick_user": payload.kick_user,
         "updated_at": "now()"
     }).eq("handle", user).execute()
 
@@ -299,7 +308,7 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
         raise HTTPException(status_code=404, detail="Streamer profile not found.")
     
     if user in CACHE:
-        CACHE[user] = {} # Clear cache
+        CACHE[user] = {} 
         
     return {"status": "success"}
 
