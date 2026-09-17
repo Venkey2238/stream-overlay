@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frameless Kinetic HUD - Live Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ease-punch: cubic-bezier(0.19, 1, 0.22, 1);
+            --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            --ease-snap: cubic-bezier(0.86, 0, 0.07, 1);
+            --ease-glide: cubic-bezier(0.25, 1, 0.5, 1);
+            --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
+            --ease-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-cyber: cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            background-color: transparent; 
+            overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #chat-widget {
+            position: absolute;
+            bottom: 50px; left: 50px;
+            width: 500px; 
+            display: flex; flex-direction: column; justify-content: flex-end;
+            gap: 0; perspective: 2000px; transform-style: preserve-3d; z-index: 10;
+        }
+
+        .msg-wrapper {
+            position: relative; max-height: 250px; margin-top: 25px; opacity: 1;
+            transform-origin: left center; will-change: max-height, margin-top, opacity;
+            transition: max-height 0.6s var(--ease-cyber), margin-top 0.6s var(--ease-cyber), opacity 0.4s ease-out;
+        }
+
+        .msg-wrapper.collapsing {
+            max-height: 0 !important; margin-top: 0 !important;
+            opacity: 0; overflow: hidden; pointer-events: none;
+        }
+
+        .cyber-thread {
+            display: flex; align-items: flex-start; gap: 20px;
+            position: relative; transform-style: preserve-3d;
+            filter: drop-shadow(0px 4px 15px rgba(0,0,0,0.8)) drop-shadow(0px 0px 8px var(--accent));
+        }
+
+        .hud-line {
+            position: absolute; left: 27px; top: 60px; bottom: -15px; width: 2px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            opacity: 0.6; z-index: 0; transform-origin: top; will-change: transform, opacity;
+        }
+
+        .avatar-node {
+            position: relative; flex-shrink: 0; width: 56px; height: 56px;
+            z-index: 2; will-change: transform, filter;
+        }
+
+        .avatar-node::before {
+            content: ''; position: absolute; inset: -6px;
+            border: 1px dashed var(--accent); border-radius: 50%;
+            animation: spinRing 10s linear infinite; opacity: 0.8;
+        }
+
+        .avatar-node::after {
+            content: ''; position: absolute; inset: -2px;
+            border: 2px solid var(--accent); border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent); opacity: 0.5;
+        }
+
+        @keyframes spinRing { 100% { transform: rotate(360deg); } }
+
+        .avatar {
+            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+            filter: grayscale(20%) contrast(120%);
+            mask-image: radial-gradient(circle, black 60%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle, black 60%, transparent 100%);
+        }
+
+        .text-cluster {
+            display: flex; flex-direction: column; justify-content: flex-start;
+            flex-grow: 1; padding-top: 5px; z-index: 2; transform-style: preserve-3d;
+        }
+
+        .username-glitch {
+            font-family: 'Syncopate', sans-serif; font-size: 0.65rem; font-weight: 900;
+            letter-spacing: 0.35em; color: var(--accent); text-transform: uppercase;
+            margin-bottom: 2px; position: relative; display: inline-block;
+            will-change: transform, opacity, letter-spacing;
+        }
+
+        .message-kinetic {
+            font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 900;
+            line-height: 1.3; letter-spacing: -0.02em;
+            background: linear-gradient(110deg, #ffffff 0%, #e0e0e0 40%, var(--accent) 50%, #ffffff 60%, #ffffff 100%);
+            background-size: 250% auto; -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; color: transparent;
+            animation: textShimmer 4s linear infinite;
+            word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+            will-change: transform, opacity, filter, clip-path; transform-origin: left top;
+        }
+
+        @keyframes textShimmer { 0% { background-position: -150% center; } 100% { background-position: 150% center; } }
+
+        /* ==========================================================================
+           THE 20 UNIQUE FRAMELESS KINETIC ANIMATIONS (Kept from your approved design)
+           ========================================================================== */
+        
+        .thread-in-01 { animation: thIn01 0.7s var(--ease-cyber) forwards; } .thread-out-01 { animation: thOut01 0.5s var(--ease-expo) forwards; } .avatar-in-01 { animation: avIn01 0.6s 0.1s var(--ease-punch) both; } .user-in-01 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-01 { animation: msIn01 0.7s 0.3s var(--ease-elastic) both; } .line-in-01 { animation: lnIn01 0.5s 0.4s var(--ease-glide) both; }
+        @keyframes thIn01 { 0% { transform: translateX(-50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes thOut01 { 100% { transform: translateX(100px) skewX(20deg); opacity: 0; filter: blur(5px); } } @keyframes avIn01 { 0% { transform: scale(0) rotate(-180deg); } 100% { transform: scale(1) rotate(0); } } @keyframes usIn01 { 0% { clip-path: inset(0 100% 0 0); transform: translateX(-10px); } 100% { clip-path: inset(0 0 0 0); transform: translateX(0); } } @keyframes msIn01 { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); transform: translateX(-20px); letter-spacing: -2px; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateX(0); letter-spacing: -0.02em; } } @keyframes lnIn01 { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+
+        .thread-in-02 { animation: thIn02 0.8s var(--ease-bounce) forwards; } .thread-out-02 { animation: thOut02 0.4s ease-in forwards; } .avatar-in-02 { animation: avIn02 0.7s 0.1s var(--ease-elastic) both; } .user-in-02 { animation: usIn02 0.6s 0.2s var(--ease-elastic) both; } .msg-in-02 { animation: msIn02 0.8s 0.3s var(--ease-punch) both; } .line-in-02 { animation: lnIn02 0.6s 0.2s var(--ease-bounce) both; }
+        @keyframes thIn02 { 0% { opacity: 0; filter: brightness(300%) contrast(200%); } 100% { opacity: 1; filter: brightness(100%) contrast(100%); } } @keyframes thOut02 { 100% { transform: scale(1.1); opacity: 0; filter: blur(10px); } } @keyframes avIn02 { 0% { transform: translate(-30px, 30px) scale(0); opacity: 0; } 100% { transform: translate(0, 0) scale(1); opacity: 1; } } @keyframes usIn02 { 0% { transform: translateY(-20px); opacity: 0; letter-spacing: 1em; } 100% { transform: translateY(0); opacity: 1; letter-spacing: 0.35em; } } @keyframes msIn02 { 0% { transform: scale(1.5); opacity: 0; filter: blur(10px); } 100% { transform: scale(1); opacity: 1; filter: blur(0); } } @keyframes lnIn02 { 0% { opacity: 0; transform: translateY(-20px); } 100% { opacity: 0.6; transform: translateY(0); } }
+
+        .thread-in-03 { animation: thIn03 0.9s var(--ease-glide) forwards; } .thread-out-03 { animation: thOut03 0.5s var(--ease-snap) forwards; } .avatar-in-03 { animation: avIn03 0.6s 0.2s var(--ease-glide) both; } .user-in-03 { animation: usIn03 0.5s 0.3s linear both; } .msg-in-03 { animation: msIn03 0.8s 0.4s var(--ease-cyber) both; } .line-in-03 { animation: lnIn03 0.4s 0.1s linear both; }
+        @keyframes thIn03 { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes thOut03 { 100% { transform: translateY(30px); opacity: 0; clip-path: inset(0 0 100% 0); } } @keyframes avIn03 { 0% { clip-path: inset(0 0 100% 0); transform: translateY(-10px); } 100% { clip-path: inset(0 0 0 0); transform: translateY(0); } } @keyframes usIn03 { 0% { clip-path: inset(0 0 100% 0); opacity: 0; } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } @keyframes msIn03 { 0% { clip-path: inset(0 0 100% 0); opacity: 0; transform: translateY(10px); filter: hue-rotate(90deg); } 100% { clip-path: inset(0 0 0 0); opacity: 1; transform: translateY(0); filter: hue-rotate(0); } } @keyframes lnIn03 { 0% { clip-path: inset(0 0 100% 0); } 100% { clip-path: inset(0 0 0 0); } }
+
+        .thread-in-04 { animation: thIn04 1s var(--ease-fluid) forwards; } .thread-out-04 { animation: thOut04 0.6s var(--ease-fluid) forwards; } .avatar-in-04 { animation: avIn04 0.8s 0.1s var(--ease-elastic) both; } .user-in-04 { animation: usIn04 0.7s 0.2s var(--ease-punch) both; } .msg-in-04 { animation: msIn04 1s 0.3s var(--ease-fluid) both; } .line-in-04 { animation: lnIn04 0.8s 0.2s var(--ease-fluid) both; }
+        @keyframes thIn04 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut04 { 100% { transform: translateZ(-300px); opacity: 0; filter: blur(15px); } } @keyframes avIn04 { 0% { transform: translateZ(200px) scale(0.5); opacity: 0; } 100% { transform: translateZ(0) scale(1); opacity: 1; } } @keyframes usIn04 { 0% { transform: translateZ(100px); opacity: 0; filter: blur(5px); } 100% { transform: translateZ(0); opacity: 1; filter: blur(0); } } @keyframes msIn04 { 0% { transform: translateZ(300px) rotateX(-20deg); opacity: 0; filter: blur(10px); } 100% { transform: translateZ(0) rotateX(0); opacity: 1; filter: blur(0); } } @keyframes lnIn04 { 0% { transform: translateZ(50px) scaleY(0); } 100% { transform: translateZ(0) scaleY(1); } }
+
+        .thread-in-05 { animation: thIn05 0.6s steps(5, end) forwards; } .thread-out-05 { animation: thOut05 0.4s steps(4, end) forwards; } .avatar-in-05 { animation: avIn05 0.5s 0.2s steps(3, end) both; } .user-in-05 { animation: usIn05 0.8s 0.1s linear both; } .msg-in-05 { animation: msIn05 0.7s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; } .line-in-05 { animation: lnIn05 0.3s 0.1s steps(2, end) both; }
+        @keyframes thIn05 { 0% { opacity: 0; filter: invert(1); transform: translateX(-20px); } 50% { opacity: 1; filter: invert(0); transform: translateX(10px); } 100% { opacity: 1; transform: translateX(0); } } @keyframes thOut05 { 100% { opacity: 0; transform: skewX(45deg); filter: contrast(300%); } } @keyframes avIn05 { 0% { transform: scale(1.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } } @keyframes usIn05 { 0% { clip-path: inset(0 100% 0 0); opacity: 0; } 20% { clip-path: inset(20% 0 80% 0); opacity: 1; } 40% { clip-path: inset(80% 0 10% 0); } 60% { clip-path: inset(10% 0 60% 0); } 80% { clip-path: inset(40% 0 20% 0); } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } @keyframes msIn05 { 0% { opacity: 0; filter: drop-shadow(10px 0 0 red) drop-shadow(-10px 0 0 cyan); transform: skewX(20deg); } 50% { opacity: 1; filter: drop-shadow(-5px 0 0 red) drop-shadow(5px 0 0 cyan); transform: skewX(-10deg); } 100% { filter: drop-shadow(0 0 0 red) drop-shadow(0 0 0 cyan); opacity: 1; transform: skewX(0); } } @keyframes lnIn05 { 0% { opacity: 0; } 100% { opacity: 0.6; } }
+
+        .thread-in-06 { animation: thIn06 0.8s var(--ease-bounce) forwards; } .thread-out-06 { animation: thOut06 0.5s var(--ease-snap) forwards; } .avatar-in-06 { animation: avIn06 0.7s 0.1s var(--ease-bounce) both; } .user-in-06 { animation: usIn06 0.6s 0.2s var(--ease-bounce) both; } .msg-in-06 { animation: msIn06 0.8s 0.3s var(--ease-bounce) both; } .line-in-06 { animation: lnIn06 0.6s 0.3s var(--ease-bounce) both; }
+        @keyframes thIn06 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut06 { 100% { transform: translateY(50px); opacity: 0; filter: blur(5px); } } @keyframes avIn06 { 0% { transform: translateY(-50px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes usIn06 { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes msIn06 { 0% { transform: translateY(-40px) scaleY(1.2); opacity: 0; } 100% { transform: translateY(0) scaleY(1); opacity: 1; } } @keyframes lnIn06 { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+
+        .thread-in-07 { animation: thIn07 0.7s var(--ease-elastic) forwards; } .thread-out-07 { animation: thOut07 0.4s ease-in forwards; } .avatar-in-07 { animation: avIn07 0.6s 0.1s var(--ease-elastic) both; } .user-in-07 { animation: usIn07 0.5s 0.2s var(--ease-snap) both; } .msg-in-07 { animation: msIn07 0.7s 0.25s var(--ease-elastic) both; } .line-in-07 { animation: lnIn07 0.5s 0.3s var(--ease-elastic) both; }
+        @keyframes thIn07 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut07 { 100% { transform: translateX(-100px) skewX(-20deg); opacity: 0; } } @keyframes avIn07 { 0% { transform: translateX(-100px) rotate(-90deg); opacity: 0; } 100% { transform: translateX(0) rotate(0); opacity: 1; } } @keyframes usIn07 { 0% { transform: translateX(50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes msIn07 { 0% { transform: translateX(100px) skewX(30deg); opacity: 0; } 100% { transform: translateX(0) skewX(0); opacity: 1; } } @keyframes lnIn07 { 0% { transform: scaleY(0) rotate(20deg); } 100% { transform: scaleY(1) rotate(0); } }
+
+        .thread-in-08 { animation: thIn08 1.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; } .thread-out-08 { animation: thOut08 0.8s ease-in forwards; } .avatar-in-08 { animation: avIn08 1s 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) both; } .user-in-08 { animation: usIn08 0.9s 0.4s ease-out both; } .msg-in-08 { animation: msIn08 1.2s 0.5s cubic-bezier(0.25, 1, 0.5, 1) both; } .line-in-08 { animation: lnIn08 1s 0.3s ease-out both; }
+        @keyframes thIn08 { 0% { opacity: 0; transform: translateY(-10px); } 100% { opacity: 1; transform: translateY(0); } } @keyframes thOut08 { 100% { opacity: 0; transform: translateY(-20px); filter: blur(15px); } } @keyframes avIn08 { 0% { opacity: 0; filter: blur(20px); transform: scale(0.8); } 100% { opacity: 1; filter: blur(0); transform: scale(1); } } @keyframes usIn08 { 0% { opacity: 0; filter: blur(10px); letter-spacing: 1em; } 100% { opacity: 1; filter: blur(0); letter-spacing: 0.35em; } } @keyframes msIn08 { 0% { opacity: 0; filter: blur(20px) brightness(200%); transform: scale(1.1); } 100% { opacity: 1; filter: blur(0) brightness(100%); transform: scale(1); } } @keyframes lnIn08 { 0% { opacity: 0; filter: blur(5px); } 100% { opacity: 0.6; filter: blur(0); } }
+
+        .thread-in-09 { animation: thIn09 0.8s var(--ease-cyber) forwards; } .thread-out-09 { animation: thOut09 0.5s var(--ease-snap) forwards; } .avatar-in-09 { animation: avIn09 0.7s 0.1s var(--ease-cyber) both; } .user-in-09 { animation: usIn09 0.6s 0.2s var(--ease-punch) both; } .msg-in-09 { animation: msIn09 0.8s 0.3s var(--ease-cyber) both; } .line-in-09 { animation: lnIn09 0.6s 0.2s var(--ease-cyber) both; }
+        @keyframes thIn09 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut09 { 100% { opacity: 0; transform: scaleY(0.1); filter: brightness(200%); } } @keyframes avIn09 { 0% { clip-path: polygon(50% 0, 50% 0, 50% 100%, 50% 100%); opacity: 0; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; } } @keyframes usIn09 { 0% { clip-path: polygon(0 50%, 100% 50%, 100% 50%, 0 50%); opacity: 0; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; } } @keyframes msIn09 { 0% { clip-path: polygon(0 50%, 100% 50%, 100% 50%, 0 50%); opacity: 0; transform: scaleY(2); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; transform: scaleY(1); } } @keyframes lnIn09 { 0% { opacity: 0; } 100% { opacity: 0.6; } }
+
+        .thread-in-10 { animation: thIn10 0.9s var(--ease-elastic) forwards; } .thread-out-10 { animation: thOut10 0.5s ease-in forwards; } .avatar-in-10 { animation: avIn10 0.7s 0.1s var(--ease-elastic) both; } .user-in-10 { animation: usIn10 0.6s 0.2s var(--ease-elastic) both; } .msg-in-10 { animation: msIn10 0.8s 0.3s var(--ease-elastic) both; } .line-in-10 { animation: lnIn10 0.5s 0.2s linear both; }
+        @keyframes thIn10 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut10 { 100% { transform: scale(0.8) translateZ(-100px); opacity: 0; } } @keyframes avIn10 { 0% { transform: translateX(50px) rotate(180deg); opacity: 0; filter: blur(5px); } 100% { transform: translateX(0) rotate(0); opacity: 1; filter: blur(0); } } @keyframes usIn10 { 0% { transform: translateX(30px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes msIn10 { 0% { transform: translateX(60px) scaleX(1.2); opacity: 0; } 100% { transform: translateX(0) scaleX(1); opacity: 1; } } @keyframes lnIn10 { 0% { transform: scaleY(0); transform-origin: bottom; } 100% { transform: scaleY(1); transform-origin: bottom; } }
+
+        /* The other 10 duplicate the core behaviors securely so we have 20 classes */
+        .thread-in-11 { animation: thIn01 0.7s var(--ease-punch) forwards; } .thread-out-11 { animation: thOut01 0.5s var(--ease-snap) forwards; } .avatar-in-11 { animation: avIn01 0.6s 0.1s var(--ease-bounce) both; } .user-in-11 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-11 { animation: msIn01 0.7s 0.3s var(--ease-expo) both; } .line-in-11 { animation: lnIn01 0.4s 0.3s linear both; }
+        .thread-in-12 { animation: thIn02 1s var(--ease-fluid) forwards; } .thread-out-12 { animation: thOut02 0.6s ease-in forwards; } .avatar-in-12 { animation: avIn02 0.8s 0.1s var(--ease-fluid) both; } .user-in-12 { animation: usIn02 0.7s 0.2s var(--ease-fluid) both; } .msg-in-12 { animation: msIn02 0.9s 0.3s var(--ease-fluid) both; } .line-in-12 { animation: lnIn02 0.7s 0.2s var(--ease-fluid) both; }
+        .thread-in-13 { animation: thIn03 0.6s var(--ease-snap) forwards; } .thread-out-13 { animation: thOut03 0.4s var(--ease-snap) forwards; } .avatar-in-13 { animation: avIn03 0.5s 0.1s var(--ease-punch) both; } .user-in-13 { animation: usIn03 0.4s 0.15s var(--ease-punch) both; } .msg-in-13 { animation: msIn03 0.6s 0.2s var(--ease-bounce) both; } .line-in-13 { animation: lnIn03 0.3s 0.1s linear both; }
+        .thread-in-14 { animation: thIn04 0.8s var(--ease-cyber) forwards; } .thread-out-14 { animation: thOut04 0.5s ease-out forwards; } .avatar-in-14 { animation: avIn04 0.6s 0.1s steps(5, end) both; } .user-in-14 { animation: usIn04 0.5s 0.2s steps(10, end) both; } .msg-in-14 { animation: msIn04 0.8s 0.3s steps(20, end) both; } .line-in-14 { animation: lnIn04 0.5s 0.2s steps(4, end) both; }
+        .thread-in-15 { animation: thIn05 0.5s var(--ease-expo) forwards; } .thread-out-15 { animation: thOut05 0.4s var(--ease-expo) forwards; } .avatar-in-15 { animation: avIn05 0.4s 0.1s var(--ease-bounce) both; } .user-in-15 { animation: usIn05 0.3s 0.15s var(--ease-punch) both; } .msg-in-15 { animation: msIn05 0.5s 0.2s var(--ease-punch) both; } .line-in-15 { animation: lnIn05 0.3s 0.1s linear both; }
+        .thread-in-16 { animation: thIn06 0.9s cubic-bezier(0.42, 0, 0.08, 1) forwards; } .thread-out-16 { animation: thOut06 0.6s ease-in forwards; } .avatar-in-16 { animation: avIn06 0.7s 0.1s cubic-bezier(0.42, 0, 0.08, 1) both; } .user-in-16 { animation: usIn06 0.6s 0.2s cubic-bezier(0.42, 0, 0.08, 1) both; } .msg-in-16 { animation: msIn06 0.8s 0.3s cubic-bezier(0.42, 0, 0.08, 1) both; } .line-in-16 { animation: lnIn06 0.6s 0.2s ease-in-out both; }
+        .thread-in-17 { animation: thIn07 1.2s var(--ease-glide) forwards; } .thread-out-17 { animation: thOut07 0.8s ease-in forwards; } .avatar-in-17 { animation: avIn07 1s 0.1s var(--ease-glide) both; } .user-in-17 { animation: usIn07 0.9s 0.2s var(--ease-glide) both; } .msg-in-17 { animation: msIn07 1.1s 0.3s var(--ease-glide) both; } .line-in-17 { animation: lnIn07 0.8s 0.2s var(--ease-glide) both; }
+        .thread-in-18 { animation: thIn08 0.5s var(--ease-punch) forwards; } .thread-out-18 { animation: thOut08 0.4s var(--ease-snap) forwards; } .avatar-in-18 { animation: avIn08 0.4s 0.1s var(--ease-punch) both; } .user-in-18 { animation: usIn08 0.3s 0.15s var(--ease-punch) both; } .msg-in-18 { animation: msIn08 0.5s 0.2s var(--ease-punch) both; } .line-in-18 { animation: lnIn08 0.3s 0.1s var(--ease-punch) both; }
+        .thread-in-19 { animation: thIn09 0.7s steps(6, end) forwards; } .thread-out-19 { animation: thOut09 0.4s steps(4, end) forwards; } .avatar-in-19 { animation: avIn09 0.6s 0.1s steps(4, end) both; } .user-in-19 { animation: usIn09 0.5s 0.2s steps(3, end) both; } .msg-in-19 { animation: msIn09 0.7s 0.25s steps(5, end) both; } .line-in-19 { animation: lnIn09 0.4s 0.15s steps(2, end) both; }
+        .thread-in-20 { animation: thIn10 0.9s var(--ease-bounce) forwards; } .thread-out-20 { animation: thOut10 0.6s ease-in forwards; } .avatar-in-20 { animation: avIn10 0.8s 0.1s var(--ease-bounce) both; } .user-in-20 { animation: usIn10 0.7s 0.2s var(--ease-punch) both; } .msg-in-20 { animation: msIn10 0.9s 0.3s var(--ease-bounce) both; } .line-in-20 { animation: lnIn10 0.6s 0.2s linear both; }
+
+    </style>
+</head>
+<body>
+
+    <div id="chat-widget"></div>
+
+    <script>
+        class KineticHUDOverlay {
+            constructor() {
+                this.container = document.getElementById('chat-widget');
+                this.maxMessages = 2; 
+
+                this.colors = [
+                    '#ff0055', '#00ffff', '#ffaa00', '#b700ff', '#39ff14', 
+                    '#ff00ff', '#0088ff', '#ff4500', '#f8f8ff', '#ff1493' 
+                ];
+                this.sequenceCounter = 1; 
+            }
+
+            getRandomColor() { return this.colors[Math.floor(Math.random() * this.colors.length)]; }
+
+            addMessage(username, message, avatarUrl) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'msg-wrapper';
+
+                const thread = document.createElement('div');
+                thread.className = 'cyber-thread';
+
+                const seqNum = this.sequenceCounter.toString().padStart(2, '0');
+                
+                const thIn = `thread-in-${seqNum}`; const thOut = `thread-out-${seqNum}`;
+                const avIn = `avatar-in-${seqNum}`; const usIn = `user-in-${seqNum}`;
+                const msIn = `msg-in-${seqNum}`; const lnIn = `line-in-${seqNum}`;
+
+                this.sequenceCounter++;
+                if (this.sequenceCounter > 20) this.sequenceCounter = 1;
+
+                const accentColor = this.getRandomColor();
+                thread.style.setProperty('--accent', accentColor);
+                thread.classList.add(thIn);
+                thread.dataset.animOut = thOut;
+
+                thread.innerHTML = `
+                    <div class="hud-line ${lnIn}"></div>
+                    <div class="avatar-node ${avIn}">
+                        <img src="${avatarUrl}" class="avatar" alt="User">
+                    </div>
+                    <div class="text-cluster">
+                        <div class="username-glitch ${usIn}">${username}</div>
+                        <div class="message-kinetic ${msIn}">${message}</div>
+                    </div>
+                `;
+
+                wrapper.appendChild(thread);
+                this.container.appendChild(wrapper);
+
+                this.enforceLimit();
+            }
+
+            enforceLimit() {
+                const messages = this.container.children;
+                if (messages.length > this.maxMessages) {
+                    const oldestWrapper = messages[0];
+
+                    if (oldestWrapper.classList.contains('is-exiting')) return;
+                    oldestWrapper.classList.add('is-exiting');
+
+                    const thread = oldestWrapper.querySelector('.cyber-thread');
+                    const animOut = thread.dataset.animOut;
+
+                    thread.classList.add(animOut);
+
+                    setTimeout(() => {
+                        oldestWrapper.classList.add('collapsing');
+                        setTimeout(() => {
+                            if(oldestWrapper.parentNode) {
+                                oldestWrapper.parentNode.removeChild(oldestWrapper);
+                            }
+                        }, 600); 
+                    }, 500);
+                }
+            }
+        }
+
+        // ==========================================
+        // REAL YOUTUBE LIVE CHAT ENGINE
+        // ==========================================
+        class LiveChatEngine {
+            constructor(hudEngine, handle) {
+                this.hudEngine = hudEngine;
+                this.handle = handle;
+                this.nextPageToken = "";
+                this.isPolling = false;
+
+                if (!this.handle) {
+                    this.runDemoMode();
+                } else {
+                    this.pollChat();
+                }
+            }
+
+            async pollChat() {
+                if(this.isPolling) return;
+                this.isPolling = true;
+
+                let delay = 5000; 
+
+                try {
+                    const url = `/api/streamer/${this.handle}/chat?pageToken=${this.nextPageToken}`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    
+                    if (res.ok && !data.error) {
+                        if (data.pollingIntervalMillis) {
+                            delay = data.pollingIntervalMillis;
+                        }
+
+                        if (data.nextPageToken) {
+                            this.nextPageToken = data.nextPageToken;
+                        }
+
+                        if (data.items && data.items.length > 0) {
+                            this.queueMessages(data.items);
+                        }
+                    } else {
+                        // Error, wait 10 seconds before retrying
+                        delay = 10000;
+                    }
+                } catch (e) {
+                    console.error("Chat poll error", e);
+                    delay = 10000;
+                }
+
+                setTimeout(() => {
+                    this.isPolling = false;
+                    this.pollChat();
+                }, delay);
+            }
+
+            queueMessages(items) {
+                // Stagger the deployment of messages so they don't instantly flush each other out.
+                // 2.5 seconds per message ensures the dopamine animation finishes beautifully.
+                items.forEach((item, index) => {
+                    setTimeout(() => {
+                        const username = item.authorDetails.displayName;
+                        const message = item.snippet.displayMessage;
+                        const avatarUrl = item.authorDetails.profileImageUrl;
+                        this.hudEngine.addMessage(username, message, avatarUrl);
+                    }, index * 2500); 
+                });
+            }
+
+            runDemoMode() {
+                const mockUsers = ["NightRunner", "ApexPredator", "GlitchKing", "NeonViper", "VoidWalker"];
+                const mockMsgs = [
+                    "DEMO MODE: Please add ?user=name to the URL to connect real chat.",
+                    "This frameless design is absolutely incredible.",
+                    "The text animations loop flawlessly. Pure premium."
+                ];
+                const defaultAvatar = "https://yt3.ggpht.com/a/default-user=s88-c-k-c0x00ffffff-no-rj"; 
+
+                const triggerRandomChat = () => {
+                    const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
+                    const msg = mockMsgs[Math.floor(Math.random() * mockMsgs.length)];
+                    this.hudEngine.addMessage(user, msg, defaultAvatar);
+                    const nextDelay = Math.floor(Math.random() * 2000) + 3500; 
+                    setTimeout(triggerRandomChat, nextDelay);
+                }
+                setTimeout(triggerRandomChat, 1000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const hudEngine = new KineticHUDOverlay();
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('user') || '';
+            
+            // Fire up the real-time chat scraper engine
+            new LiveChatEngine(hudEngine, username);
+        });
+    </script>
+</body>
+</html>
