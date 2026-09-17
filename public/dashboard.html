@@ -53,7 +53,6 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* GOOGLE AUTH BUTTON */
         .auth-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 30px; }
         .btn-google {
             width: 100%; height: 56px; display: flex; align-items: center; justify-content: center; gap: 14px;
@@ -70,7 +69,6 @@
         .btn-google:hover::before { transform: translateX(100%); }
         .google-icon { width: 22px; height: 22px; }
 
-        /* LIVE CONNECTED PROFILE CARD */
         .profile-card {
             background: var(--surface-card); border: 1px solid rgba(144, 0, 255, 0.25);
             border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
@@ -81,7 +79,6 @@
         .channel-stats { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-green); box-shadow: 0 0 10px var(--status-green); display: inline-block; margin-right: 4px; }
 
-        /* OBS LINKS GRID */
         .obs-links-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
         .obs-dock {
             background: rgba(0, 0, 0, 0.45); border: 1px dashed rgba(144, 0, 255, 0.4);
@@ -96,7 +93,7 @@
         .copy-btn:hover { color: #fff; }
         .obs-url { font-family: monospace; font-size: 0.8rem; color: var(--status-green); word-break: break-all; }
 
-        /* FORM CONTROLS */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 16px; }
         .field { margin-bottom: 16px; }
         .field-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 6px; display: block; }
         input, textarea {
@@ -110,7 +107,7 @@
             background: linear-gradient(90deg, var(--purple-deep), var(--purple-neon));
             color: #fff; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px;
             text-transform: uppercase; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(144, 0, 255, 0.35); transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(144, 0, 255, 0.35); transition: all 0.2s ease; margin-top: 10px;
         }
         .btn-push:hover { filter: brightness(1.2); transform: translateY(-1px); }
     </style>
@@ -119,7 +116,7 @@
 
     <div class="dashboard-container">
         <div class="header">
-            <div class="system-badge">⚡ Live Sync Engine</div>
+            <div class="system-badge">⚡ Unified Live Sync Engine</div>
             <h1 class="title">Control Hub</h1>
         </div>
 
@@ -147,7 +144,6 @@
         </div>
 
         <div class="obs-links-grid" id="obs-links" style="display: none;">
-            <!-- Main Overlay URL -->
             <div class="obs-dock">
                 <div class="obs-dock-header">
                     <span class="dock-label">HUD Overlay URL</span>
@@ -156,10 +152,9 @@
                 <div class="obs-url" id="overlay-url">Awaiting sign-in...</div>
             </div>
             
-            <!-- Chat Overlay URL -->
             <div class="obs-dock">
                 <div class="obs-dock-header">
-                    <span class="dock-label">Live Chat HUD URL</span>
+                    <span class="dock-label">Unified Chat URL (YT+Twitch+Kick)</span>
                     <button class="copy-btn" onclick="copyUrl('chat-url')">Copy URL</button>
                 </div>
                 <div class="obs-url" id="chat-url">Awaiting sign-in...</div>
@@ -167,8 +162,19 @@
         </div>
 
         <div class="field">
-            <label class="field-label">Active Stream URL (Required for Chat & Likes)</label>
+            <label class="field-label">Active YouTube Stream URL</label>
             <input type="text" id="stream_url" placeholder="https://youtube.com/watch?v=...">
+        </div>
+
+        <div class="form-grid">
+            <div class="field">
+                <label class="field-label">Twitch Username</label>
+                <input type="text" id="twitch_user" placeholder="e.g. Ninja">
+            </div>
+            <div class="field">
+                <label class="field-label">Kick Username</label>
+                <input type="text" id="kick_user" placeholder="e.g. xQc">
+            </div>
         </div>
 
         <div class="field">
@@ -203,9 +209,11 @@
                         
                         document.getElementById('sub_goal').value = data.sub_goal || 5000;
                         document.getElementById('ticker_text').value = data.ticker_text || "";
+                        document.getElementById('twitch_user').value = data.twitch_user || "";
+                        document.getElementById('kick_user').value = data.kick_user || "";
+                        
                         if(data.video_id) document.getElementById('stream_url').value = `https://youtube.com/watch?v=${data.video_id}`;
 
-                        // GENERATE BOTH URLS
                         document.getElementById('overlay-url').innerText = `${window.location.origin}/overlay?user=${handle}`;
                         document.getElementById('chat-url').innerText = `${window.location.origin}/chat?user=${handle}`;
                     }
@@ -232,13 +240,15 @@
             } else if (streamUrl.includes("youtu.be/")) {
                 videoId = streamUrl.split("youtu.be/")[1].split("?")[0];
             } else if (streamUrl.length === 11) {
-                videoId = streamUrl; // Paste ID directly
+                videoId = streamUrl; 
             }
 
             const payload = {
                 sub_goal: parseInt(document.getElementById('sub_goal').value) || 5000,
                 video_id: videoId,
-                ticker_text: document.getElementById('ticker_text').value
+                ticker_text: document.getElementById('ticker_text').value,
+                twitch_user: document.getElementById('twitch_user').value.trim(),
+                kick_user: document.getElementById('kick_user').value.trim()
             };
 
             try {
