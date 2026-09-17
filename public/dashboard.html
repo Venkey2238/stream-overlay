@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Creator Hub</title>
+    <title>Creator Hub SaaS</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -130,7 +130,7 @@
                 </svg>
                 Sign in with YouTube
             </a>
-            <span style="font-size: 0.7rem; color: var(--text-muted);">Instant zero-key verification via official Google API</span>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">SaaS Engine Active</span>
         </div>
 
         <div class="profile-card" id="profile-box" style="display: none;">
@@ -172,11 +172,9 @@
                 <input type="text" id="twitch_user" placeholder="e.g. Ninja">
             </div>
             <div class="field">
-                <label class="field-label">
-                    Kick Chatroom ID 
-                    <a href="#" onclick="alert('To get your ID:\n1. Open a new tab and go to: https://kick.com/api/v1/channels/YOUR_USERNAME\n2. Scroll down until you see \x22chatroom\x22:{\x22id\x22: 123456}\n3. Paste that number here.')" style="color:var(--gold-pure); text-transform:none; text-decoration:none; margin-left: 5px;">(How to find this?)</a>
-                </label>
-                <input type="text" id="kick_user" placeholder="e.g. 123456">
+                <label class="field-label">Kick Username</label>
+                <!-- Because of Auto-Resolver, streamers just type their username here! -->
+                <input type="text" id="kick_user" placeholder="e.g. kalaakaar">
             </div>
         </div>
 
@@ -213,6 +211,8 @@
                         document.getElementById('sub_goal').value = data.sub_goal || 5000;
                         document.getElementById('ticker_text').value = data.ticker_text || "";
                         document.getElementById('twitch_user').value = data.twitch_user || "";
+                        
+                        // We store the resolved ID in the DB, but we show it in the input so it stays active
                         document.getElementById('kick_user').value = data.kick_user || "";
                         
                         if(data.video_id) document.getElementById('stream_url').value = `https://youtube.com/watch?v=${data.video_id}`;
@@ -234,7 +234,7 @@
             if (!handle) return alert("You must sign in first.");
             
             const btn = document.getElementById('sync-btn');
-            btn.innerText = "SYNCING...";
+            btn.innerText = "RESOLVING KICK DATA...";
             
             let videoId = "";
             const streamUrl = document.getElementById('stream_url').value;
@@ -246,12 +246,34 @@
                 videoId = streamUrl; 
             }
 
+            // AUTO-RESOLVER: Translates Kick Username into Chatroom ID natively in the browser
+            let rawKickInput = document.getElementById('kick_user').value.trim();
+            let resolvedKickId = rawKickInput;
+
+            // If the user typed a username (letters) instead of a numeric ID
+            if (rawKickInput && !/^\d+$/.test(rawKickInput)) {
+                try {
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v1/channels/' + rawKickInput)}`;
+                    const res = await fetch(proxyUrl);
+                    const data = await res.json();
+                    const parsed = JSON.parse(data.contents);
+                    
+                    if (parsed && parsed.chatroom && parsed.chatroom.id) {
+                        resolvedKickId = parsed.chatroom.id.toString();
+                    }
+                } catch(e) {
+                    console.log("Could not resolve Kick ID automatically.");
+                }
+            }
+
+            btn.innerText = "SYNCING TO SERVERS...";
+
             const payload = {
                 sub_goal: parseInt(document.getElementById('sub_goal').value) || 5000,
                 video_id: videoId,
                 ticker_text: document.getElementById('ticker_text').value,
                 twitch_user: document.getElementById('twitch_user').value.trim(),
-                kick_user: document.getElementById('kick_user').value.trim()
+                kick_user: resolvedKickId // We save the exact numeric ID to the database!
             };
 
             try {
@@ -264,6 +286,10 @@
                 if (res.ok) {
                     btn.innerText = "SUCCESS! SYNCED";
                     btn.style.background = "linear-gradient(90deg, #00b09b, #96c93d)";
+                    
+                    // Update input field to show the resolved ID
+                    document.getElementById('kick_user').value = resolvedKickId;
+
                     setTimeout(() => {
                         btn.innerText = "Sync Overlays";
                         btn.style.background = "";
