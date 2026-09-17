@@ -26,7 +26,7 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 CACHE = {}
-CACHE_TTL = 5  
+CACHE_TTL = 5
 
 app = FastAPI()
 
@@ -206,7 +206,6 @@ async def get_live_overlay_data(handle: str, response: Response):
             supabase.table("streamers").update({"current_subs": current_subs, "updated_at": "now()"}).eq("handle", user).execute()
 
         if video_id:
-            # Added liveStreamingDetails to fetch exact concurrent viewers
             vid_res = await client.get(
                 f"https://www.googleapis.com/youtube/v3/videos?part=statistics,liveStreamingDetails&id={video_id}",
                 headers={"Authorization": f"Bearer {token}"}
@@ -214,7 +213,6 @@ async def get_live_overlay_data(handle: str, response: Response):
             if vid_res.status_code == 200 and vid_res.json().get("items"):
                 item = vid_res.json()["items"][0]
                 likes = int(item["statistics"].get("likeCount", 0))
-                # Safely extract YouTube viewers
                 yt_viewers = int(item.get("liveStreamingDetails", {}).get("concurrentViewers", 0))
 
     response_data = {
@@ -223,7 +221,7 @@ async def get_live_overlay_data(handle: str, response: Response):
         "avatar": profile["avatar"],
         "subs": current_subs,
         "likes": likes,
-        "yt_viewers": yt_viewers, # Now passed to the frontend
+        "yt_viewers": yt_viewers,
         "sub_goal": profile["sub_goal"] if profile["sub_goal"] else 5000,
         "video_id": video_id,
         "ticker_text": profile["ticker_text"],
@@ -288,15 +286,44 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
         else:
             return {"error": "API Error", "pollingIntervalMillis": 10000}
 
-# Bypass Kick CORS Protection
-@app.get("/api/kick_id/{kick_username}")
-async def get_kick_id(kick_username: str):
+# ==========================================
+# 6. KICK VIEWER PROXY (OBS CLOUDFLARE BYPASS)
+# ==========================================
+@app.get("/api/kick_viewers/{username}")
+async def get_kick_viewers(username: str, response: Response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    
+    # We fake a perfect human Chrome User-Agent here to stop Cloudflare from blocking us
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+    }
+    
     async with httpx.AsyncClient() as client:
-        res = await client.get(f"https://kick.com/api/v1/channels/{kick_username}", headers={"User-Agent": "Mozilla/5.0"})
-        if res.status_code == 200:
-            data = res.json()
-            return {"chatroom_id": data.get("chatroom", {}).get("id")}
-    return {"error": "Failed to connect to Kick API"}
+        # Fallback 1: CodeTabs
+        try:
+            res = await client.get(f"https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/{username}", headers=headers, timeout=5.0)
+            if res.status_code == 200:
+                data = res.json()
+                if data and "livestream" in data:
+                    count = data["livestream"].get("viewer_count", 0) if data["livestream"] else 0
+                    return {"viewers": count}
+        except:
+            pass
+            
+        # Fallback 2: AllOrigins
+        try:
+            res = await client.get(f"https://api.allorigins.win/get?url=https://kick.com/api/v1/channels/{username}", headers=headers, timeout=5.0)
+            if res.status_code == 200:
+                import json
+                data = json.loads(res.json().get("contents", "{}"))
+                if data and "livestream" in data:
+                    count = data["livestream"].get("viewer_count", 0) if data["livestream"] else 0
+                    return {"viewers": count}
+        except:
+            pass
+
+    return {"viewers": 0}
 
 @app.post("/api/streamer/{handle}/settings")
 async def save_streamer_settings(handle: str, payload: SettingsPayload):
@@ -319,7 +346,7 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
     return {"status": "success"}
 
 # ==========================================
-# 6. STATIC FILES (Vercel Fix)
+# 7. STATIC FILES (Vercel Fix)
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
