@@ -357,59 +357,61 @@
             }
 
          // ==========================================
-            // KICK WEBSOCKET (DIRECT ID + MULTI-KEY ROTATION)
+            // KICK WEBSOCKET (PROPER PUSHER HANDSHAKE)
             // ==========================================
-            async connectKick(chatroomId) {
-                // Because the Dashboard converted the username to an ID, we bypass Cloudflare APIs completely.
+            connectKick(chatroomId) {
                 if (!/^\d+$/.test(chatroomId)) {
                     console.error("[Kick] Invalid Chatroom ID. Open dashboard and sync again.");
                     return;
                 }
 
-                // Kick uses different Pusher keys globally. We loop through them instantly.
-                const pusherKeys = ["eb1d5f283081a78b932c", "32cbd69e4b950bf97679", "1bb076ec966b931dd264"];
-                let connected = false;
+                try {
+                    // Official Kick Pusher Key
+                    const ws = new WebSocket("wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false");
+                    
+                    ws.onopen = () => {
+                        console.log(`[Kick] Connecting to WebSocket... waiting for server handshake.`);
+                    };
 
-                for (let key of pusherKeys) {
-                    if (connected) break;
-
-                    await new Promise((resolve) => {
-                        const ws = new WebSocket(`wss://ws-us2.pusher.com/app/${key}?protocol=7&client=js&version=7.4.0&flash=false`);
+                    ws.onmessage = (event) => {
+                        const parsed = JSON.parse(event.data);
                         
-                        // Fail quickly if key is dead
-                        const timeout = setTimeout(() => { ws.close(); resolve(); }, 4000);
-
-                        ws.onopen = () => {
-                            clearTimeout(timeout);
+                        // STEP 1: Wait for the server to formally establish the connection
+                        if (parsed.event === "pusher:connection_established") {
+                            console.log("[Kick] Handshake received. Sending subscription request...");
                             ws.send(JSON.stringify({
                                 event: "pusher:subscribe",
                                 data: { auth: "", channel: `chatrooms.${chatroomId}.v2` }
                             }));
-                            console.log(`[Kick] Connected securely to Room: ${chatroomId}`);
-                            connected = true;
-                            resolve();
-                        };
+                        }
 
-                        ws.onmessage = (event) => {
-                            const parsed = JSON.parse(event.data);
+                        // STEP 2: Confirm we are officially in the chatroom
+                        if (parsed.event === "pusher_internal:subscription_succeeded") {
+                            console.log(`[Kick] SUCCESS! Subscribed to Room ID: ${chatroomId}`);
+                        }
+                        
+                        // STEP 3: Listen for actual chat messages
+                        if (parsed.event === "App\\Events\\ChatMessageEvent") {
+                            const msgData = JSON.parse(parsed.data);
+                            const username = msgData.sender.username;
+                            const message = msgData.content;
                             
-                            if (parsed.event === "App\\Events\\ChatMessageEvent") {
-                                const msgData = JSON.parse(parsed.data);
-                                const username = msgData.sender.username;
-                                const message = msgData.content;
-                                
-                                // Clean Typography Avatar
-                                const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-                                
-                                this.masterQueue.push({ username, message, avatar });
-                            }
-                        };
+                            // Fetch Kick Avatar or fallback to clean typography
+                            const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
+                            
+                            this.masterQueue.push({ username, message, avatar });
+                        }
+                    };
 
-                        ws.onerror = () => {
-                            clearTimeout(timeout);
-                            resolve(); // Try next key
-                        };
-                    });
+                    // Anti-Disconnect Ping: Keeps the connection alive
+                    setInterval(() => {
+                        if(ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ event: "pusher:ping", data: {} }));
+                        }
+                    }, 120000);
+
+                } catch(e) {
+                    console.error("[Kick] Connection Error:", e);
                 }
             }
             // ==========================================
