@@ -1,597 +1,1129 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fast Sync Stream Overlay</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --void-obsidian: #030008;
-            --void-deep: #0a011a;
-            --purple-core: #2b00ff;
-            --purple-rich: #4d0099;
-            --purple-neon: #a200ff;
-            --purple-glare: rgba(162, 0, 255, 0.8);
-            --gold-dark: #b38600;
-            --gold-pure: #ffd700;
-            --gold-bright: #ffea75;
-            --neon-white: #ffffff;
-            --glass-sheen: rgba(255, 255, 255, 0.15);
 
-            --overlay-width: 860px; 
-            --overlay-height: 76px;  
-            --logo-size: 104px;        
-            
-            --sweep-progress: 0%; 
-            --logo-rot: 0deg; 
-            --ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            --ease-slot: cubic-bezier(0.2, 0.9, 0.1, 1);
-        }
+<meta charset="UTF-8">
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        body {
-            width: 100vw; height: 100vh;
-            background-color: transparent; 
-            font-family: 'Montserrat', sans-serif;
-            overflow: hidden; color: white;
-            display: flex; align-items: center; justify-content: center;
-        }
+<title>Stream Status Overlay</title>
 
-        .obs-safe-zone {
-            width: 1000px; height: 250px;
-            display: flex; align-items: center; justify-content: center; position: relative;
-        }
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
 
-        .scene-container {
-            position: relative; width: var(--overlay-width); height: var(--overlay-height);
-            display: flex; align-items: center; z-index: 10;
-        }
+<style>
 
-        .master-overlay-wrapper {
-            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
-            padding: 3px; border-radius: 40px;
-            background: linear-gradient(90deg, var(--void-obsidian), var(--purple-rich), var(--purple-neon), var(--purple-rich), var(--void-obsidian));
-            background-size: 300% 100%; animation: borderFlow 8s linear infinite;
-            clip-path: inset(0 calc(100% - var(--sweep-progress)) 0 0);
-            z-index: 1; will-change: clip-path; box-shadow: inset 0 0 10px rgba(0,0,0,1);
-        }
 
-        .overlay-core {
-            position: relative; width: 100%; height: 100%;
-            background-color: var(--void-obsidian); border-radius: 37px; overflow: hidden; 
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 25px 0 75px; gap: 25px; z-index: 2;
-            box-shadow: inset 0 0 50px rgba(0,0,0,1), inset 0 0 15px rgba(162, 0, 255, 0.2);
-        }
 
-        .holo-grid {
-            position: absolute; inset: 0; z-index: 1; opacity: 0.35;
-            background-image: linear-gradient(var(--purple-glare) 1px, transparent 1px), linear-gradient(90deg, var(--purple-glare) 1px, transparent 1px);
-            background-size: 20px 20px; animation: panGrid 15s linear infinite;
-            mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
-            -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
-        }
+:root {
 
-        .scanlines {
-            position: absolute; inset: 0; z-index: 2; opacity: 0.15;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.5));
-            background-size: 100% 4px; pointer-events: none;
-        }
+/* Void & Cyber Palette */
 
-        .glass-reflection {
-            position: absolute; top: 0; left: 0; width: 100%; height: 50%;
-            background: linear-gradient(180deg, var(--glass-sheen) 0%, transparent 100%);
-            border-radius: 37px 37px 0 0; z-index: 99; pointer-events: none;
-        }
+--void-obsidian: #030008;
 
-        #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; mix-blend-mode: screen; }
+--void-deep: #0a011a;
 
-        .logo-sweeper {
-            position: absolute; top: 50%; left: var(--sweep-progress);
-            transform: translate(-50%, -50%); width: var(--logo-size); height: var(--logo-size); z-index: 100;
-            background-color: var(--void-deep); border-radius: 50%; padding: 5px;
-            filter: drop-shadow(0 0 10px rgba(162, 0, 255, 0.8));
-            display: flex; justify-content: center; align-items: center; will-change: left;
-        }
+--purple-core: #2b00ff;
 
-        .logo-sweeper::before, .logo-sweeper::after {
-            content: ''; position: absolute; inset: -6px; border-radius: 50%;
-            border: 2px dashed rgba(162, 0, 255, 0.8); pointer-events: none; z-index: -1;
-        }
-        .logo-sweeper::before { animation: spinCW 8s linear infinite; }
-        .logo-sweeper::after { inset: -12px; border: 1px dotted rgba(255, 215, 0, 0.6); animation: spinCCW 12s linear infinite; }
+--purple-rich: #4d0099;
 
-        .logo-inner-ring {
-            width: 100%; height: 100%; border-radius: 50%; padding: 3px;
-            background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-pure), var(--gold-bright));
-            background-size: 200% 200%; animation: borderFlow 4s ease infinite;
-            display: flex; justify-content: center; align-items: center;
-            transform: rotate(var(--logo-rot)); will-change: transform; transition: filter 0.3s ease;
-        }
-        .logo-inner-ring.overdrive { filter: brightness(1.5) drop-shadow(0 0 10px var(--gold-pure)); }
-        
-        .brand-logo {
-            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
-            background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
-        }
+--purple-neon: #a200ff;
 
-        .data-module {
-            position: relative; z-index: 10;
-            display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-            height: 100%; min-width: 85px; 
-        }
+--purple-glare: rgba(162, 0, 255, 0.8);
 
-        .data-label {
-            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
-            text-transform: uppercase; letter-spacing: 0.3em; color: var(--void-obsidian); 
-            background: var(--neon-white); padding: 3px 6px; border-radius: 2px; margin-bottom: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.8); position: relative; overflow: hidden;
-        }
+--gold-dark: #b38600;
 
-        .data-label::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
-            animation: glassShine 4s linear infinite;
-        }
+--gold-pure: #ffd700;
 
-        .slot-machine-container {
-            display: flex; font-family: 'Montserrat', sans-serif; font-size: 1.7rem; font-weight: 900;
-            line-height: 1; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; 
-            color: var(--neon-white); text-shadow: 0 3px 5px rgba(0, 0, 0, 1), 0 0 15px rgba(255, 255, 255, 0.5);
-            height: 1.7rem; overflow: hidden; position: relative;
-        }
+--gold-bright: #ffea75;
 
-        .slot-digit-window { position: relative; width: 1.1rem; height: 100%; text-align: center; }
-        .slot-digit-window.comma { width: 0.5rem; text-align: left; }
+--neon-white: #ffffff;
 
-        .slot-strip {
-            position: absolute; top: 0; left: 0; width: 100%;
-            display: flex; flex-direction: column; align-items: center; will-change: transform, filter;
-        }
-        .slot-strip.rolling { transition: transform 1.5s var(--ease-slot), filter 1.5s var(--ease-slot); }
-        .slot-strip > span { height: 1.7rem; display: flex; justify-content: center; align-items: center; }
+--glass-sheen: rgba(255, 255, 255, 0.15);
 
-        .flare-layer {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%);
-            opacity: 0; z-index: 99; pointer-events: none; mix-blend-mode: screen;
-        }
-        .data-module.flare-active .flare-layer { animation: quickFlare 0.5s ease-out; }
 
-        .separator {
-            position: relative; z-index: 10; width: 3px; height: 35px;
-            background: rgba(255, 255, 255, 0.1); border-radius: 2px;
-            box-shadow: inset 0 0 5px rgba(255,255,255,0.5), 0 0 10px rgba(162, 0, 255, 0.6);
-        }
 
-        .goal-module {
-            display: flex; flex-direction: column; justify-content: center;
-            flex-grow: 1; min-width: 220px; z-index: 10; position: relative;
-        }
+/* Dimensional Sizing */
 
-        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+--overlay-width: 860px;
 
-        .goal-title {
-            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
-            color: var(--void-obsidian); background: var(--gold-pure);
-            padding: 3px 6px; border-radius: 2px; letter-spacing: 0.25em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 15px rgba(255,215,0,0.5);
-            animation: pulseGold 2s infinite alternate;
-        }
+--overlay-height: 76px;
 
-        .goal-numbers {
-            font-size: 0.9rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1px;
-            font-variant-numeric: tabular-nums; text-shadow: 0 2px 4px rgba(0,0,0,1);
-            transition: transform 0.3s var(--ease-dopamine);
-        }
+--logo-size: 104px;
 
-        .progress-track {
-            position: relative; width: 100%; height: 16px;
-            background: rgba(0,0,0,0.9); overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.2); transform: skewX(-25deg); box-shadow: inset 0 3px 8px rgba(0,0,0,1);
-        }
 
-        .progress-fill {
-            position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
-            background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), var(--gold-dark));
-            background-size: 200% 100%; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 0 20px rgba(162, 0, 255, 0.9);
-            transition: width 1.5s var(--ease-dopamine); overflow: hidden; animation: borderFlow 3s linear infinite;
-        }
+/* Animation Physics Hooks */
 
-        .progress-fill::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 300%; height: 100%;
-            background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.4) 8px, rgba(255,255,255,0.4) 16px);
-            animation: kineticFlow 1s linear infinite;
-        }
+--sweep-progress: 0%;
 
-        .progress-fill::after {
-            content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 5px;
-            background: var(--neon-white); box-shadow: -3px 0 12px var(--neon-white), 0 0 25px var(--gold-pure);
-        }
+--logo-rot: 0deg;
 
-        .goal-flash .progress-fill { filter: brightness(1.8); box-shadow: 0 0 40px var(--gold-pure); }
-        .goal-flash .goal-numbers { transform: scale(1.2); color: var(--gold-pure); text-shadow: 0 0 20px var(--gold-pure); }
+--ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
-        .ticker-module {
-            display: flex; align-items: center; background: rgba(0, 0, 0, 0.75); border-left: 3px solid var(--purple-neon);
-            padding: 0 15px; height: 100%; width: 250px; overflow: hidden; position: relative; z-index: 10;
-            box-shadow: inset 5px 0 15px rgba(0,0,0,0.8);
-        }
+--ease-cinematic: cubic-bezier(0.7, 0, 0.3, 1);
 
-        .live-eq-container { display: flex; align-items: flex-end; gap: 3px; height: 16px; margin-right: 15px; flex-shrink: 0; }
-        .eq-bar { width: 4px; background: #00ffcc; border-radius: 1px 1px 0 0; box-shadow: 0 0 10px #00ffcc; transition: height 0.08s ease; }
-        .ticker-wrapper { overflow: hidden; width: 100%; position: relative; }
-        
-        .ticker-content {
-            font-size: 0.8rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1.5px; white-space: nowrap; 
-            transform: translateX(100%); will-change: transform;
-            text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 12px var(--purple-neon), 0 0 24px var(--purple-neon);
-        }
+--ease-slot: cubic-bezier(0.2, 0.9, 0.1, 1);
 
-        @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
-        @keyframes panGrid { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
-        @keyframes spinCW { 100% { transform: rotate(360deg); } }
-        @keyframes spinCCW { 100% { transform: rotate(-360deg); } }
-        @keyframes kineticFlow { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
-        @keyframes glassShine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
-        @keyframes quickFlare { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
-        @keyframes pulseGold { 0% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 5px rgba(255,215,0,0.2); } 100% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 20px rgba(255,215,0,0.8); } }
-        @keyframes pureFlash {
-            0% { color: #fff; text-shadow: 0 0 20px #fff, 0 0 40px #fff; transform: scale(1.05); }
-            100% { color: #fff; text-shadow: 0 3px 5px rgba(0,0,0,1), 0 0 15px rgba(255, 255, 255, 0.5); transform: scale(1); }
-        }
-    </style>
+}
+
+
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+
+
+body {
+
+width: 100vw; height: 100vh;
+
+background-color: transparent;
+
+font-family: 'Montserrat', sans-serif;
+
+overflow: hidden; color: white;
+
+display: flex; align-items: center; justify-content: center;
+
+}
+
+
+
+.obs-safe-zone {
+
+width: 1000px; height: 250px;
+
+display: flex; align-items: center; justify-content: center; position: relative;
+
+}
+
+
+
+.scene-container {
+
+position: relative; width: var(--overlay-width); height: var(--overlay-height);
+
+display: flex; align-items: center; z-index: 10;
+
+}
+
+
+
+.master-overlay-wrapper {
+
+position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+
+padding: 3px; border-radius: 40px;
+
+background: linear-gradient(90deg, var(--void-obsidian), var(--purple-rich), var(--purple-neon), var(--purple-rich), var(--void-obsidian));
+
+background-size: 300% 100%; animation: borderFlow 8s linear infinite;
+
+clip-path: inset(0 calc(100% - var(--sweep-progress)) 0 0);
+
+z-index: 1; will-change: clip-path; box-shadow: inset 0 0 10px rgba(0,0,0,1);
+
+}
+
+
+
+.overlay-core {
+
+position: relative; width: 100%; height: 100%;
+
+background-color: var(--void-obsidian); border-radius: 37px; overflow: hidden;
+
+display: flex; align-items: center; justify-content: space-between;
+
+padding: 0 25px 0 75px; gap: 25px; z-index: 2;
+
+box-shadow: inset 0 0 50px rgba(0,0,0,1), inset 0 0 15px rgba(162, 0, 255, 0.2);
+
+}
+
+
+
+.holo-grid {
+
+position: absolute; inset: 0; z-index: 1; opacity: 0.35;
+
+background-image: linear-gradient(var(--purple-glare) 1px, transparent 1px), linear-gradient(90deg, var(--purple-glare) 1px, transparent 1px);
+
+background-size: 20px 20px; animation: panGrid 15s linear infinite;
+
+mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
+
+-webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
+
+}
+
+
+
+.scanlines {
+
+position: absolute; inset: 0; z-index: 2; opacity: 0.15;
+
+background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.5));
+
+background-size: 100% 4px; pointer-events: none;
+
+}
+
+
+
+.glass-reflection {
+
+position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+
+background: linear-gradient(180deg, var(--glass-sheen) 0%, transparent 100%);
+
+border-radius: 37px 37px 0 0; z-index: 99; pointer-events: none;
+
+}
+
+
+
+#particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; mix-blend-mode: screen; }
+
+
+
+.logo-sweeper {
+
+position: absolute; top: 50%; left: var(--sweep-progress);
+
+transform: translate(-50%, -50%); width: var(--logo-size); height: var(--logo-size); z-index: 100;
+
+background-color: var(--void-deep); border-radius: 50%; padding: 5px;
+
+filter: drop-shadow(0 0 10px rgba(162, 0, 255, 0.8));
+
+display: flex; justify-content: center; align-items: center; will-change: left;
+
+}
+
+
+
+.logo-sweeper::before, .logo-sweeper::after {
+
+content: ''; position: absolute; inset: -6px; border-radius: 50%;
+
+border: 2px dashed rgba(162, 0, 255, 0.8); pointer-events: none; z-index: -1;
+
+}
+
+.logo-sweeper::before { animation: spinCW 8s linear infinite; }
+
+.logo-sweeper::after { inset: -12px; border: 1px dotted rgba(255, 215, 0, 0.6); animation: spinCCW 12s linear infinite; }
+
+
+
+.logo-inner-ring {
+
+width: 100%; height: 100%; border-radius: 50%; padding: 3px;
+
+background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-pure), var(--gold-bright));
+
+background-size: 200% 200%; animation: borderFlow 4s ease infinite;
+
+display: flex; justify-content: center; align-items: center;
+
+transform: rotate(var(--logo-rot)); will-change: transform;
+
+}
+
+
+.brand-logo {
+
+width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+
+background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
+
+}
+
+
+
+.data-module {
+
+position: relative; z-index: 10;
+
+display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+
+height: 100%; min-width: 85px;
+
+}
+
+
+
+.data-label {
+
+font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+
+text-transform: uppercase; letter-spacing: 0.3em; color: var(--void-obsidian);
+
+background: var(--neon-white); padding: 3px 6px; border-radius: 2px; margin-bottom: 4px;
+
+box-shadow: 0 2px 4px rgba(0,0,0,0.8); position: relative; overflow: hidden;
+
+}
+
+
+
+.data-label::after {
+
+content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+
+background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+
+animation: glassShine 4s linear infinite;
+
+}
+
+
+
+.slot-machine-container {
+
+display: flex; font-family: 'Montserrat', sans-serif; font-size: 1.7rem; font-weight: 900;
+
+line-height: 1; letter-spacing: 0.05em; font-variant-numeric: tabular-nums;
+
+color: var(--neon-white); text-shadow: 0 3px 5px rgba(0, 0, 0, 1), 0 0 15px rgba(255, 255, 255, 0.5);
+
+height: 1.7rem; overflow: hidden; position: relative;
+
+}
+
+
+
+.slot-digit-window { position: relative; width: 1.1rem; height: 100%; text-align: center; }
+
+.slot-digit-window.comma { width: 0.5rem; text-align: left; }
+
+
+
+.slot-strip {
+
+position: absolute; top: 0; left: 0; width: 100%;
+
+display: flex; flex-direction: column; align-items: center; will-change: transform, filter;
+
+}
+
+.slot-strip.rolling { transition: transform 1.5s var(--ease-slot), filter 1.5s var(--ease-slot); }
+
+.slot-strip > span { height: 1.7rem; display: flex; justify-content: center; align-items: center; }
+
+
+
+.flare-layer {
+
+position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+
+width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%);
+
+opacity: 0; z-index: 99; pointer-events: none; mix-blend-mode: screen;
+
+}
+
+.data-module.flare-active .flare-layer { animation: quickFlare 0.5s ease-out; }
+
+
+
+.separator {
+
+position: relative; z-index: 10; width: 3px; height: 35px;
+
+background: rgba(255, 255, 255, 0.1); border-radius: 2px;
+
+box-shadow: inset 0 0 5px rgba(255,255,255,0.5), 0 0 10px rgba(162, 0, 255, 0.6);
+
+}
+
+
+
+.goal-module {
+
+display: flex; flex-direction: column; justify-content: center;
+
+flex-grow: 1; min-width: 220px; z-index: 10; position: relative;
+
+}
+
+
+
+.goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+
+
+
+.goal-title {
+
+font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+
+color: var(--void-obsidian); background: var(--gold-pure);
+
+padding: 3px 6px; border-radius: 2px; letter-spacing: 0.25em;
+
+box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 15px rgba(255,215,0,0.5);
+
+animation: pulseGold 2s infinite alternate;
+
+}
+
+
+
+.goal-numbers {
+
+font-size: 0.9rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1px;
+
+font-variant-numeric: tabular-nums; text-shadow: 0 2px 4px rgba(0,0,0,1);
+
+transition: transform 0.3s var(--ease-dopamine);
+
+}
+
+
+
+.progress-track {
+
+position: relative; width: 100%; height: 16px;
+
+background: rgba(0,0,0,0.9); overflow: hidden;
+
+border: 1px solid rgba(255, 255, 255, 0.2); transform: skewX(-25deg); box-shadow: inset 0 3px 8px rgba(0,0,0,1);
+
+}
+
+
+
+.progress-fill {
+
+position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
+
+background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), var(--gold-dark));
+
+background-size: 200% 100%; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 0 20px rgba(162, 0, 255, 0.9);
+
+transition: width 1.5s var(--ease-dopamine); overflow: hidden; animation: borderFlow 3s linear infinite;
+
+}
+
+
+
+.progress-fill::before {
+
+content: ''; position: absolute; top: 0; left: 0; width: 300%; height: 100%;
+
+background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.4) 8px, rgba(255,255,255,0.4) 16px);
+
+animation: kineticFlow 1s linear infinite;
+
+}
+
+
+
+.progress-fill::after {
+
+content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 5px;
+
+background: var(--neon-white); box-shadow: -3px 0 12px var(--neon-white), 0 0 25px var(--gold-pure);
+
+}
+
+
+
+.goal-flash .progress-fill { filter: brightness(1.8); box-shadow: 0 0 40px var(--gold-pure); }
+
+.goal-flash .goal-numbers { transform: scale(1.2); color: var(--gold-pure); text-shadow: 0 0 20px var(--gold-pure); }
+
+
+
+.ticker-module {
+
+display: flex; align-items: center; background: rgba(0, 0, 0, 0.75); border-left: 3px solid var(--purple-neon);
+
+padding: 0 15px; height: 100%; width: 250px; overflow: hidden; position: relative; z-index: 10;
+
+box-shadow: inset 5px 0 15px rgba(0,0,0,0.8);
+
+}
+
+
+
+.live-eq-container { display: flex; align-items: flex-end; gap: 3px; height: 16px; margin-right: 15px; flex-shrink: 0; }
+
+.eq-bar { width: 4px; background: #00ffcc; border-radius: 1px 1px 0 0; box-shadow: 0 0 10px #00ffcc; transition: height 0.08s ease; }
+
+.ticker-wrapper { overflow: hidden; width: 100%; position: relative; }
+
+
+.ticker-content {
+
+font-size: 0.8rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1.5px; white-space: nowrap;
+
+transform: translateX(100%); will-change: transform;
+
+text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 12px var(--purple-neon), 0 0 24px var(--purple-neon);
+
+}
+
+
+
+@keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+
+@keyframes panGrid { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
+
+@keyframes spinCW { 100% { transform: rotate(360deg); } }
+
+@keyframes spinCCW { 100% { transform: rotate(-360deg); } }
+
+@keyframes kineticFlow { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
+
+@keyframes glassShine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+
+@keyframes quickFlare { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+
+@keyframes pulseGold { 0% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 5px rgba(255,215,0,0.2); } 100% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 20px rgba(255,215,0,0.8); } }
+
+
+</style>
+
 </head>
+
 <body>
 
-    <div class="obs-safe-zone">
-        <div class="scene-container" id="scene-wrapper">
-            
-            <div class="logo-sweeper" id="logo-sweeper">
-                <div class="logo-inner-ring" id="logo-ring">
-                    <img src="" alt="Logo" class="brand-logo" id="brand-logo" style="display:none;">
-                </div>
-            </div>
 
-            <div class="master-overlay-wrapper" id="overlay">
-                <div class="overlay-core">
-                    
-                    <div class="holo-grid"></div>
-                    <div class="scanlines"></div>
-                    <div class="glass-reflection"></div>
-                    <canvas id="particle-canvas"></canvas> 
 
-                    <div class="data-module" id="mod-subs">
-                        <div class="data-label">SUBS</div>
-                        <div class="slot-machine-container" id="slot-subs"></div>
-                        <div class="flare-layer"></div>
-                    </div>
-                    <div class="separator"></div>
+<div class="obs-safe-zone">
 
-                    <div class="data-module" id="mod-likes">
-                        <div class="data-label">LIKES</div>
-                        <div class="slot-machine-container" id="slot-likes"></div>
-                        <div class="flare-layer"></div>
-                    </div>
-                    <div class="separator"></div>
+<div class="scene-container" id="scene-wrapper">
 
-                    <div class="goal-module" id="mod-goal">
-                        <div class="goal-header">
-                            <span class="goal-title">SUB GOAL</span>
-                            <span class="goal-numbers" id="val-goal">0 / 5,000</span>
-                        </div>
-                        <div class="progress-track">
-                            <div class="progress-fill" id="goal-bar"></div>
-                        </div>
-                    </div>
 
-                    <div class="ticker-module">
-                        <div class="live-eq-container" id="live-eq">
-                            <div class="eq-bar" style="height: 4px;"></div>
-                            <div class="eq-bar" style="height: 8px;"></div>
-                            <div class="eq-bar" style="height: 6px;"></div>
-                            <div class="eq-bar" style="height: 12px;"></div>
-                        </div>
-                        <div class="ticker-wrapper">
-                            <div class="ticker-content" id="ticker-text">CONNECTING TO LIVE FEED...</div>
-                        </div>
-                    </div>
+<div class="logo-sweeper" id="logo-sweeper">
 
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="logo-inner-ring">
 
-    <script>
-        class ParticleEngine {
-            constructor(canvasId) {
-                this.canvas = document.getElementById(canvasId); 
-                this.ctx = this.canvas.getContext('2d');
-                this.particles = []; this.isSweeping = false; this.sweepX = 0;
-                window.particleEngineInstance = this; 
-                this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
-            }
-            resize() { this.canvas.width = this.canvas.clientWidth; this.canvas.height = this.canvas.clientHeight; }
-            setSweeping(active, xPosition) { this.isSweeping = active; this.sweepX = xPosition; }
-            
-            spawnBurst(x, y) {
-                for(let i=0; i<20; i++) {
-                    this.particles.push({ 
-                        x: x, y: y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
-                        life: 1.0, decay: Math.random()*0.04+0.02, size: Math.random()*4+2, 
-                        color: Math.random() > 0.4 ? '#ffffff' : '#ffd700', isSquare: true
-                    });
-                }
-            }
+<img src="" alt="Logo" class="brand-logo" id="brand-logo" style="display:none;">
 
-            render() {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                if(Math.random() > 0.8) {
-                    this.particles.push({
-                        x: -10, y: Math.random() * this.canvas.height, vx: Math.random() * 5 + 2, vy: (Math.random() - 0.5) * 1,
-                        life: 1.0, decay: 0.008, size: Math.random() * 2 + 1, color: 'rgba(162, 0, 255, 0.9)', isLine: true, length: Math.random() * 40 + 10
-                    });
-                }
-                if (this.isSweeping) {
-                    const px = (this.sweepX / 100) * this.canvas.width, py = this.canvas.height / 2;
-                    for(let i=0; i<3; i++) this.particles.push({ 
-                        x: px, y: py + (Math.random()*60-30), vx: (Math.random()-0.5)*5 - 2, vy: (Math.random()-0.5)*5, 
-                        life: 1.0, decay: Math.random()*0.05+0.03, size: Math.random()*3+2, color: '#a200ff', isSquare: true
-                    });
-                }
+</div>
 
-                for(let i = this.particles.length - 1; i >= 0; i--) {
-                    let p = this.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
-                    if(p.y < 0 || p.y > this.canvas.height) p.vy *= -0.8;
-                    if (p.life <= 0) { this.particles.splice(i, 1); continue; }
-                    this.ctx.fillStyle = p.color; this.ctx.shadowBlur = 12; this.ctx.shadowColor = p.color; this.ctx.globalAlpha = p.life;
-                    if (p.isLine) this.ctx.fillRect(p.x, p.y, p.length, p.size);
-                    else if (p.isSquare) this.ctx.fillRect(p.x, p.y, p.size, p.size);
-                    else { this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); this.ctx.fill(); }
-                }
-                this.ctx.globalAlpha = 1.0; requestAnimationFrame(() => this.render());
-            }
-        }
+</div>
 
-        class SlotMachineDigit {
-            constructor(char, delayOffset) {
-                this.element = document.createElement('div');
-                this.element.className = char === ',' ? 'slot-digit-window comma' : 'slot-digit-window';
-                this.strip = document.createElement('div'); this.strip.className = 'slot-strip';
-                this.element.appendChild(this.strip);
-                this.isComma = char === ','; this.currentChar = char; this.delayOffset = delayOffset;
-                this.buildStrip(char);
-            }
-            buildStrip(targetChar) {
-                this.strip.innerHTML = ''; this.strip.style.transition = 'none';
-                this.strip.style.transform = 'translateY(0)'; this.strip.style.filter = 'blur(0px)';
-                if (this.isComma) { const span = document.createElement('span'); span.innerText = ','; this.strip.appendChild(span); return; }
 
-                const startDigit = parseInt(this.currentChar) || 0;
-                const targetDigit = parseInt(targetChar) || 0;
-                this.currentChar = targetChar;
-                
-                let html = `<span>${startDigit}</span>`;
-                for(let i=0; i<15; i++) html += `<span>${Math.floor(Math.random()*10)}</span>`;
-                html += `<span>${targetDigit}</span>`;
-                this.strip.innerHTML = html; void this.strip.offsetWidth; 
-            }
-            rollToTarget() {
-                if(this.isComma) return;
-                const targetY = - (this.strip.children.length - 1) * this.element.offsetHeight;
-                this.strip.style.transition = `transform 1.5s var(--ease-slot) ${this.delayOffset}s, filter 0.75s ease-in-out ${this.delayOffset}s`;
-                this.strip.style.filter = 'blur(4px)'; this.strip.style.transform = `translateY(${targetY}px)`;
-                setTimeout(() => { this.strip.style.filter = 'blur(0px)'; }, (1.0 + this.delayOffset) * 1000 - 400); 
-            }
-        }
 
-        class NumberSlotEngine {
-            constructor(containerId) {
-                this.container = document.getElementById(containerId); this.moduleParent = this.container.parentElement;
-                this.digits = []; this.currentString = "0"; this.updateDOM("0", true);
-            }
-            format(num) { return (num || 0).toLocaleString('en-US'); }
-            updateDOM(newStr, forceInstant = false) {
-                this.container.innerHTML = ''; this.digits = [];
-                for(let i = 0; i < newStr.length; i++) {
-                    const delay = (newStr.length - 1 - i) * 0.08; 
-                    const digit = new SlotMachineDigit(newStr[i], delay);
-                    this.digits.push(digit); this.container.appendChild(digit.element);
-                }
-                this.currentString = newStr;
-            }
-            triggerRoll(newValue) {
-                const targetStr = this.format(newValue);
-                if(targetStr.length !== this.currentString.length) this.updateDOM(this.currentString);
-                
-                for(let i=0; i<targetStr.length; i++) {
-                    if(!this.digits[i]) {
-                         const delay = (targetStr.length - 1 - i) * 0.08; 
-                         const newDigit = new SlotMachineDigit(targetStr[i], delay);
-                         this.digits.push(newDigit); this.container.appendChild(newDigit.element);
-                    } else { this.digits[i].buildStrip(targetStr[i]); }
-                }
-                this.currentString = targetStr;
-                this.digits.forEach(digit => digit.rollToTarget());
+<div class="master-overlay-wrapper" id="overlay">
 
-                const maxDelay = (targetStr.length - 1) * 0.08;
-                setTimeout(() => {
-                    this.moduleParent.classList.remove('flare-active'); void this.moduleParent.offsetWidth; this.moduleParent.classList.add('flare-active');
-                    
-                    // Flash text exactly when the number settles
-                    this.container.style.animation = 'none';
-                    void this.container.offsetWidth; 
-                    this.container.style.animation = 'pureFlash 0.5s ease-out forwards';
+<div class="overlay-core">
 
-                    if(window.particleEngineInstance) {
-                        const rect = this.container.getBoundingClientRect(); const pCanvas = document.getElementById('particle-canvas').getBoundingClientRect();
-                        window.particleEngineInstance.spawnBurst((rect.left - pCanvas.left) + rect.width/2, (rect.top - pCanvas.top) + rect.height/2);
-                    }
-                }, (1.5 + maxDelay) * 1000);
-            }
-        }
 
-        class AudioEQSimulator {
-            constructor() { this.bars = document.querySelectorAll('.eq-bar'); this.animate(); }
-            animate() { setInterval(() => { this.bars.forEach(bar => { bar.style.height = `${Math.floor(Math.random() * 12) + 4}px`; }); }, 100); }
-        }
+<div class="holo-grid"></div>
 
-        class TickerEngine {
-            constructor() {
-                this.element = document.getElementById('ticker-text'); this.container = this.element.parentElement;
-                this.queue = ["AWAITING LIVE FEED..."]; this.currentIndex = 0; 
-                this.pos = this.container.offsetWidth; this.speed = 1.5; this.animate();
-            }
-            setMessages(messageString) {
-                const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
-                if(parts.length > 0) this.queue = parts;
-            }
-            animate() {
-                this.pos -= this.speed;
-                if (this.pos < -this.element.offsetWidth - 50) {
-                    this.currentIndex = (this.currentIndex + 1) % this.queue.length;
-                    this.element.innerText = this.queue[this.currentIndex]; 
-                    this.pos = this.container.offsetWidth;
-                }
-                this.element.style.transform = `translateX(${this.pos}px)`; requestAnimationFrame(() => this.animate());
-            }
-        }
+<div class="scanlines"></div>
 
-        class OverlayState {
-            constructor() {
-                this.state = { subs: 0, likes: 0, goal: 5000 };
-                this.slotSubs = new NumberSlotEngine('slot-subs');
-                this.slotLikes = new NumberSlotEngine('slot-likes');
-                this.elements = { 
-                    goalMod: document.getElementById('mod-goal'), 
-                    goalText: document.getElementById('val-goal'), 
-                    goalBar: document.getElementById('goal-bar'),
-                    logoRing: document.getElementById('logo-ring')
-                };
-            }
-            format(num) { return (num || 0).toLocaleString('en-US'); }
-            
-            triggerSubGoalAnimation() {
-                this.elements.goalMod.classList.remove('goal-flash'); void this.elements.goalMod.offsetWidth; 
-                this.elements.goalMod.classList.add('goal-flash'); setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 1000);
-            }
+<div class="glass-reflection"></div>
 
-            updateData(newSubs, newLikes, newGoal) {
-                if (newGoal) this.state.goal = newGoal;
-                let subChanged = false;
+<canvas id="particle-canvas"></canvas>
 
-                // STRICT SYNC: Only spin the slot machine when real data physically changes.
-                if (newSubs !== this.state.subs) { 
-                    if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
-                    this.slotSubs.triggerRoll(newSubs);
-                    this.state.subs = newSubs; 
-                }
-                
-                if (newLikes !== this.state.likes) { 
-                    // Stagger the like roll slightly if both update at the exact same second
-                    setTimeout(() => this.slotLikes.triggerRoll(newLikes), 500);
-                    this.state.likes = newLikes; 
-                }
-                
-                let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
-                this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
-                this.elements.goalBar.style.width = `${percentage}%`;
 
-                if (subChanged) { 
-                    this.triggerSubGoalAnimation(); 
-                }
-            }
-        }
 
-        class CinematicSweepController {
-            constructor(particleEngine) { this.scene = document.getElementById('scene-wrapper'); this.particleEngine = particleEngine; this.runCycle(); }
-            sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-            tweenSweep(startPct, endPct, duration) {
-                return new Promise(resolve => {
-                    let startTime = null; this.particleEngine.setSweeping(true, startPct);
-                    const update = (currentTime) => {
-                        if (!startTime) startTime = currentTime; let progress = Math.min((currentTime - startTime) / duration, 1);
-                        let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-                        const currentPct = startPct + (endPct - startPct) * ease;
-                        
-                        this.scene.style.setProperty('--sweep-progress', `${currentPct}%`);
-                        this.particleEngine.setSweeping(true, currentPct);
-                        document.documentElement.style.setProperty('--logo-rot', `${(currentPct / 100) * 1440}deg`);
+<div class="data-module" id="mod-subs">
 
-                        if (progress < 1) requestAnimationFrame(update); else {
-                            this.scene.style.setProperty('--sweep-progress', `${endPct}%`); this.particleEngine.setSweeping(false, endPct); resolve();
-                        }
-                    }; requestAnimationFrame(update);
-                });
-            }
-            async runCycle() {
-                await this.sleep(1000); 
-                while(true) { await this.tweenSweep(0, 100, 2500); await this.sleep(20000); await this.tweenSweep(100, 0, 2500); await this.sleep(2000); }
-            }
-        }
+<div class="data-label">SUBS</div>
 
-        // ==============================================================
-        // THE ENGINE THAT POWERS REAL-TIME YOUTUBE PINGS
-        // ==============================================================
-        class MultiStreamerLiveEngine {
-            constructor(state, ticker) {
-                this.state = state;
-                this.ticker = ticker;
-                const urlParams = new URLSearchParams(window.location.search);
-                this.username = urlParams.get('user') || '';
+<div class="slot-machine-container" id="slot-subs"></div>
 
-                if (!this.username) {
-                    this.ticker.setMessages("ERROR: NO USER SPECIFIED IN URL");
-                    return;
-                }
+<div class="flare-layer"></div>
 
-                // Initial fetch
-                this.pollData();
-                
-                // Hyper-fast 5-second polling loop
-                setInterval(() => this.pollData(), 5000);
-            }
+</div>
 
-            async pollData() {
-                try {
-                    const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
-                    if (!res.ok) return;
-                    const data = await res.json();
-                    
-                    if (data.authenticated) {
-                        // Triggers the UI to update ONLY if numbers changed
-                        this.state.updateData(data.subs, data.likes, data.sub_goal);
-                        
-                        if (data.ticker_text) {
-                            this.ticker.setMessages(data.ticker_text);
-                        }
-                        
-                        if (data.avatar) {
-                            const logoEl = document.getElementById('brand-logo');
-                            if (logoEl.src !== data.avatar) {
-                                logoEl.src = data.avatar;
-                                logoEl.style.display = 'block';
-                            }
-                        }
-                    }
-                } catch(e) {
-                    console.error("Poll failed:", e);
-                }
-            }
-        }
+<div class="separator"></div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const particles = new ParticleEngine('particle-canvas');
-            const state = new OverlayState();
-            const ticker = new TickerEngine();
-            new AudioEQSimulator();
-            new CinematicSweepController(particles);
-            
-            // Replaces the fake looping demo with the real-time data engine
-            new MultiStreamerLiveEngine(state, ticker);
-        });
-    </script>
+
+
+<div class="data-module" id="mod-likes">
+
+<div class="data-label">LIKES</div>
+
+<div class="slot-machine-container" id="slot-likes"></div>
+
+<div class="flare-layer"></div>
+
+</div>
+
+<div class="separator"></div>
+
+
+
+<div class="goal-module" id="mod-goal">
+
+<div class="goal-header">
+
+<span class="goal-title">SUB GOAL</span>
+
+<span class="goal-numbers" id="val-goal">0 / 5,000</span>
+
+</div>
+
+<div class="progress-track">
+
+<div class="progress-fill" id="goal-bar"></div>
+
+</div>
+
+</div>
+
+
+
+<div class="ticker-module">
+
+<div class="live-eq-container" id="live-eq">
+
+<div class="eq-bar" style="height: 4px;"></div>
+
+<div class="eq-bar" style="height: 8px;"></div>
+
+<div class="eq-bar" style="height: 6px;"></div>
+
+<div class="eq-bar" style="height: 12px;"></div>
+
+</div>
+
+<div class="ticker-wrapper">
+
+<div class="ticker-content" id="ticker-text">CONNECTING TO LIVE FEED...</div>
+
+</div>
+
+</div>
+
+
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<script>
+
+class ParticleEngine {
+
+constructor(canvasId) {
+
+this.canvas = document.getElementById(canvasId);
+
+this.ctx = this.canvas.getContext('2d');
+
+this.particles = []; this.isSweeping = false; this.sweepX = 0;
+
+window.particleEngineInstance = this;
+
+this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
+
+}
+
+resize() { this.canvas.width = this.canvas.clientWidth; this.canvas.height = this.canvas.clientHeight; }
+
+setSweeping(active, xPosition) { this.isSweeping = active; this.sweepX = xPosition; }
+
+
+spawnBurst(x, y) {
+
+for(let i=0; i<20; i++) {
+
+this.particles.push({
+
+x: x, y: y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15,
+
+life: 1.0, decay: Math.random()*0.04+0.02, size: Math.random()*4+2,
+
+color: Math.random() > 0.4 ? '#ffffff' : '#ffd700', isSquare: true
+
+});
+
+}
+
+}
+
+
+
+render() {
+
+this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+if(Math.random() > 0.8) {
+
+this.particles.push({
+
+x: -10, y: Math.random() * this.canvas.height, vx: Math.random() * 5 + 2, vy: (Math.random() - 0.5) * 1,
+
+life: 1.0, decay: 0.008, size: Math.random() * 2 + 1, color: 'rgba(162, 0, 255, 0.9)', isLine: true, length: Math.random() * 40 + 10
+
+});
+
+}
+
+if (this.isSweeping) {
+
+const px = (this.sweepX / 100) * this.canvas.width, py = this.canvas.height / 2;
+
+for(let i=0; i<3; i++) this.particles.push({
+
+x: px, y: py + (Math.random()*60-30), vx: (Math.random()-0.5)*5 - 2, vy: (Math.random()-0.5)*5,
+
+life: 1.0, decay: Math.random()*0.05+0.03, size: Math.random()*3+2, color: '#a200ff', isSquare: true
+
+});
+
+}
+
+
+
+for(let i = this.particles.length - 1; i >= 0; i--) {
+
+let p = this.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+
+if(p.y < 0 || p.y > this.canvas.height) p.vy *= -0.8;
+
+if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+
+this.ctx.fillStyle = p.color; this.ctx.shadowBlur = 12; this.ctx.shadowColor = p.color; this.ctx.globalAlpha = p.life;
+
+if (p.isLine) this.ctx.fillRect(p.x, p.y, p.length, p.size);
+
+else if (p.isSquare) this.ctx.fillRect(p.x, p.y, p.size, p.size);
+
+else { this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); this.ctx.fill(); }
+
+}
+
+this.ctx.globalAlpha = 1.0; requestAnimationFrame(() => this.render());
+
+}
+
+}
+
+
+
+class SlotMachineDigit {
+
+constructor(char, delayOffset) {
+
+this.element = document.createElement('div');
+
+this.element.className = char === ',' ? 'slot-digit-window comma' : 'slot-digit-window';
+
+this.strip = document.createElement('div'); this.strip.className = 'slot-strip';
+
+this.element.appendChild(this.strip);
+
+this.isComma = char === ','; this.currentChar = char; this.delayOffset = delayOffset;
+
+this.buildStrip(char);
+
+}
+
+buildStrip(targetChar) {
+
+this.strip.innerHTML = ''; this.strip.style.transition = 'none';
+
+this.strip.style.transform = 'translateY(0)'; this.strip.style.filter = 'blur(0px)';
+
+if (this.isComma) { const span = document.createElement('span'); span.innerText = ','; this.strip.appendChild(span); return; }
+
+
+
+const startDigit = parseInt(this.currentChar) || 0;
+
+const targetDigit = parseInt(targetChar) || 0;
+
+this.currentChar = targetChar;
+
+
+let html = `<span>${startDigit}</span>`;
+
+for(let i=0; i<15; i++) html += `<span>${Math.floor(Math.random()*10)}</span>`;
+
+html += `<span>${targetDigit}</span>`;
+
+this.strip.innerHTML = html; void this.strip.offsetWidth;
+
+}
+
+rollToTarget() {
+
+if(this.isComma) return;
+
+const targetY = - (this.strip.children.length - 1) * this.element.offsetHeight;
+
+this.strip.style.transition = `transform 1.5s var(--ease-slot) ${this.delayOffset}s, filter 0.75s ease-in-out ${this.delayOffset}s`;
+
+this.strip.style.filter = 'blur(4px)'; this.strip.style.transform = `translateY(${targetY}px)`;
+
+setTimeout(() => { this.strip.style.filter = 'blur(0px)'; }, (1.0 + this.delayOffset) * 1000 - 400);
+
+}
+
+}
+
+
+
+class NumberSlotEngine {
+
+constructor(containerId) {
+
+this.container = document.getElementById(containerId); this.moduleParent = this.container.parentElement;
+
+this.digits = []; this.currentString = "0"; this.updateDOM("0", true);
+
+}
+
+format(num) { return (num || 0).toLocaleString('en-US'); }
+
+updateDOM(newStr, forceInstant = false) {
+
+this.container.innerHTML = ''; this.digits = [];
+
+for(let i = 0; i < newStr.length; i++) {
+
+const delay = (newStr.length - 1 - i) * 0.08;
+
+const digit = new SlotMachineDigit(newStr[i], delay);
+
+this.digits.push(digit); this.container.appendChild(digit.element);
+
+}
+
+this.currentString = newStr;
+
+}
+
+triggerRoll(newValue) {
+
+const targetStr = this.format(newValue);
+
+if(targetStr.length !== this.currentString.length) this.updateDOM(this.currentString);
+
+
+for(let i=0; i<targetStr.length; i++) {
+
+if(!this.digits[i]) {
+
+const delay = (targetStr.length - 1 - i) * 0.08;
+
+const newDigit = new SlotMachineDigit(targetStr[i], delay);
+
+this.digits.push(newDigit); this.container.appendChild(newDigit.element);
+
+} else { this.digits[i].buildStrip(targetStr[i]); }
+
+}
+
+this.currentString = targetStr;
+
+this.digits.forEach(digit => digit.rollToTarget());
+
+
+
+const maxDelay = (targetStr.length - 1) * 0.08;
+
+setTimeout(() => {
+
+this.moduleParent.classList.remove('flare-active'); void this.moduleParent.offsetWidth; this.moduleParent.classList.add('flare-active');
+
+if(window.particleEngineInstance) {
+
+const rect = this.container.getBoundingClientRect(); const pCanvas = document.getElementById('particle-canvas').getBoundingClientRect();
+
+window.particleEngineInstance.spawnBurst((rect.left - pCanvas.left) + rect.width/2, (rect.top - pCanvas.top) + rect.height/2);
+
+}
+
+}, (1.5 + maxDelay) * 1000);
+
+}
+
+}
+
+
+
+class AudioEQSimulator {
+
+constructor() { this.bars = document.querySelectorAll('.eq-bar'); this.animate(); }
+
+animate() { setInterval(() => { this.bars.forEach(bar => { bar.style.height = `${Math.floor(Math.random() * 12) + 4}px`; }); }, 100); }
+
+}
+
+
+
+class TickerEngine {
+
+constructor() {
+
+this.element = document.getElementById('ticker-text'); this.container = this.element.parentElement;
+
+this.queue = ["AWAITING LIVE FEED..."]; this.currentIndex = 0;
+
+this.pos = this.container.offsetWidth; this.speed = 1.5; this.animate();
+
+}
+
+setMessages(messageString) {
+
+const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
+
+if(parts.length > 0) this.queue = parts;
+
+}
+
+animate() {
+
+this.pos -= this.speed;
+
+if (this.pos < -this.element.offsetWidth - 50) {
+
+this.currentIndex = (this.currentIndex + 1) % this.queue.length;
+
+this.element.innerText = this.queue[this.currentIndex];
+
+this.pos = this.container.offsetWidth;
+
+}
+
+this.element.style.transform = `translateX(${this.pos}px)`; requestAnimationFrame(() => this.animate());
+
+}
+
+}
+
+
+
+class OverlayState {
+
+constructor() {
+
+this.state = { subs: 0, likes: 0, goal: 5000 };
+
+this.slotSubs = new NumberSlotEngine('slot-subs');
+
+this.slotLikes = new NumberSlotEngine('slot-likes');
+
+this.elements = { goalMod: document.getElementById('mod-goal'), goalText: document.getElementById('val-goal'), goalBar: document.getElementById('goal-bar') };
+
+
+this.rollInterval = setInterval(() => { this.executeRoll(); }, 5500);
+
+}
+
+format(num) { return (num || 0).toLocaleString('en-US'); }
+
+triggerSubGoalAnimation() {
+
+this.elements.goalMod.classList.remove('goal-flash'); void this.elements.goalMod.offsetWidth;
+
+this.elements.goalMod.classList.add('goal-flash'); setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 1000);
+
+}
+
+executeRoll() { this.slotSubs.triggerRoll(this.state.subs); this.slotLikes.triggerRoll(this.state.likes); }
+
+updateData(newSubs, newLikes, newGoal) {
+
+if (newGoal) this.state.goal = newGoal;
+
+let subChanged = false;
+
+
+
+if (newSubs !== this.state.subs) {
+
+if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
+
+this.state.subs = newSubs;
+
+}
+
+if (newLikes !== this.state.likes) { this.state.likes = newLikes; }
+
+
+let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
+
+this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
+
+this.elements.goalBar.style.width = `${percentage}%`;
+
+
+
+if (subChanged) { this.triggerSubGoalAnimation(); this.executeRoll(); }
+
+}
+
+}
+
+
+
+class CinematicSweepController {
+
+constructor(particleEngine) { this.scene = document.getElementById('scene-wrapper'); this.particleEngine = particleEngine; this.runCycle(); }
+
+sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+tweenSweep(startPct, endPct, duration) {
+
+return new Promise(resolve => {
+
+let startTime = null; this.particleEngine.setSweeping(true, startPct);
+
+const update = (currentTime) => {
+
+if (!startTime) startTime = currentTime; let progress = Math.min((currentTime - startTime) / duration, 1);
+
+let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+const currentPct = startPct + (endPct - startPct) * ease;
+
+
+this.scene.style.setProperty('--sweep-progress', `${currentPct}%`);
+
+this.particleEngine.setSweeping(true, currentPct);
+
+document.documentElement.style.setProperty('--logo-rot', `${(currentPct / 100) * 1440}deg`);
+
+
+
+if (progress < 1) requestAnimationFrame(update); else {
+
+this.scene.style.setProperty('--sweep-progress', `${endPct}%`); this.particleEngine.setSweeping(false, endPct); resolve();
+
+}
+
+}; requestAnimationFrame(update);
+
+});
+
+}
+
+async runCycle() {
+
+await this.sleep(1000);
+
+while(true) { await this.tweenSweep(0, 100, 2500); await this.sleep(20000); await this.tweenSweep(100, 0, 2500); await this.sleep(2000); }
+
+}
+
+}
+
+
+
+// CRITICAL FIX: The Real Data Polling Engine
+
+class MultiStreamerLiveEngine {
+
+constructor(state, ticker) {
+
+this.state = state;
+
+this.ticker = ticker;
+
+const urlParams = new URLSearchParams(window.location.search);
+
+this.username = urlParams.get('user') || '';
+
+
+
+if (!this.username) {
+
+this.ticker.setMessages("ERROR: NO USER SPECIFIED IN URL");
+
+return;
+
+}
+
+
+
+this.pollData();
+
+setInterval(() => this.pollData(), 10000);
+
+}
+
+
+
+async pollData() {
+
+try {
+
+const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
+
+if (!res.ok) return;
+
+const data = await res.json();
+
+
+if (data.authenticated) {
+
+this.state.updateData(data.subs, data.likes, data.sub_goal);
+
+
+if (data.ticker_text) {
+
+this.ticker.setMessages(data.ticker_text);
+
+}
+
+
+if (data.avatar) {
+
+const logoEl = document.getElementById('brand-logo');
+
+if (logoEl.src !== data.avatar) {
+
+logoEl.src = data.avatar;
+
+logoEl.style.display = 'block';
+
+}
+
+}
+
+}
+
+} catch(e) {
+
+console.error("Poll failed:", e);
+
+}
+
+}
+
+}
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+
+const particles = new ParticleEngine('particle-canvas');
+
+const state = new OverlayState();
+
+const ticker = new TickerEngine();
+
+new AudioEQSimulator();
+
+new CinematicSweepController(particles);
+
+
+// Starts pulling real data instead of fake generator!
+
+new MultiStreamerLiveEngine(state, ticker);
+
+});
+
+</script>
+
 </body>
+
 </html>
