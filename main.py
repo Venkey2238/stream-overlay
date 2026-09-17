@@ -193,6 +193,7 @@ async def get_live_overlay_data(handle: str, response: Response):
 
     current_subs = profile.get("current_subs", 0)
     likes = 0
+    yt_viewers = 0
     video_id = profile.get("video_id")
 
     async with httpx.AsyncClient() as client:
@@ -205,12 +206,16 @@ async def get_live_overlay_data(handle: str, response: Response):
             supabase.table("streamers").update({"current_subs": current_subs, "updated_at": "now()"}).eq("handle", user).execute()
 
         if video_id:
+            # Added liveStreamingDetails to fetch exact concurrent viewers
             vid_res = await client.get(
-                f"https://www.googleapis.com/youtube/v3/videos?part=statistics&id={video_id}",
+                f"https://www.googleapis.com/youtube/v3/videos?part=statistics,liveStreamingDetails&id={video_id}",
                 headers={"Authorization": f"Bearer {token}"}
             )
             if vid_res.status_code == 200 and vid_res.json().get("items"):
-                likes = int(vid_res.json()["items"][0]["statistics"].get("likeCount", 0))
+                item = vid_res.json()["items"][0]
+                likes = int(item["statistics"].get("likeCount", 0))
+                # Safely extract YouTube viewers
+                yt_viewers = int(item.get("liveStreamingDetails", {}).get("concurrentViewers", 0))
 
     response_data = {
         "authenticated": True,
@@ -218,6 +223,7 @@ async def get_live_overlay_data(handle: str, response: Response):
         "avatar": profile["avatar"],
         "subs": current_subs,
         "likes": likes,
+        "yt_viewers": yt_viewers, # Now passed to the frontend
         "sub_goal": profile["sub_goal"] if profile["sub_goal"] else 5000,
         "video_id": video_id,
         "ticker_text": profile["ticker_text"],
