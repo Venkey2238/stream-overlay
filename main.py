@@ -26,8 +26,7 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 CACHE = {}
-# REDUCED TO 10 SECONDS FOR MAXIMUM ALLOWABLE API SPEED
-CACHE_TTL = 10  
+CACHE_TTL = 5  # CRITICAL UPDATE: Dropped to 5 seconds for hyper-fast real-time sync
 
 app = FastAPI()
 
@@ -286,7 +285,6 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
         else:
             return {"error": "API Error", "pollingIntervalMillis": 10000}
 
-
 @app.post("/api/streamer/{handle}/settings")
 async def save_streamer_settings(handle: str, payload: SettingsPayload):
     user = handle.strip().lower()
@@ -301,7 +299,7 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
         raise HTTPException(status_code=404, detail="Streamer profile not found.")
     
     if user in CACHE:
-        CACHE[user] = {} # Clear cache instantly on save
+        CACHE[user] = {} # Clear cache
         
     return {"status": "success"}
 
