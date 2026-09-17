@@ -16,6 +16,7 @@
     
     { "source": "/dashboard", "destination": "/public/dashboard.html" },
     { "source": "/overlay", "destination": "/public/overlay.html" },
+    { "source": "/chat", "destination": "/main.py" },
     { "source": "/", "destination": "/public/dashboard.html" }
   ]
 }
