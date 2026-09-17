@@ -172,8 +172,11 @@
                 <input type="text" id="twitch_user" placeholder="e.g. Ninja">
             </div>
             <div class="field">
-                <label class="field-label">Kick Username</label>
-                <input type="text" id="kick_user" placeholder="e.g. xQc">
+                <label class="field-label">
+                    Kick Chatroom ID 
+                    <a href="#" onclick="alert('To get your ID:\n1. Open a new tab and go to: https://kick.com/api/v1/channels/YOUR_USERNAME\n2. Scroll down until you see \x22chatroom\x22:{\x22id\x22: 123456}\n3. Paste that number here.')" style="color:var(--gold-pure); text-transform:none; text-decoration:none; margin-left: 5px;">(How to find this?)</a>
+                </label>
+                <input type="text" id="kick_user" placeholder="e.g. 123456">
             </div>
         </div>
 
