@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unified Multi-Platform Kinetic Chat</title>
+    <title>Unified Multi-Platform Kinetic Chat + Viewers</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
     <style>
@@ -14,8 +14,12 @@
             --ease-glide: cubic-bezier(0.25, 1, 0.5, 1);
             --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
             --ease-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
             --ease-cyber: cubic-bezier(0.77, 0, 0.175, 1);
+            
+            /* Platform Branding */
+            --yt-color: #ff0000;
+            --tw-color: #9146ff;
+            --kk-color: #53fc18;
         }
 
         body {
@@ -27,10 +31,60 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        #chat-widget {
+        #master-container {
             position: absolute;
             bottom: 50px; left: 50px;
-            width: 500px; 
+            width: 500px;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+
+        /* ==========================================================================
+           VIEWER HUD STYLES
+           ========================================================================== */
+        #viewer-hud {
+            display: flex; gap: 15px;
+            perspective: 1000px;
+            z-index: 20;
+        }
+
+        .viewer-node {
+            display: none; /* Hidden until platform is connected */
+            align-items: center; gap: 10px;
+            padding: 8px 14px;
+            background: linear-gradient(90deg, rgba(8, 2, 15, 0.95), rgba(8, 2, 15, 0.6));
+            border-left: 3px solid var(--node-color);
+            border-radius: 6px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: -4px 4px 12px rgba(0,0,0,0.8), inset 2px 0 8px rgba(255,255,255,0.05);
+            transform-origin: left center;
+            animation: nodeIn 0.8s var(--ease-elastic) forwards;
+        }
+
+        .v-label {
+            font-family: 'Syncopate', sans-serif; font-size: 0.6rem; font-weight: 900;
+            letter-spacing: 0.2em; color: var(--node-color); text-transform: uppercase;
+            text-shadow: 0 0 10px var(--node-color);
+        }
+
+        .v-count {
+            font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 900;
+            color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,1);
+            font-variant-numeric: tabular-nums;
+            transition: transform 0.3s var(--ease-bounce), color 0.3s, text-shadow 0.3s;
+        }
+
+        .viewer-node.flash .v-count {
+            transform: scale(1.3);
+            color: var(--node-color);
+            text-shadow: 0 0 20px var(--node-color), 0 0 40px #fff;
+        }
+
+        @keyframes nodeIn { 0% { opacity: 0; transform: translateX(-30px) rotateY(-45deg); } 100% { opacity: 1; transform: translateX(0) rotateY(0); } }
+
+        /* ==========================================================================
+           CHAT STYLES
+           ========================================================================== */
+        #chat-widget {
             display: flex; flex-direction: column; justify-content: flex-end;
             gap: 0; perspective: 2000px; transform-style: preserve-3d; z-index: 10;
         }
@@ -40,11 +94,7 @@
             transform-origin: left center; will-change: max-height, margin-top, opacity;
             transition: max-height 0.6s var(--ease-cyber), margin-top 0.6s var(--ease-cyber), opacity 0.4s ease-out;
         }
-
-        .msg-wrapper.collapsing {
-            max-height: 0 !important; margin-top: 0 !important;
-            opacity: 0; overflow: hidden; pointer-events: none;
-        }
+        .msg-wrapper.collapsing { max-height: 0 !important; margin-top: 0 !important; opacity: 0; overflow: hidden; pointer-events: none; }
 
         .cyber-thread {
             display: flex; align-items: flex-start; gap: 20px;
@@ -54,80 +104,64 @@
 
         .hud-line {
             position: absolute; left: 27px; top: 60px; bottom: -15px; width: 2px;
-            background: linear-gradient(to bottom, var(--accent), transparent);
-            opacity: 0.6; z-index: 0; transform-origin: top; will-change: transform, opacity;
+            background: linear-gradient(to bottom, var(--accent), transparent); opacity: 0.6; z-index: 0; transform-origin: top;
         }
 
-        .avatar-node {
-            position: relative; flex-shrink: 0; width: 56px; height: 56px;
-            z-index: 2; will-change: transform, filter;
-        }
-
-        .avatar-node::before {
-            content: ''; position: absolute; inset: -6px;
-            border: 1px dashed var(--accent); border-radius: 50%;
-            animation: spinRing 10s linear infinite; opacity: 0.8;
-        }
-
-        .avatar-node::after {
-            content: ''; position: absolute; inset: -2px;
-            border: 2px solid var(--accent); border-radius: 50%;
-            box-shadow: 0 0 15px var(--accent); opacity: 0.5;
-        }
-
+        .avatar-node { position: relative; flex-shrink: 0; width: 56px; height: 56px; z-index: 2; }
+        .avatar-node::before { content: ''; position: absolute; inset: -6px; border: 1px dashed var(--accent); border-radius: 50%; animation: spinRing 10s linear infinite; opacity: 0.8; }
+        .avatar-node::after { content: ''; position: absolute; inset: -2px; border: 2px solid var(--accent); border-radius: 50%; box-shadow: 0 0 15px var(--accent); opacity: 0.5; }
         @keyframes spinRing { 100% { transform: rotate(360deg); } }
 
         .avatar {
             width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
-            filter: grayscale(20%) contrast(120%);
-            mask-image: radial-gradient(circle, black 60%, transparent 100%);
-            -webkit-mask-image: radial-gradient(circle, black 60%, transparent 100%);
+            filter: grayscale(20%) contrast(120%); mask-image: radial-gradient(circle, black 60%, transparent 100%); -webkit-mask-image: radial-gradient(circle, black 60%, transparent 100%);
         }
 
-        .text-cluster {
-            display: flex; flex-direction: column; justify-content: flex-start;
-            flex-grow: 1; padding-top: 5px; z-index: 2; transform-style: preserve-3d;
-        }
-
+        .text-cluster { display: flex; flex-direction: column; justify-content: flex-start; flex-grow: 1; padding-top: 5px; z-index: 2; transform-style: preserve-3d; }
+        
         .username-glitch {
-            font-family: 'Syncopate', sans-serif; font-size: 0.65rem; font-weight: 900;
-            letter-spacing: 0.35em; color: var(--accent); text-transform: uppercase;
+            font-family: 'Syncopate', sans-serif; font-size: 0.65rem; font-weight: 900; letter-spacing: 0.35em; color: var(--accent); text-transform: uppercase;
             margin-bottom: 2px; position: relative; display: inline-block;
-            will-change: transform, opacity, letter-spacing;
         }
 
         .message-kinetic {
-            font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 900;
-            line-height: 1.3; letter-spacing: -0.02em;
+            font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 900; line-height: 1.3; letter-spacing: -0.02em;
             background: linear-gradient(110deg, #ffffff 0%, #e0e0e0 40%, var(--accent) 50%, #ffffff 60%, #ffffff 100%);
-            background-size: 250% auto; -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent; color: transparent;
-            animation: textShimmer 4s linear infinite;
-            word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
-            will-change: transform, opacity, filter, clip-path; transform-origin: left top;
+            background-size: 250% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+            animation: textShimmer 4s linear infinite; word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+            transform-origin: left top;
         }
 
         @keyframes textShimmer { 0% { background-position: -150% center; } 100% { background-position: 150% center; } }
 
         /* The 20 Unique CSS Animations */
-        .thread-in-01 { animation: thIn01 0.7s var(--ease-cyber) forwards; } .thread-out-01 { animation: thOut01 0.5s var(--ease-expo) forwards; } .avatar-in-01 { animation: avIn01 0.6s 0.1s var(--ease-punch) both; } .user-in-01 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-01 { animation: msIn01 0.7s 0.3s var(--ease-elastic) both; } .line-in-01 { animation: lnIn01 0.5s 0.4s var(--ease-glide) both; }
+        .thread-in-01 { animation: thIn01 0.7s var(--ease-cyber) forwards; } .thread-out-01 { animation: thOut01 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; } .avatar-in-01 { animation: avIn01 0.6s 0.1s var(--ease-punch) both; } .user-in-01 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-01 { animation: msIn01 0.7s 0.3s var(--ease-elastic) both; } .line-in-01 { animation: lnIn01 0.5s 0.4s var(--ease-glide) both; }
         @keyframes thIn01 { 0% { transform: translateX(-50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes thOut01 { 100% { transform: translateX(100px) skewX(20deg); opacity: 0; filter: blur(5px); } } @keyframes avIn01 { 0% { transform: scale(0) rotate(-180deg); } 100% { transform: scale(1) rotate(0); } } @keyframes usIn01 { 0% { clip-path: inset(0 100% 0 0); transform: translateX(-10px); } 100% { clip-path: inset(0 0 0 0); transform: translateX(0); } } @keyframes msIn01 { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); transform: translateX(-20px); letter-spacing: -2px; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateX(0); letter-spacing: -0.02em; } } @keyframes lnIn01 { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+        
         .thread-in-02 { animation: thIn02 0.8s var(--ease-bounce) forwards; } .thread-out-02 { animation: thOut02 0.4s ease-in forwards; } .avatar-in-02 { animation: avIn02 0.7s 0.1s var(--ease-elastic) both; } .user-in-02 { animation: usIn02 0.6s 0.2s var(--ease-elastic) both; } .msg-in-02 { animation: msIn02 0.8s 0.3s var(--ease-punch) both; } .line-in-02 { animation: lnIn02 0.6s 0.2s var(--ease-bounce) both; }
         @keyframes thIn02 { 0% { opacity: 0; filter: brightness(300%) contrast(200%); } 100% { opacity: 1; filter: brightness(100%) contrast(100%); } } @keyframes thOut02 { 100% { transform: scale(1.1); opacity: 0; filter: blur(10px); } } @keyframes avIn02 { 0% { transform: translate(-30px, 30px) scale(0); opacity: 0; } 100% { transform: translate(0, 0) scale(1); opacity: 1; } } @keyframes usIn02 { 0% { transform: translateY(-20px); opacity: 0; letter-spacing: 1em; } 100% { transform: translateY(0); opacity: 1; letter-spacing: 0.35em; } } @keyframes msIn02 { 0% { transform: scale(1.5); opacity: 0; filter: blur(10px); } 100% { transform: scale(1); opacity: 1; filter: blur(0); } } @keyframes lnIn02 { 0% { opacity: 0; transform: translateY(-20px); } 100% { opacity: 0.6; transform: translateY(0); } }
+
         .thread-in-03 { animation: thIn03 0.9s var(--ease-glide) forwards; } .thread-out-03 { animation: thOut03 0.5s var(--ease-snap) forwards; } .avatar-in-03 { animation: avIn03 0.6s 0.2s var(--ease-glide) both; } .user-in-03 { animation: usIn03 0.5s 0.3s linear both; } .msg-in-03 { animation: msIn03 0.8s 0.4s var(--ease-cyber) both; } .line-in-03 { animation: lnIn03 0.4s 0.1s linear both; }
         @keyframes thIn03 { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes thOut03 { 100% { transform: translateY(30px); opacity: 0; clip-path: inset(0 0 100% 0); } } @keyframes avIn03 { 0% { clip-path: inset(0 0 100% 0); transform: translateY(-10px); } 100% { clip-path: inset(0 0 0 0); transform: translateY(0); } } @keyframes usIn03 { 0% { clip-path: inset(0 0 100% 0); opacity: 0; } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } @keyframes msIn03 { 0% { clip-path: inset(0 0 100% 0); opacity: 0; transform: translateY(10px); filter: hue-rotate(90deg); } 100% { clip-path: inset(0 0 0 0); opacity: 1; transform: translateY(0); filter: hue-rotate(0); } } @keyframes lnIn03 { 0% { clip-path: inset(0 0 100% 0); } 100% { clip-path: inset(0 0 0 0); } }
+
         .thread-in-04 { animation: thIn04 1s var(--ease-fluid) forwards; } .thread-out-04 { animation: thOut04 0.6s var(--ease-fluid) forwards; } .avatar-in-04 { animation: avIn04 0.8s 0.1s var(--ease-elastic) both; } .user-in-04 { animation: usIn04 0.7s 0.2s var(--ease-punch) both; } .msg-in-04 { animation: msIn04 1s 0.3s var(--ease-fluid) both; } .line-in-04 { animation: lnIn04 0.8s 0.2s var(--ease-fluid) both; }
         @keyframes thIn04 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut04 { 100% { transform: translateZ(-300px); opacity: 0; filter: blur(15px); } } @keyframes avIn04 { 0% { transform: translateZ(200px) scale(0.5); opacity: 0; } 100% { transform: translateZ(0) scale(1); opacity: 1; } } @keyframes usIn04 { 0% { transform: translateZ(100px); opacity: 0; filter: blur(5px); } 100% { transform: translateZ(0); opacity: 1; filter: blur(0); } } @keyframes msIn04 { 0% { transform: translateZ(300px) rotateX(-20deg); opacity: 0; filter: blur(10px); } 100% { transform: translateZ(0) rotateX(0); opacity: 1; filter: blur(0); } } @keyframes lnIn04 { 0% { transform: translateZ(50px) scaleY(0); } 100% { transform: translateZ(0) scaleY(1); } }
+
         .thread-in-05 { animation: thIn05 0.6s steps(5, end) forwards; } .thread-out-05 { animation: thOut05 0.4s steps(4, end) forwards; } .avatar-in-05 { animation: avIn05 0.5s 0.2s steps(3, end) both; } .user-in-05 { animation: usIn05 0.8s 0.1s linear both; } .msg-in-05 { animation: msIn05 0.7s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; } .line-in-05 { animation: lnIn05 0.3s 0.1s steps(2, end) both; }
         @keyframes thIn05 { 0% { opacity: 0; filter: invert(1); transform: translateX(-20px); } 50% { opacity: 1; filter: invert(0); transform: translateX(10px); } 100% { opacity: 1; transform: translateX(0); } } @keyframes thOut05 { 100% { opacity: 0; transform: skewX(45deg); filter: contrast(300%); } } @keyframes avIn05 { 0% { transform: scale(1.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } } @keyframes usIn05 { 0% { clip-path: inset(0 100% 0 0); opacity: 0; } 20% { clip-path: inset(20% 0 80% 0); opacity: 1; } 40% { clip-path: inset(80% 0 10% 0); } 60% { clip-path: inset(10% 0 60% 0); } 80% { clip-path: inset(40% 0 20% 0); } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } @keyframes msIn05 { 0% { opacity: 0; filter: drop-shadow(10px 0 0 red) drop-shadow(-10px 0 0 cyan); transform: skewX(20deg); } 50% { opacity: 1; filter: drop-shadow(-5px 0 0 red) drop-shadow(5px 0 0 cyan); transform: skewX(-10deg); } 100% { filter: drop-shadow(0 0 0 red) drop-shadow(0 0 0 cyan); opacity: 1; transform: skewX(0); } } @keyframes lnIn05 { 0% { opacity: 0; } 100% { opacity: 0.6; } }
+
         .thread-in-06 { animation: thIn06 0.8s var(--ease-bounce) forwards; } .thread-out-06 { animation: thOut06 0.5s var(--ease-snap) forwards; } .avatar-in-06 { animation: avIn06 0.7s 0.1s var(--ease-bounce) both; } .user-in-06 { animation: usIn06 0.6s 0.2s var(--ease-bounce) both; } .msg-in-06 { animation: msIn06 0.8s 0.3s var(--ease-bounce) both; } .line-in-06 { animation: lnIn06 0.6s 0.3s var(--ease-bounce) both; }
         @keyframes thIn06 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut06 { 100% { transform: translateY(50px); opacity: 0; filter: blur(5px); } } @keyframes avIn06 { 0% { transform: translateY(-50px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes usIn06 { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes msIn06 { 0% { transform: translateY(-40px) scaleY(1.2); opacity: 0; } 100% { transform: translateY(0) scaleY(1); opacity: 1; } } @keyframes lnIn06 { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+
         .thread-in-07 { animation: thIn07 0.7s var(--ease-elastic) forwards; } .thread-out-07 { animation: thOut07 0.4s ease-in forwards; } .avatar-in-07 { animation: avIn07 0.6s 0.1s var(--ease-elastic) both; } .user-in-07 { animation: usIn07 0.5s 0.2s var(--ease-snap) both; } .msg-in-07 { animation: msIn07 0.7s 0.25s var(--ease-elastic) both; } .line-in-07 { animation: lnIn07 0.5s 0.3s var(--ease-elastic) both; }
         @keyframes thIn07 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut07 { 100% { transform: translateX(-100px) skewX(-20deg); opacity: 0; } } @keyframes avIn07 { 0% { transform: translateX(-100px) rotate(-90deg); opacity: 0; } 100% { transform: translateX(0) rotate(0); opacity: 1; } } @keyframes usIn07 { 0% { transform: translateX(50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes msIn07 { 0% { transform: translateX(100px) skewX(30deg); opacity: 0; } 100% { transform: translateX(0) skewX(0); opacity: 1; } } @keyframes lnIn07 { 0% { transform: scaleY(0) rotate(20deg); } 100% { transform: scaleY(1) rotate(0); } }
+
         .thread-in-08 { animation: thIn08 1.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; } .thread-out-08 { animation: thOut08 0.8s ease-in forwards; } .avatar-in-08 { animation: avIn08 1s 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) both; } .user-in-08 { animation: usIn08 0.9s 0.4s ease-out both; } .msg-in-08 { animation: msIn08 1.2s 0.5s cubic-bezier(0.25, 1, 0.5, 1) both; } .line-in-08 { animation: lnIn08 1s 0.3s ease-out both; }
         @keyframes thIn08 { 0% { opacity: 0; transform: translateY(-10px); } 100% { opacity: 1; transform: translateY(0); } } @keyframes thOut08 { 100% { opacity: 0; transform: translateY(-20px); filter: blur(15px); } } @keyframes avIn08 { 0% { opacity: 0; filter: blur(20px); transform: scale(0.8); } 100% { opacity: 1; filter: blur(0); transform: scale(1); } } @keyframes usIn08 { 0% { opacity: 0; filter: blur(10px); letter-spacing: 1em; } 100% { opacity: 1; filter: blur(0); letter-spacing: 0.35em; } } @keyframes msIn08 { 0% { opacity: 0; filter: blur(20px) brightness(200%); transform: scale(1.1); } 100% { opacity: 1; filter: blur(0) brightness(100%); transform: scale(1); } } @keyframes lnIn08 { 0% { opacity: 0; filter: blur(5px); } 100% { opacity: 0.6; filter: blur(0); } }
+
         .thread-in-09 { animation: thIn09 0.8s var(--ease-cyber) forwards; } .thread-out-09 { animation: thOut09 0.5s var(--ease-snap) forwards; } .avatar-in-09 { animation: avIn09 0.7s 0.1s var(--ease-cyber) both; } .user-in-09 { animation: usIn09 0.6s 0.2s var(--ease-punch) both; } .msg-in-09 { animation: msIn09 0.8s 0.3s var(--ease-cyber) both; } .line-in-09 { animation: lnIn09 0.6s 0.2s var(--ease-cyber) both; }
         @keyframes thIn09 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut09 { 100% { opacity: 0; transform: scaleY(0.1); filter: brightness(200%); } } @keyframes avIn09 { 0% { clip-path: polygon(50% 0, 50% 0, 50% 100%, 50% 100%); opacity: 0; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; } } @keyframes usIn09 { 0% { clip-path: polygon(0 50%, 100% 50%, 100% 50%, 0 50%); opacity: 0; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; } } @keyframes msIn09 { 0% { clip-path: polygon(0 50%, 100% 50%, 100% 50%, 0 50%); opacity: 0; transform: scaleY(2); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; transform: scaleY(1); } } @keyframes lnIn09 { 0% { opacity: 0; } 100% { opacity: 0.6; } }
+
         .thread-in-10 { animation: thIn10 0.9s var(--ease-elastic) forwards; } .thread-out-10 { animation: thOut10 0.5s ease-in forwards; } .avatar-in-10 { animation: avIn10 0.7s 0.1s var(--ease-elastic) both; } .user-in-10 { animation: usIn10 0.6s 0.2s var(--ease-elastic) both; } .msg-in-10 { animation: msIn10 0.8s 0.3s var(--ease-elastic) both; } .line-in-10 { animation: lnIn10 0.5s 0.2s linear both; }
         @keyframes thIn10 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut10 { 100% { transform: scale(0.8) translateZ(-100px); opacity: 0; } } @keyframes avIn10 { 0% { transform: translateX(50px) rotate(180deg); opacity: 0; filter: blur(5px); } 100% { transform: translateX(0) rotate(0); opacity: 1; filter: blur(0); } } @keyframes usIn10 { 0% { transform: translateX(30px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes msIn10 { 0% { transform: translateX(60px) scaleX(1.2); opacity: 0; } 100% { transform: translateX(0) scaleX(1); opacity: 1; } } @keyframes lnIn10 { 0% { transform: scaleY(0); transform-origin: bottom; } 100% { transform: scaleY(1); transform-origin: bottom; } }
 
@@ -146,43 +180,54 @@
 </head>
 <body>
 
-    <div id="chat-widget"></div>
+    <div id="master-container">
+        <!-- 1. The Real-Time Viewer HUD -->
+        <div id="viewer-hud">
+            <div class="viewer-node" id="node-yt" style="--node-color: var(--yt-color);">
+                <span class="v-label">YOUTUBE</span>
+                <span class="v-count" id="count-yt">0</span>
+            </div>
+            <div class="viewer-node" id="node-tw" style="--node-color: var(--tw-color);">
+                <span class="v-label">TWITCH</span>
+                <span class="v-count" id="count-tw">0</span>
+            </div>
+            <div class="viewer-node" id="node-kk" style="--node-color: var(--kk-color);">
+                <span class="v-label">KICK</span>
+                <span class="v-count" id="count-kk">0</span>
+            </div>
+        </div>
+
+        <!-- 2. The Multi-Platform Chat -->
+        <div id="chat-widget"></div>
+    </div>
 
     <script>
+        // ==========================================
+        // KINETIC CHAT ENGINE
+        // ==========================================
         class KineticHUDOverlay {
             constructor() {
                 this.container = document.getElementById('chat-widget');
                 this.maxMessages = 2; 
-
-                this.colors = [
-                    '#ff0055', '#00ffff', '#ffaa00', '#b700ff', '#39ff14', 
-                    '#ff00ff', '#0088ff', '#ff4500', '#f8f8ff', '#ff1493' 
-                ];
+                this.colors = ['#ff0055', '#00ffff', '#ffaa00', '#b700ff', '#39ff14', '#ff00ff', '#0088ff', '#ff4500', '#f8f8ff', '#ff1493'];
                 this.sequenceCounter = 1; 
             }
-
             getRandomColor() { return this.colors[Math.floor(Math.random() * this.colors.length)]; }
 
             addMessage(username, message, avatarUrl) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'msg-wrapper';
-
-                const thread = document.createElement('div');
-                thread.className = 'cyber-thread';
+                const wrapper = document.createElement('div'); wrapper.className = 'msg-wrapper';
+                const thread = document.createElement('div'); thread.className = 'cyber-thread';
 
                 const seqNum = this.sequenceCounter.toString().padStart(2, '0');
-                
                 const thIn = `thread-in-${seqNum}`; const thOut = `thread-out-${seqNum}`;
                 const avIn = `avatar-in-${seqNum}`; const usIn = `user-in-${seqNum}`;
                 const msIn = `msg-in-${seqNum}`; const lnIn = `line-in-${seqNum}`;
 
-                this.sequenceCounter++;
-                if (this.sequenceCounter > 20) this.sequenceCounter = 1;
+                this.sequenceCounter++; if (this.sequenceCounter > 20) this.sequenceCounter = 1;
 
                 const accentColor = this.getRandomColor();
                 thread.style.setProperty('--accent', accentColor);
-                thread.classList.add(thIn);
-                thread.dataset.animOut = thOut;
+                thread.classList.add(thIn); thread.dataset.animOut = thOut;
 
                 thread.innerHTML = `
                     <div class="hud-line ${lnIn}"></div>
@@ -194,10 +239,7 @@
                         <div class="message-kinetic ${msIn}">${message}</div>
                     </div>
                 `;
-
-                wrapper.appendChild(thread);
-                this.container.appendChild(wrapper);
-
+                wrapper.appendChild(thread); this.container.appendChild(wrapper);
                 this.enforceLimit();
             }
 
@@ -205,48 +247,104 @@
                 const messages = this.container.children;
                 if (messages.length > this.maxMessages) {
                     const oldestWrapper = messages[0];
-
                     if (oldestWrapper.classList.contains('is-exiting')) return;
                     oldestWrapper.classList.add('is-exiting');
 
                     const thread = oldestWrapper.querySelector('.cyber-thread');
-                    const animOut = thread.dataset.animOut;
-
-                    thread.classList.add(animOut);
+                    thread.classList.add(thread.dataset.animOut);
 
                     setTimeout(() => {
                         oldestWrapper.classList.add('collapsing');
-                        setTimeout(() => {
-                            if(oldestWrapper.parentNode) {
-                                oldestWrapper.parentNode.removeChild(oldestWrapper);
-                            }
-                        }, 600); 
+                        setTimeout(() => { if(oldestWrapper.parentNode) oldestWrapper.parentNode.removeChild(oldestWrapper); }, 600); 
                     }, 500);
                 }
             }
         }
 
-        /**
-         * =======================================================================
-         * MASTER UNIFIED CHAT ENGINE (YOUTUBE + TWITCH + KICK)
-         * Connects to all 3 platforms via WebSockets/Polling and pushes them
-         * into a unified Master Queue to guarantee flawless dopamine animations.
-         * =======================================================================
-         */
-        class MasterUnifiedChatEngine {
-            constructor(hudEngine, handle) {
+        // ==========================================
+        // REAL-TIME VIEWER ENGINE (No Tokens needed)
+        // ==========================================
+        class RealTimeViewerEngine {
+            constructor() {
+                this.state = { yt: 0, tw: 0, kk: 0 };
+            }
+
+            format(num) { return (num || 0).toLocaleString('en-US'); }
+
+            triggerFlash(nodeId) {
+                const node = document.getElementById(nodeId);
+                node.classList.remove('flash');
+                void node.offsetWidth; 
+                node.classList.add('flash');
+                setTimeout(() => node.classList.remove('flash'), 500);
+            }
+
+            // Called by the Master Engine every 5s for YouTube
+            updateYT(count) {
+                const node = document.getElementById('node-yt');
+                if (count > 0 && node.style.display !== 'flex') node.style.display = 'flex';
+                
+                if (count !== this.state.yt) {
+                    if (count > this.state.yt) this.triggerFlash('node-yt');
+                    this.state.yt = count;
+                    document.getElementById('count-yt').innerText = this.format(count);
+                }
+            }
+
+            // Called every 10s by the Master Engine for Twitch & Kick
+            async pollExternal(twitchUser, kickUser) {
+                if (twitchUser) {
+                    try {
+                        const res = await fetch(`https://decapi.me/twitch/viewercount/${twitchUser}`);
+                        const text = await res.text();
+                        const count = parseInt(text);
+                        if (!isNaN(count)) {
+                            const node = document.getElementById('node-tw');
+                            if (node.style.display !== 'flex') node.style.display = 'flex';
+                            
+                            if (count !== this.state.tw) {
+                                if (count > this.state.tw) this.triggerFlash('node-tw');
+                                this.state.tw = count;
+                                document.getElementById('count-tw').innerText = this.format(count);
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (kickUser) {
+                    try {
+                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v1/channels/' + kickUser)}`);
+                        const json = await res.json();
+                        const parsed = JSON.parse(json.contents);
+                        if (parsed && parsed.livestream) {
+                            const count = parsed.livestream.viewer_count;
+                            const node = document.getElementById('node-kk');
+                            if (node.style.display !== 'flex') node.style.display = 'flex';
+
+                            if (count !== this.state.kk) {
+                                if (count > this.state.kk) this.triggerFlash('node-kk');
+                                this.state.kk = count;
+                                document.getElementById('count-kk').innerText = this.format(count);
+                            }
+                        }
+                    } catch(e) {}
+                }
+            }
+        }
+
+        // ==========================================
+        // MASTER UNIFIED ENGINE
+        // ==========================================
+        class MasterUnifiedEngine {
+            constructor(hudEngine, viewerEngine, handle) {
                 this.hudEngine = hudEngine;
+                this.viewerEngine = viewerEngine;
                 this.handle = handle;
-                
-                // Master array that holds messages from ALL platforms
                 this.masterQueue = [];
-                
-                // Controls deployment pacing so animations never skip
-                this.isProcessingQueue = false;
-                
-                // Platform State
                 this.ytNextPageToken = "";
                 this.ytPolling = false;
+                
+                this.config = { tw: "", kk: "" };
 
                 if (!this.handle) {
                     this.runDemoMode();
@@ -254,46 +352,44 @@
                     this.fetchConfigAndStart();
                 }
 
-                // Start the master deployment loop
                 setInterval(() => this.processQueue(), 2500);
+                // Poll external viewers every 10 seconds to save bandwidth
+                setInterval(() => this.viewerEngine.pollExternal(this.config.tw, this.config.kk), 10000);
             }
 
-            // Fetches all usernames (YT, Twitch, Kick) from your Python backend
             async fetchConfigAndStart() {
                 try {
                     const res = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
                     const data = await res.json();
                     
                     if (data.authenticated) {
-                        // 1. Start YouTube Polling
+                        this.config.tw = data.twitch_user;
+                        this.config.kk = data.kick_user;
+
+                        // Start YouTube Polling (Gets Chat + YT Viewers)
                         this.pollYouTube();
                         
-                        // 2. Start Twitch WebSocket (if configured)
-                        if (data.twitch_user) {
-                            this.connectTwitch(data.twitch_user);
-                        }
+                        // Initial external viewer fetch
+                        this.viewerEngine.pollExternal(this.config.tw, this.config.kk);
 
-                        // 3. Start Kick WebSocket (if configured)
-                        if (data.kick_user) {
-                            this.connectKick(data.kick_user);
-                        }
+                        if (this.config.tw) this.connectTwitch(this.config.tw);
+                        if (this.config.kk) this.connectKick(this.config.kk); // Needs the numeric ID from dashboard!
                     }
-                } catch(e) {
-                    console.error("Config fetch error:", e);
-                }
+                } catch(e) { console.error("Config fetch error:", e); }
             }
 
-            // ==========================================
-            // YOUTUBE POLLING
-            // ==========================================
             async pollYouTube() {
                 if(this.ytPolling) return;
                 this.ytPolling = true;
-
                 let delay = 5000; 
                 try {
-                    const url = `/api/streamer/${this.handle}/chat?pageToken=${this.ytNextPageToken}`;
-                    const res = await fetch(url);
+                    // Update YT Viewers first
+                    const statRes = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
+                    const statData = await statRes.json();
+                    if(statData.yt_viewers !== undefined) this.viewerEngine.updateYT(statData.yt_viewers);
+
+                    // Update Chat
+                    const res = await fetch(`/api/streamer/${this.handle}/chat?pageToken=${this.ytNextPageToken}`);
                     const data = await res.json();
                     
                     if (res.ok && !data.error) {
@@ -309,122 +405,61 @@
                                 });
                             });
                         }
-                    } else {
-                        delay = 10000;
-                    }
-                } catch (e) {
-                    delay = 10000;
-                }
+                    } else { delay = 10000; }
+                } catch (e) { delay = 10000; }
 
-                setTimeout(() => {
-                    this.ytPolling = false;
-                    this.pollYouTube();
-                }, delay);
+                setTimeout(() => { this.ytPolling = false; this.pollYouTube(); }, delay);
             }
 
-            // ==========================================
-            // TWITCH NATIVE WEBSOCKET (IRC)
-            // ==========================================
             connectTwitch(channel) {
                 const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-                
                 ws.onopen = () => {
-                    // Request tags to get display-name
                     ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
                     ws.send('NICK justinfan' + Math.floor(Math.random() * 100000));
                     ws.send(`JOIN #${channel.toLowerCase()}`);
-                    console.log("[Twitch] Connected to", channel);
+                    console.log("[Twitch] Connected");
                 };
-
                 ws.onmessage = (event) => {
                     const lines = event.data.split('\r\n');
                     for (let line of lines) {
-                        if (line === 'PING :tmi.twitch.tv') {
-                            ws.send('PONG :tmi.twitch.tv');
-                        } else if (line.includes('PRIVMSG')) {
+                        if (line === 'PING :tmi.twitch.tv') ws.send('PONG :tmi.twitch.tv');
+                        else if (line.includes('PRIVMSG')) {
                             const nameMatch = line.match(/display-name=([^;]+)/);
                             const msgMatch = line.match(/PRIVMSG #[^:]+:(.+)/);
                             if (nameMatch && msgMatch) {
                                 const username = nameMatch[1];
-                                const message = msgMatch[1];
-                                // Use UI Avatars to generate a premium clean icon based on their name
                                 const avatar = `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-                                
-                                this.masterQueue.push({ username, message, avatar });
+                                this.masterQueue.push({ username, message: msgMatch[1], avatar });
                             }
                         }
                     }
                 };
             }
 
-       // ==========================================
-            // KICK WEBSOCKET (AGGRESSIVE ROTATION)
-            // ==========================================
             connectKick(chatroomId) {
-                if (!/^\d+$/.test(chatroomId)) {
-                    console.error("[Kick] Invalid Chatroom ID. Make sure it is purely numbers.");
-                    return;
-                }
-
-                console.log(`[Kick] Initializing connection for Room ID: ${chatroomId}...`);
-
-                // Kick rotates these 3 keys globally.
-                const kickKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
+                if (!/^\d+$/.test(chatroomId)) return;
+                const pusherKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
                 let keyIndex = 0;
 
                 const tryConnect = () => {
-                    if (keyIndex >= kickKeys.length) {
-                        console.error("[Kick] FATAL: All Pusher keys failed. Kick is currently blocking your browser's Origin, or an AdBlocker is stopping the connection.");
-                        return;
-                    }
+                    if (keyIndex >= pusherKeys.length) return;
+                    const pusher = new Pusher(pusherKeys[keyIndex], { cluster: 'us2', forceTLS: true });
 
-                    const currentKey = kickKeys[keyIndex];
-                    console.log(`[Kick] Attempting connection with Key: ${currentKey}`);
-
-                    const pusher = new Pusher(currentKey, {
-                        cluster: 'us2',
-                        forceTLS: true
-                    });
-
-                    pusher.connection.bind('connected', () => {
-                        console.log('[Kick] Pusher connected successfully to US2 Cluster!');
-                    });
-
-                    // AGGRESSIVE ROTATION: Catch ANY error and instantly rotate
                     pusher.connection.bind('error', (err) => {
-                        console.error(`[Kick] Connection Error on key ${currentKey}:`, err);
-                        console.log("[Kick] Key failed or blocked. Force rotating to next key...");
-                        pusher.disconnect();
-                        keyIndex++;
-                        setTimeout(tryConnect, 1000); // Wait 1 second before trying next key
+                        pusher.disconnect(); keyIndex++; setTimeout(tryConnect, 1000);
                     });
 
                     const channel = pusher.subscribe(`chatrooms.${chatroomId}.v2`);
-
-                    channel.bind('pusher:subscription_succeeded', () => {
-                        console.log(`[Kick] SUCCESS! Officially listening to Chatroom ${chatroomId}`);
-                    });
-
-                    // Listen for Chat Messages
                     channel.bind('App\\Events\\ChatMessageEvent', (data) => {
-                        console.log("[Kick] Message Received!", data.content);
-                        
                         const username = data.sender.username;
-                        const message = data.content;
                         const avatar = data.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-                        
-                        this.masterQueue.push({ username, message, avatar });
+                        this.masterQueue.push({ username, message: data.content, avatar });
                     });
                 };
-
-                // Start the connection loop
                 tryConnect();
             }
-            // ==========================================
-            // MASTER QUEUE DEPLOYMENT
-            // ==========================================
+
             processQueue() {
-                // If there are messages waiting, release EXACTLY ONE every 2.5 seconds
                 if (this.masterQueue.length > 0) {
                     const msg = this.masterQueue.shift();
                     this.hudEngine.addMessage(msg.username, msg.message, msg.avatar);
@@ -432,22 +467,27 @@
             }
 
             runDemoMode() {
-                const mockUsers = ["YT_Sniper", "Twitch_God", "Kick_Legend", "NeonViper", "VoidWalker"];
-                const mockMsgs = [
-                    "DEMO MODE: Add ?user=name to URL to connect all 3 platforms.",
-                    "Twitch connection is active!",
-                    "YouTube polling is active!",
-                    "Kick websocket is active!",
-                    "Messages from all 3 are funneled into this single queue seamlessly."
-                ];
+                // Simulate Viewers
+                document.getElementById('node-yt').style.display = 'flex';
+                document.getElementById('node-tw').style.display = 'flex';
+                document.getElementById('node-kk').style.display = 'flex';
+                
+                setInterval(() => this.viewerEngine.updateYT(Math.floor(Math.random() * 50) + 1200), 5000);
+                setInterval(() => {
+                    this.viewerEngine.state.tw = Math.floor(Math.random() * 20) + 800;
+                    this.viewerEngine.state.kk = Math.floor(Math.random() * 100) + 2100;
+                    document.getElementById('count-tw').innerText = this.viewerEngine.format(this.viewerEngine.state.tw);
+                    document.getElementById('count-kk').innerText = this.viewerEngine.format(this.viewerEngine.state.kk);
+                    this.viewerEngine.triggerFlash('node-tw');
+                    this.viewerEngine.triggerFlash('node-kk');
+                }, 8000);
 
+                // Simulate Chat
                 const triggerRandomChat = () => {
-                    const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-                    const msg = mockMsgs[Math.floor(Math.random() * mockMsgs.length)];
+                    const user = "DemoUser";
                     const avatar = `https://ui-avatars.com/api/?name=${user}&background=random&color=fff&bold=true`;
-                    
-                    this.masterQueue.push({ username: user, message: msg, avatar: avatar });
-                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 2000) + 1500);
+                    this.masterQueue.push({ username: user, message: "This is a demo message to test the viewer HUD layout!", avatar: avatar });
+                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 2000) + 2500);
                 }
                 setTimeout(triggerRandomChat, 1000);
             }
@@ -455,11 +495,11 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const hudEngine = new KineticHUDOverlay();
+            const viewerEngine = new RealTimeViewerEngine();
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || '';
             
-            // Starts the Unified Multi-Platform Engine
-            new MasterUnifiedChatEngine(hudEngine, username);
+            new MasterUnifiedEngine(hudEngine, viewerEngine, username);
         });
     </script>
 </body>
