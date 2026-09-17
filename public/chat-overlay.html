@@ -357,8 +357,8 @@
                 };
             }
 
-        // ==========================================
-            // KICK WEBSOCKET (MULTI-KEY ROTATION + DEBUG)
+       // ==========================================
+            // KICK WEBSOCKET (AGGRESSIVE ROTATION)
             // ==========================================
             connectKick(chatroomId) {
                 if (!/^\d+$/.test(chatroomId)) {
@@ -368,13 +368,13 @@
 
                 console.log(`[Kick] Initializing connection for Room ID: ${chatroomId}...`);
 
-                // Kick rotates these 3 keys globally. We will automatically cycle through them.
+                // Kick rotates these 3 keys globally.
                 const kickKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
                 let keyIndex = 0;
 
                 const tryConnect = () => {
                     if (keyIndex >= kickKeys.length) {
-                        console.error("[Kick] FATAL: All Pusher keys failed. (Check your AdBlocker!)");
+                        console.error("[Kick] FATAL: All Pusher keys failed. Kick is currently blocking your browser's Origin, or an AdBlocker is stopping the connection.");
                         return;
                     }
 
@@ -390,15 +390,13 @@
                         console.log('[Kick] Pusher connected successfully to US2 Cluster!');
                     });
 
-                    // Automatically catch dead keys and rotate to the next one
+                    // AGGRESSIVE ROTATION: Catch ANY error and instantly rotate
                     pusher.connection.bind('error', (err) => {
-                        console.error(`[Kick] Connection Error with key ${currentKey}:`, err);
-                        if (err && err.error && err.error.data && err.error.data.code === 4004) {
-                            console.log("[Kick] Key is dead. Rotating to next key...");
-                            pusher.disconnect();
-                            keyIndex++;
-                            tryConnect();
-                        }
+                        console.error(`[Kick] Connection Error on key ${currentKey}:`, err);
+                        console.log("[Kick] Key failed or blocked. Force rotating to next key...");
+                        pusher.disconnect();
+                        keyIndex++;
+                        setTimeout(tryConnect, 1000); // Wait 1 second before trying next key
                     });
 
                     const channel = pusher.subscribe(`chatrooms.${chatroomId}.v2`);
@@ -409,7 +407,7 @@
 
                     // Listen for Chat Messages
                     channel.bind('App\\Events\\ChatMessageEvent', (data) => {
-                        console.log("[Kick] Raw Message Received!", data.content);
+                        console.log("[Kick] Message Received!", data.content);
                         
                         const username = data.sender.username;
                         const message = data.content;
