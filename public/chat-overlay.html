@@ -282,13 +282,13 @@
             }
 
             async pollExternal(twitchUser, kickConfig) {
-                // Twitch DecAPI
+                // Twitch
                 if (twitchUser) {
                     try {
                         const res = await fetch(`https://decapi.me/twitch/viewercount/${twitchUser}`);
                         const text = await res.text();
                         let count = parseInt(text);
-                        if (isNaN(count)) count = 0; // "Offline" handles gracefully
+                        if (isNaN(count)) count = 0; 
 
                         const node = document.getElementById('node-tw');
                         if (node.style.display !== 'flex') node.style.display = 'flex';
@@ -301,7 +301,7 @@
                     } catch(e) {}
                 }
 
-                // Kick Proxy Routing
+                // Kick (OBS Cloudflare Bypass via Vercel Backend)
                 let kickUserSlug = "";
                 if (kickConfig) {
                     if (kickConfig.includes("|||")) kickUserSlug = kickConfig.split("|||")[0];
@@ -310,25 +310,12 @@
 
                 if (kickUserSlug) {
                     try {
-                        let count = null;
-                        try {
-                            const res1 = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/${kickUserSlug}`);
-                            const data1 = await res1.json();
-                            if (data1) {
-                                if (data1.livestream) count = data1.livestream.viewer_count;
-                                else count = 0; // Offline
-                            }
-                        } catch (e1) {
-                            const res2 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v1/channels/' + kickUserSlug)}`);
-                            const data2 = await res2.json();
-                            const parsed2 = JSON.parse(data2.contents);
-                            if (parsed2) {
-                                if (parsed2.livestream) count = parsed2.livestream.viewer_count;
-                                else count = 0; // Offline
-                            }
-                        }
-
-                        if (count !== null && count !== undefined) {
+                        // OBS is completely bypassed. Vercel fetches it safely.
+                        const res = await fetch(`/api/kick_viewers/${kickUserSlug}?t=${new Date().getTime()}`);
+                        const data = await res.json();
+                        
+                        if (data && data.viewers !== undefined) {
+                            const count = data.viewers;
                             const node = document.getElementById('node-kk');
                             if (node.style.display !== 'flex') node.style.display = 'flex';
 
