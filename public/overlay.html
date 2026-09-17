@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream Status Overlay</title>
+    <title>Fast Sync Stream Overlay</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
     <style>
-
         :root {
-            /* Void & Cyber Palette */
             --void-obsidian: #030008;
             --void-deep: #0a011a;
             --purple-core: #2b00ff;
@@ -21,16 +19,13 @@
             --neon-white: #ffffff;
             --glass-sheen: rgba(255, 255, 255, 0.15);
 
-            /* Dimensional Sizing */
             --overlay-width: 860px; 
             --overlay-height: 76px;  
             --logo-size: 104px;        
             
-            /* Animation Physics Hooks */
             --sweep-progress: 0%; 
             --logo-rot: 0deg; 
             --ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            --ease-cinematic: cubic-bezier(0.7, 0, 0.3, 1);
             --ease-slot: cubic-bezier(0.2, 0.9, 0.1, 1);
         }
 
@@ -113,8 +108,9 @@
             background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-pure), var(--gold-bright));
             background-size: 200% 200%; animation: borderFlow 4s ease infinite;
             display: flex; justify-content: center; align-items: center;
-            transform: rotate(var(--logo-rot)); will-change: transform;
+            transform: rotate(var(--logo-rot)); will-change: transform; transition: filter 0.3s ease;
         }
+        .logo-inner-ring.overdrive { filter: brightness(1.5) drop-shadow(0 0 10px var(--gold-pure)); }
         
         .brand-logo {
             width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
@@ -242,7 +238,10 @@
         @keyframes glassShine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
         @keyframes quickFlare { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
         @keyframes pulseGold { 0% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 5px rgba(255,215,0,0.2); } 100% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 20px rgba(255,215,0,0.8); } }
-        
+        @keyframes pureFlash {
+            0% { color: #fff; text-shadow: 0 0 20px #fff, 0 0 40px #fff; transform: scale(1.05); }
+            100% { color: #fff; text-shadow: 0 3px 5px rgba(0,0,0,1), 0 0 15px rgba(255, 255, 255, 0.5); transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -251,7 +250,7 @@
         <div class="scene-container" id="scene-wrapper">
             
             <div class="logo-sweeper" id="logo-sweeper">
-                <div class="logo-inner-ring">
+                <div class="logo-inner-ring" id="logo-ring">
                     <img src="" alt="Logo" class="brand-logo" id="brand-logo" style="display:none;">
                 </div>
             </div>
@@ -420,6 +419,12 @@
                 const maxDelay = (targetStr.length - 1) * 0.08;
                 setTimeout(() => {
                     this.moduleParent.classList.remove('flare-active'); void this.moduleParent.offsetWidth; this.moduleParent.classList.add('flare-active');
+                    
+                    // Flash text exactly when the number settles
+                    this.container.style.animation = 'none';
+                    void this.container.offsetWidth; 
+                    this.container.style.animation = 'pureFlash 0.5s ease-out forwards';
+
                     if(window.particleEngineInstance) {
                         const rect = this.container.getBoundingClientRect(); const pCanvas = document.getElementById('particle-canvas').getBoundingClientRect();
                         window.particleEngineInstance.spawnBurst((rect.left - pCanvas.left) + rect.width/2, (rect.top - pCanvas.top) + rect.height/2);
@@ -459,31 +464,44 @@
                 this.state = { subs: 0, likes: 0, goal: 5000 };
                 this.slotSubs = new NumberSlotEngine('slot-subs');
                 this.slotLikes = new NumberSlotEngine('slot-likes');
-                this.elements = { goalMod: document.getElementById('mod-goal'), goalText: document.getElementById('val-goal'), goalBar: document.getElementById('goal-bar') };
-                
-                this.rollInterval = setInterval(() => { this.executeRoll(); }, 5500);
+                this.elements = { 
+                    goalMod: document.getElementById('mod-goal'), 
+                    goalText: document.getElementById('val-goal'), 
+                    goalBar: document.getElementById('goal-bar'),
+                    logoRing: document.getElementById('logo-ring')
+                };
             }
             format(num) { return (num || 0).toLocaleString('en-US'); }
+            
             triggerSubGoalAnimation() {
                 this.elements.goalMod.classList.remove('goal-flash'); void this.elements.goalMod.offsetWidth; 
                 this.elements.goalMod.classList.add('goal-flash'); setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 1000);
             }
-            executeRoll() { this.slotSubs.triggerRoll(this.state.subs); this.slotLikes.triggerRoll(this.state.likes); }
+
             updateData(newSubs, newLikes, newGoal) {
                 if (newGoal) this.state.goal = newGoal;
                 let subChanged = false;
 
+                // STRICT SYNC: Only spin the slot machine when real data physically changes.
                 if (newSubs !== this.state.subs) { 
                     if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
+                    this.slotSubs.triggerRoll(newSubs);
                     this.state.subs = newSubs; 
                 }
-                if (newLikes !== this.state.likes) { this.state.likes = newLikes; }
+                
+                if (newLikes !== this.state.likes) { 
+                    // Stagger the like roll slightly if both update at the exact same second
+                    setTimeout(() => this.slotLikes.triggerRoll(newLikes), 500);
+                    this.state.likes = newLikes; 
+                }
                 
                 let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
                 this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
                 this.elements.goalBar.style.width = `${percentage}%`;
 
-                if (subChanged) { this.triggerSubGoalAnimation(); this.executeRoll(); }
+                if (subChanged) { 
+                    this.triggerSubGoalAnimation(); 
+                }
             }
         }
 
@@ -514,7 +532,9 @@
             }
         }
 
-        // CRITICAL FIX: The Real Data Polling Engine
+        // ==============================================================
+        // THE ENGINE THAT POWERS REAL-TIME YOUTUBE PINGS
+        // ==============================================================
         class MultiStreamerLiveEngine {
             constructor(state, ticker) {
                 this.state = state;
@@ -527,8 +547,11 @@
                     return;
                 }
 
+                // Initial fetch
                 this.pollData();
-                setInterval(() => this.pollData(), 10000);
+                
+                // Hyper-fast 5-second polling loop
+                setInterval(() => this.pollData(), 5000);
             }
 
             async pollData() {
@@ -538,6 +561,7 @@
                     const data = await res.json();
                     
                     if (data.authenticated) {
+                        // Triggers the UI to update ONLY if numbers changed
                         this.state.updateData(data.subs, data.likes, data.sub_goal);
                         
                         if (data.ticker_text) {
@@ -565,7 +589,7 @@
             new AudioEQSimulator();
             new CinematicSweepController(particles);
             
-            // Starts pulling real data instead of fake generator!
+            // Replaces the fake looping demo with the real-time data engine
             new MultiStreamerLiveEngine(state, ticker);
         });
     </script>
