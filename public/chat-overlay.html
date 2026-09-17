@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frameless Kinetic HUD - Live Chat</title>
+    <title>Unified Multi-Platform Kinetic Chat</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -108,41 +108,28 @@
 
         @keyframes textShimmer { 0% { background-position: -150% center; } 100% { background-position: 150% center; } }
 
-        /* ==========================================================================
-           THE 20 UNIQUE FRAMELESS KINETIC ANIMATIONS (Kept from your approved design)
-           ========================================================================== */
-        
+        /* The 20 Unique CSS Animations */
         .thread-in-01 { animation: thIn01 0.7s var(--ease-cyber) forwards; } .thread-out-01 { animation: thOut01 0.5s var(--ease-expo) forwards; } .avatar-in-01 { animation: avIn01 0.6s 0.1s var(--ease-punch) both; } .user-in-01 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-01 { animation: msIn01 0.7s 0.3s var(--ease-elastic) both; } .line-in-01 { animation: lnIn01 0.5s 0.4s var(--ease-glide) both; }
         @keyframes thIn01 { 0% { transform: translateX(-50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes thOut01 { 100% { transform: translateX(100px) skewX(20deg); opacity: 0; filter: blur(5px); } } @keyframes avIn01 { 0% { transform: scale(0) rotate(-180deg); } 100% { transform: scale(1) rotate(0); } } @keyframes usIn01 { 0% { clip-path: inset(0 100% 0 0); transform: translateX(-10px); } 100% { clip-path: inset(0 0 0 0); transform: translateX(0); } } @keyframes msIn01 { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); transform: translateX(-20px); letter-spacing: -2px; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateX(0); letter-spacing: -0.02em; } } @keyframes lnIn01 { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
-
         .thread-in-02 { animation: thIn02 0.8s var(--ease-bounce) forwards; } .thread-out-02 { animation: thOut02 0.4s ease-in forwards; } .avatar-in-02 { animation: avIn02 0.7s 0.1s var(--ease-elastic) both; } .user-in-02 { animation: usIn02 0.6s 0.2s var(--ease-elastic) both; } .msg-in-02 { animation: msIn02 0.8s 0.3s var(--ease-punch) both; } .line-in-02 { animation: lnIn02 0.6s 0.2s var(--ease-bounce) both; }
         @keyframes thIn02 { 0% { opacity: 0; filter: brightness(300%) contrast(200%); } 100% { opacity: 1; filter: brightness(100%) contrast(100%); } } @keyframes thOut02 { 100% { transform: scale(1.1); opacity: 0; filter: blur(10px); } } @keyframes avIn02 { 0% { transform: translate(-30px, 30px) scale(0); opacity: 0; } 100% { transform: translate(0, 0) scale(1); opacity: 1; } } @keyframes usIn02 { 0% { transform: translateY(-20px); opacity: 0; letter-spacing: 1em; } 100% { transform: translateY(0); opacity: 1; letter-spacing: 0.35em; } } @keyframes msIn02 { 0% { transform: scale(1.5); opacity: 0; filter: blur(10px); } 100% { transform: scale(1); opacity: 1; filter: blur(0); } } @keyframes lnIn02 { 0% { opacity: 0; transform: translateY(-20px); } 100% { opacity: 0.6; transform: translateY(0); } }
-
         .thread-in-03 { animation: thIn03 0.9s var(--ease-glide) forwards; } .thread-out-03 { animation: thOut03 0.5s var(--ease-snap) forwards; } .avatar-in-03 { animation: avIn03 0.6s 0.2s var(--ease-glide) both; } .user-in-03 { animation: usIn03 0.5s 0.3s linear both; } .msg-in-03 { animation: msIn03 0.8s 0.4s var(--ease-cyber) both; } .line-in-03 { animation: lnIn03 0.4s 0.1s linear both; }
         @keyframes thIn03 { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes thOut03 { 100% { transform: translateY(30px); opacity: 0; clip-path: inset(0 0 100% 0); } } @keyframes avIn03 { 0% { clip-path: inset(0 0 100% 0); transform: translateY(-10px); } 100% { clip-path: inset(0 0 0 0); transform: translateY(0); } } @keyframes usIn03 { 0% { clip-path: inset(0 0 100% 0); opacity: 0; } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } @keyframes msIn03 { 0% { clip-path: inset(0 0 100% 0); opacity: 0; transform: translateY(10px); filter: hue-rotate(90deg); } 100% { clip-path: inset(0 0 0 0); opacity: 1; transform: translateY(0); filter: hue-rotate(0); } } @keyframes lnIn03 { 0% { clip-path: inset(0 0 100% 0); } 100% { clip-path: inset(0 0 0 0); } }
-
         .thread-in-04 { animation: thIn04 1s var(--ease-fluid) forwards; } .thread-out-04 { animation: thOut04 0.6s var(--ease-fluid) forwards; } .avatar-in-04 { animation: avIn04 0.8s 0.1s var(--ease-elastic) both; } .user-in-04 { animation: usIn04 0.7s 0.2s var(--ease-punch) both; } .msg-in-04 { animation: msIn04 1s 0.3s var(--ease-fluid) both; } .line-in-04 { animation: lnIn04 0.8s 0.2s var(--ease-fluid) both; }
         @keyframes thIn04 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut04 { 100% { transform: translateZ(-300px); opacity: 0; filter: blur(15px); } } @keyframes avIn04 { 0% { transform: translateZ(200px) scale(0.5); opacity: 0; } 100% { transform: translateZ(0) scale(1); opacity: 1; } } @keyframes usIn04 { 0% { transform: translateZ(100px); opacity: 0; filter: blur(5px); } 100% { transform: translateZ(0); opacity: 1; filter: blur(0); } } @keyframes msIn04 { 0% { transform: translateZ(300px) rotateX(-20deg); opacity: 0; filter: blur(10px); } 100% { transform: translateZ(0) rotateX(0); opacity: 1; filter: blur(0); } } @keyframes lnIn04 { 0% { transform: translateZ(50px) scaleY(0); } 100% { transform: translateZ(0) scaleY(1); } }
-
         .thread-in-05 { animation: thIn05 0.6s steps(5, end) forwards; } .thread-out-05 { animation: thOut05 0.4s steps(4, end) forwards; } .avatar-in-05 { animation: avIn05 0.5s 0.2s steps(3, end) both; } .user-in-05 { animation: usIn05 0.8s 0.1s linear both; } .msg-in-05 { animation: msIn05 0.7s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; } .line-in-05 { animation: lnIn05 0.3s 0.1s steps(2, end) both; }
         @keyframes thIn05 { 0% { opacity: 0; filter: invert(1); transform: translateX(-20px); } 50% { opacity: 1; filter: invert(0); transform: translateX(10px); } 100% { opacity: 1; transform: translateX(0); } } @keyframes thOut05 { 100% { opacity: 0; transform: skewX(45deg); filter: contrast(300%); } } @keyframes avIn05 { 0% { transform: scale(1.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } } @keyframes usIn05 { 0% { clip-path: inset(0 100% 0 0); opacity: 0; } 20% { clip-path: inset(20% 0 80% 0); opacity: 1; } 40% { clip-path: inset(80% 0 10% 0); } 60% { clip-path: inset(10% 0 60% 0); } 80% { clip-path: inset(40% 0 20% 0); } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } @keyframes msIn05 { 0% { opacity: 0; filter: drop-shadow(10px 0 0 red) drop-shadow(-10px 0 0 cyan); transform: skewX(20deg); } 50% { opacity: 1; filter: drop-shadow(-5px 0 0 red) drop-shadow(5px 0 0 cyan); transform: skewX(-10deg); } 100% { filter: drop-shadow(0 0 0 red) drop-shadow(0 0 0 cyan); opacity: 1; transform: skewX(0); } } @keyframes lnIn05 { 0% { opacity: 0; } 100% { opacity: 0.6; } }
-
         .thread-in-06 { animation: thIn06 0.8s var(--ease-bounce) forwards; } .thread-out-06 { animation: thOut06 0.5s var(--ease-snap) forwards; } .avatar-in-06 { animation: avIn06 0.7s 0.1s var(--ease-bounce) both; } .user-in-06 { animation: usIn06 0.6s 0.2s var(--ease-bounce) both; } .msg-in-06 { animation: msIn06 0.8s 0.3s var(--ease-bounce) both; } .line-in-06 { animation: lnIn06 0.6s 0.3s var(--ease-bounce) both; }
         @keyframes thIn06 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut06 { 100% { transform: translateY(50px); opacity: 0; filter: blur(5px); } } @keyframes avIn06 { 0% { transform: translateY(-50px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes usIn06 { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } } @keyframes msIn06 { 0% { transform: translateY(-40px) scaleY(1.2); opacity: 0; } 100% { transform: translateY(0) scaleY(1); opacity: 1; } } @keyframes lnIn06 { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
-
         .thread-in-07 { animation: thIn07 0.7s var(--ease-elastic) forwards; } .thread-out-07 { animation: thOut07 0.4s ease-in forwards; } .avatar-in-07 { animation: avIn07 0.6s 0.1s var(--ease-elastic) both; } .user-in-07 { animation: usIn07 0.5s 0.2s var(--ease-snap) both; } .msg-in-07 { animation: msIn07 0.7s 0.25s var(--ease-elastic) both; } .line-in-07 { animation: lnIn07 0.5s 0.3s var(--ease-elastic) both; }
         @keyframes thIn07 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut07 { 100% { transform: translateX(-100px) skewX(-20deg); opacity: 0; } } @keyframes avIn07 { 0% { transform: translateX(-100px) rotate(-90deg); opacity: 0; } 100% { transform: translateX(0) rotate(0); opacity: 1; } } @keyframes usIn07 { 0% { transform: translateX(50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes msIn07 { 0% { transform: translateX(100px) skewX(30deg); opacity: 0; } 100% { transform: translateX(0) skewX(0); opacity: 1; } } @keyframes lnIn07 { 0% { transform: scaleY(0) rotate(20deg); } 100% { transform: scaleY(1) rotate(0); } }
-
         .thread-in-08 { animation: thIn08 1.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; } .thread-out-08 { animation: thOut08 0.8s ease-in forwards; } .avatar-in-08 { animation: avIn08 1s 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) both; } .user-in-08 { animation: usIn08 0.9s 0.4s ease-out both; } .msg-in-08 { animation: msIn08 1.2s 0.5s cubic-bezier(0.25, 1, 0.5, 1) both; } .line-in-08 { animation: lnIn08 1s 0.3s ease-out both; }
         @keyframes thIn08 { 0% { opacity: 0; transform: translateY(-10px); } 100% { opacity: 1; transform: translateY(0); } } @keyframes thOut08 { 100% { opacity: 0; transform: translateY(-20px); filter: blur(15px); } } @keyframes avIn08 { 0% { opacity: 0; filter: blur(20px); transform: scale(0.8); } 100% { opacity: 1; filter: blur(0); transform: scale(1); } } @keyframes usIn08 { 0% { opacity: 0; filter: blur(10px); letter-spacing: 1em; } 100% { opacity: 1; filter: blur(0); letter-spacing: 0.35em; } } @keyframes msIn08 { 0% { opacity: 0; filter: blur(20px) brightness(200%); transform: scale(1.1); } 100% { opacity: 1; filter: blur(0) brightness(100%); transform: scale(1); } } @keyframes lnIn08 { 0% { opacity: 0; filter: blur(5px); } 100% { opacity: 0.6; filter: blur(0); } }
-
         .thread-in-09 { animation: thIn09 0.8s var(--ease-cyber) forwards; } .thread-out-09 { animation: thOut09 0.5s var(--ease-snap) forwards; } .avatar-in-09 { animation: avIn09 0.7s 0.1s var(--ease-cyber) both; } .user-in-09 { animation: usIn09 0.6s 0.2s var(--ease-punch) both; } .msg-in-09 { animation: msIn09 0.8s 0.3s var(--ease-cyber) both; } .line-in-09 { animation: lnIn09 0.6s 0.2s var(--ease-cyber) both; }
         @keyframes thIn09 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut09 { 100% { opacity: 0; transform: scaleY(0.1); filter: brightness(200%); } } @keyframes avIn09 { 0% { clip-path: polygon(50% 0, 50% 0, 50% 100%, 50% 100%); opacity: 0; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; } } @keyframes usIn09 { 0% { clip-path: polygon(0 50%, 100% 50%, 100% 50%, 0 50%); opacity: 0; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; } } @keyframes msIn09 { 0% { clip-path: polygon(0 50%, 100% 50%, 100% 50%, 0 50%); opacity: 0; transform: scaleY(2); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; transform: scaleY(1); } } @keyframes lnIn09 { 0% { opacity: 0; } 100% { opacity: 0.6; } }
-
         .thread-in-10 { animation: thIn10 0.9s var(--ease-elastic) forwards; } .thread-out-10 { animation: thOut10 0.5s ease-in forwards; } .avatar-in-10 { animation: avIn10 0.7s 0.1s var(--ease-elastic) both; } .user-in-10 { animation: usIn10 0.6s 0.2s var(--ease-elastic) both; } .msg-in-10 { animation: msIn10 0.8s 0.3s var(--ease-elastic) both; } .line-in-10 { animation: lnIn10 0.5s 0.2s linear both; }
         @keyframes thIn10 { 0% { opacity: 0; } 100% { opacity: 1; } } @keyframes thOut10 { 100% { transform: scale(0.8) translateZ(-100px); opacity: 0; } } @keyframes avIn10 { 0% { transform: translateX(50px) rotate(180deg); opacity: 0; filter: blur(5px); } 100% { transform: translateX(0) rotate(0); opacity: 1; filter: blur(0); } } @keyframes usIn10 { 0% { transform: translateX(30px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes msIn10 { 0% { transform: translateX(60px) scaleX(1.2); opacity: 0; } 100% { transform: translateX(0) scaleX(1); opacity: 1; } } @keyframes lnIn10 { 0% { transform: scaleY(0); transform-origin: bottom; } 100% { transform: scaleY(1); transform-origin: bottom; } }
 
-        /* The other 10 duplicate the core behaviors securely so we have 20 classes */
         .thread-in-11 { animation: thIn01 0.7s var(--ease-punch) forwards; } .thread-out-11 { animation: thOut01 0.5s var(--ease-snap) forwards; } .avatar-in-11 { animation: avIn01 0.6s 0.1s var(--ease-bounce) both; } .user-in-11 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-11 { animation: msIn01 0.7s 0.3s var(--ease-expo) both; } .line-in-11 { animation: lnIn01 0.4s 0.3s linear both; }
         .thread-in-12 { animation: thIn02 1s var(--ease-fluid) forwards; } .thread-out-12 { animation: thOut02 0.6s ease-in forwards; } .avatar-in-12 { animation: avIn02 0.8s 0.1s var(--ease-fluid) both; } .user-in-12 { animation: usIn02 0.7s 0.2s var(--ease-fluid) both; } .msg-in-12 { animation: msIn02 0.9s 0.3s var(--ease-fluid) both; } .line-in-12 { animation: lnIn02 0.7s 0.2s var(--ease-fluid) both; }
         .thread-in-13 { animation: thIn03 0.6s var(--ease-snap) forwards; } .thread-out-13 { animation: thOut03 0.4s var(--ease-snap) forwards; } .avatar-in-13 { animation: avIn03 0.5s 0.1s var(--ease-punch) both; } .user-in-13 { animation: usIn03 0.4s 0.15s var(--ease-punch) both; } .msg-in-13 { animation: msIn03 0.6s 0.2s var(--ease-bounce) both; } .line-in-13 { animation: lnIn03 0.3s 0.1s linear both; }
@@ -238,89 +225,204 @@
             }
         }
 
-        // ==========================================
-        // REAL YOUTUBE LIVE CHAT ENGINE
-        // ==========================================
-        class LiveChatEngine {
+        /**
+         * =======================================================================
+         * MASTER UNIFIED CHAT ENGINE (YOUTUBE + TWITCH + KICK)
+         * Connects to all 3 platforms via WebSockets/Polling and pushes them
+         * into a unified Master Queue to guarantee flawless dopamine animations.
+         * =======================================================================
+         */
+        class MasterUnifiedChatEngine {
             constructor(hudEngine, handle) {
                 this.hudEngine = hudEngine;
                 this.handle = handle;
-                this.nextPageToken = "";
-                this.isPolling = false;
+                
+                // Master array that holds messages from ALL platforms
+                this.masterQueue = [];
+                
+                // Controls deployment pacing so animations never skip
+                this.isProcessingQueue = false;
+                
+                // Platform State
+                this.ytNextPageToken = "";
+                this.ytPolling = false;
 
                 if (!this.handle) {
                     this.runDemoMode();
                 } else {
-                    this.pollChat();
+                    this.fetchConfigAndStart();
+                }
+
+                // Start the master deployment loop
+                setInterval(() => this.processQueue(), 2500);
+            }
+
+            // Fetches all usernames (YT, Twitch, Kick) from your Python backend
+            async fetchConfigAndStart() {
+                try {
+                    const res = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
+                    const data = await res.json();
+                    
+                    if (data.authenticated) {
+                        // 1. Start YouTube Polling
+                        this.pollYouTube();
+                        
+                        // 2. Start Twitch WebSocket (if configured)
+                        if (data.twitch_user) {
+                            this.connectTwitch(data.twitch_user);
+                        }
+
+                        // 3. Start Kick WebSocket (if configured)
+                        if (data.kick_user) {
+                            this.connectKick(data.kick_user);
+                        }
+                    }
+                } catch(e) {
+                    console.error("Config fetch error:", e);
                 }
             }
 
-            async pollChat() {
-                if(this.isPolling) return;
-                this.isPolling = true;
+            // ==========================================
+            // YOUTUBE POLLING
+            // ==========================================
+            async pollYouTube() {
+                if(this.ytPolling) return;
+                this.ytPolling = true;
 
                 let delay = 5000; 
-
                 try {
-                    const url = `/api/streamer/${this.handle}/chat?pageToken=${this.nextPageToken}`;
+                    const url = `/api/streamer/${this.handle}/chat?pageToken=${this.ytNextPageToken}`;
                     const res = await fetch(url);
                     const data = await res.json();
                     
                     if (res.ok && !data.error) {
-                        if (data.pollingIntervalMillis) {
-                            delay = data.pollingIntervalMillis;
-                        }
-
-                        if (data.nextPageToken) {
-                            this.nextPageToken = data.nextPageToken;
-                        }
+                        if (data.pollingIntervalMillis) delay = data.pollingIntervalMillis;
+                        if (data.nextPageToken) this.ytNextPageToken = data.nextPageToken;
 
                         if (data.items && data.items.length > 0) {
-                            this.queueMessages(data.items);
+                            data.items.forEach(item => {
+                                this.masterQueue.push({
+                                    username: item.authorDetails.displayName,
+                                    message: item.snippet.displayMessage,
+                                    avatar: item.authorDetails.profileImageUrl
+                                });
+                            });
                         }
                     } else {
-                        // Error, wait 10 seconds before retrying
                         delay = 10000;
                     }
                 } catch (e) {
-                    console.error("Chat poll error", e);
                     delay = 10000;
                 }
 
                 setTimeout(() => {
-                    this.isPolling = false;
-                    this.pollChat();
+                    this.ytPolling = false;
+                    this.pollYouTube();
                 }, delay);
             }
 
-            queueMessages(items) {
-                // Stagger the deployment of messages so they don't instantly flush each other out.
-                // 2.5 seconds per message ensures the dopamine animation finishes beautifully.
-                items.forEach((item, index) => {
-                    setTimeout(() => {
-                        const username = item.authorDetails.displayName;
-                        const message = item.snippet.displayMessage;
-                        const avatarUrl = item.authorDetails.profileImageUrl;
-                        this.hudEngine.addMessage(username, message, avatarUrl);
-                    }, index * 2500); 
-                });
+            // ==========================================
+            // TWITCH NATIVE WEBSOCKET (IRC)
+            // ==========================================
+            connectTwitch(channel) {
+                const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+                
+                ws.onopen = () => {
+                    // Request tags to get display-name
+                    ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+                    ws.send('NICK justinfan' + Math.floor(Math.random() * 100000));
+                    ws.send(`JOIN #${channel.toLowerCase()}`);
+                    console.log("[Twitch] Connected to", channel);
+                };
+
+                ws.onmessage = (event) => {
+                    const lines = event.data.split('\r\n');
+                    for (let line of lines) {
+                        if (line === 'PING :tmi.twitch.tv') {
+                            ws.send('PONG :tmi.twitch.tv');
+                        } else if (line.includes('PRIVMSG')) {
+                            const nameMatch = line.match(/display-name=([^;]+)/);
+                            const msgMatch = line.match(/PRIVMSG #[^:]+:(.+)/);
+                            if (nameMatch && msgMatch) {
+                                const username = nameMatch[1];
+                                const message = msgMatch[1];
+                                // Use UI Avatars to generate a premium clean icon based on their name
+                                const avatar = `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
+                                
+                                this.masterQueue.push({ username, message, avatar });
+                            }
+                        }
+                    }
+                };
+            }
+
+            // ==========================================
+            // KICK WEBSOCKET (PUSHER)
+            // ==========================================
+            async connectKick(channel) {
+                try {
+                    // Fetch Chatroom ID via Python Backend to bypass CORS
+                    const res = await fetch(`/api/kick_id/${channel}`);
+                    const data = await res.json();
+                    
+                    if (data.chatroom_id) {
+                        const chatroomId = data.chatroom_id;
+                        const ws = new WebSocket("wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false");
+                        
+                        ws.onopen = () => {
+                            ws.send(JSON.stringify({
+                                event: "pusher:subscribe",
+                                data: { auth: "", channel: `chatrooms.${chatroomId}.v2` }
+                            }));
+                            console.log("[Kick] Connected to", channel);
+                        };
+
+                        ws.onmessage = (event) => {
+                            const parsed = JSON.parse(event.data);
+                            if (parsed.event === "App\\Events\\ChatMessageEvent") {
+                                const msgData = JSON.parse(parsed.data);
+                                const username = msgData.sender.username;
+                                const message = msgData.content;
+                                // Use their Kick avatar if they have one, otherwise fallback to clean typography avatar
+                                const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
+                                
+                                this.masterQueue.push({ username, message, avatar });
+                            }
+                        };
+                    }
+                } catch(e) {
+                    console.error("Failed to connect to Kick:", e);
+                }
+            }
+
+            // ==========================================
+            // MASTER QUEUE DEPLOYMENT
+            // ==========================================
+            processQueue() {
+                // If there are messages waiting, release EXACTLY ONE every 2.5 seconds
+                if (this.masterQueue.length > 0) {
+                    const msg = this.masterQueue.shift();
+                    this.hudEngine.addMessage(msg.username, msg.message, msg.avatar);
+                }
             }
 
             runDemoMode() {
-                const mockUsers = ["NightRunner", "ApexPredator", "GlitchKing", "NeonViper", "VoidWalker"];
+                const mockUsers = ["YT_Sniper", "Twitch_God", "Kick_Legend", "NeonViper", "VoidWalker"];
                 const mockMsgs = [
-                    "DEMO MODE: Please add ?user=name to the URL to connect real chat.",
-                    "This frameless design is absolutely incredible.",
-                    "The text animations loop flawlessly. Pure premium."
+                    "DEMO MODE: Add ?user=name to URL to connect all 3 platforms.",
+                    "Twitch connection is active!",
+                    "YouTube polling is active!",
+                    "Kick websocket is active!",
+                    "Messages from all 3 are funneled into this single queue seamlessly."
                 ];
-                const defaultAvatar = "https://yt3.ggpht.com/a/default-user=s88-c-k-c0x00ffffff-no-rj"; 
 
                 const triggerRandomChat = () => {
                     const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
                     const msg = mockMsgs[Math.floor(Math.random() * mockMsgs.length)];
-                    this.hudEngine.addMessage(user, msg, defaultAvatar);
-                    const nextDelay = Math.floor(Math.random() * 2000) + 3500; 
-                    setTimeout(triggerRandomChat, nextDelay);
+                    const avatar = `https://ui-avatars.com/api/?name=${user}&background=random&color=fff&bold=true`;
+                    
+                    this.masterQueue.push({ username: user, message: msg, avatar: avatar });
+                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 2000) + 1500);
                 }
                 setTimeout(triggerRandomChat, 1000);
             }
@@ -331,8 +433,8 @@
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || '';
             
-            // Fire up the real-time chat scraper engine
-            new LiveChatEngine(hudEngine, username);
+            // Starts the Unified Multi-Platform Engine
+            new MasterUnifiedChatEngine(hudEngine, username);
         });
     </script>
 </body>
