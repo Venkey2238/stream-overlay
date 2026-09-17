@@ -48,7 +48,7 @@
         }
 
         .viewer-node {
-            display: none; /* Hidden until platform is connected */
+            display: none; /* Hidden until platform is configured in dashboard */
             align-items: center; gap: 10px;
             padding: 8px 14px;
             background: linear-gradient(90deg, rgba(8, 2, 15, 0.95), rgba(8, 2, 15, 0.6));
@@ -135,7 +135,7 @@
         @keyframes textShimmer { 0% { background-position: -150% center; } 100% { background-position: 150% center; } }
 
         /* The 20 Unique CSS Animations */
-        .thread-in-01 { animation: thIn01 0.7s var(--ease-cyber) forwards; } .thread-out-01 { animation: thOut01 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; } .avatar-in-01 { animation: avIn01 0.6s 0.1s var(--ease-punch) both; } .user-in-01 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-01 { animation: msIn01 0.7s 0.3s var(--ease-elastic) both; } .line-in-01 { animation: lnIn01 0.5s 0.4s var(--ease-glide) both; }
+        .thread-in-01 { animation: thIn01 0.7s var(--ease-cyber) forwards; } .thread-out-01 { animation: thOut01 0.5s var(--ease-punch) forwards; } .avatar-in-01 { animation: avIn01 0.6s 0.1s var(--ease-punch) both; } .user-in-01 { animation: usIn01 0.5s 0.2s var(--ease-punch) both; } .msg-in-01 { animation: msIn01 0.7s 0.3s var(--ease-elastic) both; } .line-in-01 { animation: lnIn01 0.5s 0.4s var(--ease-glide) both; }
         @keyframes thIn01 { 0% { transform: translateX(-50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } } @keyframes thOut01 { 100% { transform: translateX(100px) skewX(20deg); opacity: 0; filter: blur(5px); } } @keyframes avIn01 { 0% { transform: scale(0) rotate(-180deg); } 100% { transform: scale(1) rotate(0); } } @keyframes usIn01 { 0% { clip-path: inset(0 100% 0 0); transform: translateX(-10px); } 100% { clip-path: inset(0 0 0 0); transform: translateX(0); } } @keyframes msIn01 { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); transform: translateX(-20px); letter-spacing: -2px; } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateX(0); letter-spacing: -0.02em; } } @keyframes lnIn01 { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
         
         .thread-in-02 { animation: thIn02 0.8s var(--ease-bounce) forwards; } .thread-out-02 { animation: thOut02 0.4s ease-in forwards; } .avatar-in-02 { animation: avIn02 0.7s 0.1s var(--ease-elastic) both; } .user-in-02 { animation: usIn02 0.6s 0.2s var(--ease-elastic) both; } .msg-in-02 { animation: msIn02 0.8s 0.3s var(--ease-punch) both; } .line-in-02 { animation: lnIn02 0.6s 0.2s var(--ease-bounce) both; }
@@ -175,13 +175,12 @@
         .thread-in-18 { animation: thIn08 0.5s var(--ease-punch) forwards; } .thread-out-18 { animation: thOut08 0.4s var(--ease-snap) forwards; } .avatar-in-18 { animation: avIn08 0.4s 0.1s var(--ease-punch) both; } .user-in-18 { animation: usIn08 0.3s 0.15s var(--ease-punch) both; } .msg-in-18 { animation: msIn08 0.5s 0.2s var(--ease-punch) both; } .line-in-18 { animation: lnIn08 0.3s 0.1s var(--ease-punch) both; }
         .thread-in-19 { animation: thIn09 0.7s steps(6, end) forwards; } .thread-out-19 { animation: thOut09 0.4s steps(4, end) forwards; } .avatar-in-19 { animation: avIn09 0.6s 0.1s steps(4, end) both; } .user-in-19 { animation: usIn09 0.5s 0.2s steps(3, end) both; } .msg-in-19 { animation: msIn09 0.7s 0.25s steps(5, end) both; } .line-in-19 { animation: lnIn09 0.4s 0.15s steps(2, end) both; }
         .thread-in-20 { animation: thIn10 0.9s var(--ease-bounce) forwards; } .thread-out-20 { animation: thOut10 0.6s ease-in forwards; } .avatar-in-20 { animation: avIn10 0.8s 0.1s var(--ease-bounce) both; } .user-in-20 { animation: usIn10 0.7s 0.2s var(--ease-punch) both; } .msg-in-20 { animation: msIn10 0.9s 0.3s var(--ease-bounce) both; } .line-in-20 { animation: lnIn10 0.6s 0.2s linear both; }
-
     </style>
 </head>
 <body>
 
     <div id="master-container">
-        <!-- 1. The Real-Time Viewer HUD -->
+        <!-- Persistent Viewers HUD -->
         <div id="viewer-hud">
             <div class="viewer-node" id="node-yt" style="--node-color: var(--yt-color);">
                 <span class="v-label">YOUTUBE</span>
@@ -197,14 +196,10 @@
             </div>
         </div>
 
-        <!-- 2. The Multi-Platform Chat -->
         <div id="chat-widget"></div>
     </div>
 
     <script>
-        // ==========================================
-        // KINETIC CHAT ENGINE
-        // ==========================================
         class KineticHUDOverlay {
             constructor() {
                 this.container = document.getElementById('chat-widget');
@@ -261,9 +256,6 @@
             }
         }
 
-        // ==========================================
-        // REAL-TIME VIEWER ENGINE (No Tokens needed)
-        // ==========================================
         class RealTimeViewerEngine {
             constructor() {
                 this.state = { yt: 0, tw: 0, kk: 0 };
@@ -279,11 +271,9 @@
                 setTimeout(() => node.classList.remove('flash'), 500);
             }
 
-            // Called by the Master Engine every 5s for YouTube
             updateYT(count) {
                 const node = document.getElementById('node-yt');
-                if (count > 0 && node.style.display !== 'flex') node.style.display = 'flex';
-                
+                if (node.style.display !== 'flex') node.style.display = 'flex';
                 if (count !== this.state.yt) {
                     if (count > this.state.yt) this.triggerFlash('node-yt');
                     this.state.yt = count;
@@ -291,33 +281,54 @@
                 }
             }
 
-            // Called every 10s by the Master Engine for Twitch & Kick
-            async pollExternal(twitchUser, kickUser) {
+            async pollExternal(twitchUser, kickConfig) {
+                // Twitch DecAPI
                 if (twitchUser) {
                     try {
                         const res = await fetch(`https://decapi.me/twitch/viewercount/${twitchUser}`);
                         const text = await res.text();
-                        const count = parseInt(text);
-                        if (!isNaN(count)) {
-                            const node = document.getElementById('node-tw');
-                            if (node.style.display !== 'flex') node.style.display = 'flex';
-                            
-                            if (count !== this.state.tw) {
-                                if (count > this.state.tw) this.triggerFlash('node-tw');
-                                this.state.tw = count;
-                                document.getElementById('count-tw').innerText = this.format(count);
-                            }
+                        let count = parseInt(text);
+                        if (isNaN(count)) count = 0; // "Offline" handles gracefully
+
+                        const node = document.getElementById('node-tw');
+                        if (node.style.display !== 'flex') node.style.display = 'flex';
+                        
+                        if (count !== this.state.tw) {
+                            if (count > this.state.tw) this.triggerFlash('node-tw');
+                            this.state.tw = count;
+                            document.getElementById('count-tw').innerText = this.format(count);
                         }
                     } catch(e) {}
                 }
 
-                if (kickUser) {
+                // Kick Proxy Routing
+                let kickUserSlug = "";
+                if (kickConfig) {
+                    if (kickConfig.includes("|||")) kickUserSlug = kickConfig.split("|||")[0];
+                    else if (isNaN(kickConfig)) kickUserSlug = kickConfig;
+                }
+
+                if (kickUserSlug) {
                     try {
-                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v1/channels/' + kickUser)}`);
-                        const json = await res.json();
-                        const parsed = JSON.parse(json.contents);
-                        if (parsed && parsed.livestream) {
-                            const count = parsed.livestream.viewer_count;
+                        let count = null;
+                        try {
+                            const res1 = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/${kickUserSlug}`);
+                            const data1 = await res1.json();
+                            if (data1) {
+                                if (data1.livestream) count = data1.livestream.viewer_count;
+                                else count = 0; // Offline
+                            }
+                        } catch (e1) {
+                            const res2 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v1/channels/' + kickUserSlug)}`);
+                            const data2 = await res2.json();
+                            const parsed2 = JSON.parse(data2.contents);
+                            if (parsed2) {
+                                if (parsed2.livestream) count = parsed2.livestream.viewer_count;
+                                else count = 0; // Offline
+                            }
+                        }
+
+                        if (count !== null && count !== undefined) {
                             const node = document.getElementById('node-kk');
                             if (node.style.display !== 'flex') node.style.display = 'flex';
 
@@ -332,9 +343,6 @@
             }
         }
 
-        // ==========================================
-        // MASTER UNIFIED ENGINE
-        // ==========================================
         class MasterUnifiedEngine {
             constructor(hudEngine, viewerEngine, handle) {
                 this.hudEngine = hudEngine;
@@ -346,14 +354,10 @@
                 
                 this.config = { tw: "", kk: "" };
 
-                if (!this.handle) {
-                    this.runDemoMode();
-                } else {
-                    this.fetchConfigAndStart();
-                }
+                if (!this.handle) this.runDemoMode();
+                else this.fetchConfigAndStart();
 
                 setInterval(() => this.processQueue(), 2500);
-                // Poll external viewers every 10 seconds to save bandwidth
                 setInterval(() => this.viewerEngine.pollExternal(this.config.tw, this.config.kk), 10000);
             }
 
@@ -366,14 +370,16 @@
                         this.config.tw = data.twitch_user;
                         this.config.kk = data.kick_user;
 
-                        // Start YouTube Polling (Gets Chat + YT Viewers)
                         this.pollYouTube();
-                        
-                        // Initial external viewer fetch
                         this.viewerEngine.pollExternal(this.config.tw, this.config.kk);
 
                         if (this.config.tw) this.connectTwitch(this.config.tw);
-                        if (this.config.kk) this.connectKick(this.config.kk); // Needs the numeric ID from dashboard!
+                        
+                        if (this.config.kk) {
+                            let kId = this.config.kk;
+                            if (kId.includes("|||")) kId = kId.split("|||")[1];
+                            if (kId) this.connectKick(kId); 
+                        }
                     }
                 } catch(e) { console.error("Config fetch error:", e); }
             }
@@ -383,12 +389,10 @@
                 this.ytPolling = true;
                 let delay = 5000; 
                 try {
-                    // Update YT Viewers first
                     const statRes = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
                     const statData = await statRes.json();
                     if(statData.yt_viewers !== undefined) this.viewerEngine.updateYT(statData.yt_viewers);
 
-                    // Update Chat
                     const res = await fetch(`/api/streamer/${this.handle}/chat?pageToken=${this.ytNextPageToken}`);
                     const data = await res.json();
                     
@@ -417,7 +421,6 @@
                     ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
                     ws.send('NICK justinfan' + Math.floor(Math.random() * 100000));
                     ws.send(`JOIN #${channel.toLowerCase()}`);
-                    console.log("[Twitch] Connected");
                 };
                 ws.onmessage = (event) => {
                     const lines = event.data.split('\r\n');
@@ -445,9 +448,7 @@
                     if (keyIndex >= pusherKeys.length) return;
                     const pusher = new Pusher(pusherKeys[keyIndex], { cluster: 'us2', forceTLS: true });
 
-                    pusher.connection.bind('error', (err) => {
-                        pusher.disconnect(); keyIndex++; setTimeout(tryConnect, 1000);
-                    });
+                    pusher.connection.bind('error', (err) => { pusher.disconnect(); keyIndex++; setTimeout(tryConnect, 1000); });
 
                     const channel = pusher.subscribe(`chatrooms.${chatroomId}.v2`);
                     channel.bind('App\\Events\\ChatMessageEvent', (data) => {
@@ -467,7 +468,6 @@
             }
 
             runDemoMode() {
-                // Simulate Viewers
                 document.getElementById('node-yt').style.display = 'flex';
                 document.getElementById('node-tw').style.display = 'flex';
                 document.getElementById('node-kk').style.display = 'flex';
@@ -482,7 +482,6 @@
                     this.viewerEngine.triggerFlash('node-kk');
                 }, 8000);
 
-                // Simulate Chat
                 const triggerRandomChat = () => {
                     const user = "DemoUser";
                     const avatar = `https://ui-avatars.com/api/?name=${user}&background=random&color=fff&bold=true`;
