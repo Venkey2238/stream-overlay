@@ -26,7 +26,8 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 CACHE = {}
-CACHE_TTL = 30  
+# REDUCED TO 10 SECONDS FOR MAXIMUM ALLOWABLE API SPEED
+CACHE_TTL = 10  
 
 app = FastAPI()
 
@@ -255,7 +256,6 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
         CACHE[user] = {}
 
     async with httpx.AsyncClient() as client:
-        # Cache the liveChatId so we don't burn quota fetching video details every 3 seconds
         if "live_chat_id" not in CACHE[user] or CACHE[user].get("cached_video_id") != video_id:
             vid_res = await client.get(
                 f"https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id={video_id}",
@@ -301,7 +301,7 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
         raise HTTPException(status_code=404, detail="Streamer profile not found.")
     
     if user in CACHE:
-        CACHE[user] = {} # Clear cache
+        CACHE[user] = {} # Clear cache instantly on save
         
     return {"status": "success"}
 
