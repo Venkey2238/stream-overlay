@@ -356,47 +356,60 @@
                 };
             }
 
-           // ==========================================
-            // KICK WEBSOCKET (CLOUDFLARE BYPASS - DIRECT ID)
+         // ==========================================
+            // KICK WEBSOCKET (DIRECT ID + MULTI-KEY ROTATION)
             // ==========================================
-            connectKick(chatroomId) {
-                // By feeding the exact Chatroom ID, we completely bypass Kick's Cloudflare blocks 
-                // and connect directly to the Pusher WebSocket cluster flawlessly.
-                try {
-                    const ws = new WebSocket("wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false");
-                    
-                    ws.onopen = () => {
-                        ws.send(JSON.stringify({
-                            event: "pusher:subscribe",
-                            data: { auth: "", channel: `chatrooms.${chatroomId}.v2` }
-                        }));
-                        console.log(`[Kick] Connected successfully to Room ID: ${chatroomId}`);
-                    };
+            async connectKick(chatroomId) {
+                // Because the Dashboard converted the username to an ID, we bypass Cloudflare APIs completely.
+                if (!/^\d+$/.test(chatroomId)) {
+                    console.error("[Kick] Invalid Chatroom ID. Open dashboard and sync again.");
+                    return;
+                }
 
-                    ws.onmessage = (event) => {
-                        const parsed = JSON.parse(event.data);
+                // Kick uses different Pusher keys globally. We loop through them instantly.
+                const pusherKeys = ["eb1d5f283081a78b932c", "32cbd69e4b950bf97679", "1bb076ec966b931dd264"];
+                let connected = false;
+
+                for (let key of pusherKeys) {
+                    if (connected) break;
+
+                    await new Promise((resolve) => {
+                        const ws = new WebSocket(`wss://ws-us2.pusher.com/app/${key}?protocol=7&client=js&version=7.4.0&flash=false`);
                         
-                        if (parsed.event === "App\\Events\\ChatMessageEvent") {
-                            const msgData = JSON.parse(parsed.data);
-                            const username = msgData.sender.username;
-                            const message = msgData.content;
-                            
-                            // Fetch Kick Avatar or fallback to clean typography
-                            const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-                            
-                            this.masterQueue.push({ username, message, avatar });
-                        }
-                    };
+                        // Fail quickly if key is dead
+                        const timeout = setTimeout(() => { ws.close(); resolve(); }, 4000);
 
-                    // Anti-Disconnect Ping: Keeps the connection alive during quiet streams
-                    setInterval(() => {
-                        if(ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ event: "pusher:ping", data: {} }));
-                        }
-                    }, 120000);
+                        ws.onopen = () => {
+                            clearTimeout(timeout);
+                            ws.send(JSON.stringify({
+                                event: "pusher:subscribe",
+                                data: { auth: "", channel: `chatrooms.${chatroomId}.v2` }
+                            }));
+                            console.log(`[Kick] Connected securely to Room: ${chatroomId}`);
+                            connected = true;
+                            resolve();
+                        };
 
-                } catch(e) {
-                    console.error("[Kick] Connection Error:", e);
+                        ws.onmessage = (event) => {
+                            const parsed = JSON.parse(event.data);
+                            
+                            if (parsed.event === "App\\Events\\ChatMessageEvent") {
+                                const msgData = JSON.parse(parsed.data);
+                                const username = msgData.sender.username;
+                                const message = msgData.content;
+                                
+                                // Clean Typography Avatar
+                                const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
+                                
+                                this.masterQueue.push({ username, message, avatar });
+                            }
+                        };
+
+                        ws.onerror = () => {
+                            clearTimeout(timeout);
+                            resolve(); // Try next key
+                        };
+                    });
                 }
             }
             // ==========================================
