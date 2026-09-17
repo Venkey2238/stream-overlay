@@ -176,13 +176,11 @@ async def auth_callback(request: Request):
 
 @app.get("/api/streamer/{handle}")
 async def get_live_overlay_data(handle: str, response: Response):
-    # CRITICAL: Prevent Vercel and OBS from caching this response
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    
     user = handle.strip().lower()
     now = time.time()
 
-    if user in CACHE and CACHE[user]["expires_at"] > now:
+    if user in CACHE and "data" in CACHE[user] and CACHE[user]["expires_at"] > now:
         return CACHE[user]["data"]
 
     res = supabase.table("streamers").select("*").eq("handle", user).execute()
@@ -228,12 +226,66 @@ async def get_live_overlay_data(handle: str, response: Response):
         "ticker_text": profile["ticker_text"]
     }
 
-    CACHE[user] = {
-        "data": response_data,
-        "expires_at": now + CACHE_TTL
-    }
+    if user not in CACHE:
+        CACHE[user] = {}
+    CACHE[user]["data"] = response_data
+    CACHE[user]["expires_at"] = now + CACHE_TTL
 
     return response_data
+
+@app.get("/api/streamer/{handle}/chat")
+async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    user = handle.strip().lower()
+    
+    res = supabase.table("streamers").select("video_id").eq("handle", user).execute()
+    if not res.data:
+        return {"error": "Not found", "pollingIntervalMillis": 10000}
+    
+    video_id = res.data[0].get("video_id")
+    if not video_id:
+        return {"error": "No active stream URL configured", "pollingIntervalMillis": 15000}
+
+    try:
+        token = await get_valid_access_token(user)
+    except Exception:
+        return {"error": "Auth failed", "pollingIntervalMillis": 15000}
+
+    if user not in CACHE:
+        CACHE[user] = {}
+
+    async with httpx.AsyncClient() as client:
+        # Cache the liveChatId so we don't burn quota fetching video details every 3 seconds
+        if "live_chat_id" not in CACHE[user] or CACHE[user].get("cached_video_id") != video_id:
+            vid_res = await client.get(
+                f"https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id={video_id}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            if vid_res.status_code == 200 and vid_res.json().get("items"):
+                details = vid_res.json()["items"][0].get("liveStreamingDetails", {})
+                live_chat_id = details.get("activeLiveChatId")
+                if not live_chat_id:
+                    return {"error": "Video is not live or chat is disabled", "pollingIntervalMillis": 15000}
+                
+                CACHE[user]["live_chat_id"] = live_chat_id
+                CACHE[user]["cached_video_id"] = video_id
+            else:
+                return {"error": "Failed to resolve live chat", "pollingIntervalMillis": 10000}
+
+        live_chat_id = CACHE[user]["live_chat_id"]
+        chat_url = f"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={live_chat_id}&part=snippet,authorDetails"
+        if pageToken:
+            chat_url += f"&pageToken={pageToken}"
+
+        chat_res = await client.get(chat_url, headers={"Authorization": f"Bearer {token}"})
+        
+        if chat_res.status_code == 200:
+            return chat_res.json()
+        elif chat_res.status_code == 403:
+            return {"error": "Quota limit reached", "pollingIntervalMillis": 30000}
+        else:
+            return {"error": "API Error", "pollingIntervalMillis": 10000}
+
 
 @app.post("/api/streamer/{handle}/settings")
 async def save_streamer_settings(handle: str, payload: SettingsPayload):
@@ -249,7 +301,7 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
         raise HTTPException(status_code=404, detail="Streamer profile not found.")
     
     if user in CACHE:
-        del CACHE[user]
+        CACHE[user] = {} # Clear cache
         
     return {"status": "success"}
 
@@ -267,5 +319,9 @@ if os.path.exists(PUBLIC_DIR):
     @app.get("/overlay")
     async def serve_overlay():
         return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
+        
+    @app.get("/chat")
+    async def serve_chat():
+        return FileResponse(os.path.join(PUBLIC_DIR, "chat-overlay.html"))
 
     app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
