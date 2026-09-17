@@ -356,66 +356,45 @@
                 };
             }
 
+           // ==========================================
+            // KICK WEBSOCKET (CLOUDFLARE BYPASS - DIRECT ID)
             // ==========================================
-            // KICK WEBSOCKET (CLOUDFLARE BYPASS SYSTEM)
-            // ==========================================
-            async connectKick(channel) {
+            connectKick(chatroomId) {
+                // By feeding the exact Chatroom ID, we completely bypass Kick's Cloudflare blocks 
+                // and connect directly to the Pusher WebSocket cluster flawlessly.
                 try {
-                    let chatroomId = null;
+                    const ws = new WebSocket("wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false");
+                    
+                    ws.onopen = () => {
+                        ws.send(JSON.stringify({
+                            event: "pusher:subscribe",
+                            data: { auth: "", channel: `chatrooms.${chatroomId}.v2` }
+                        }));
+                        console.log(`[Kick] Connected successfully to Room ID: ${chatroomId}`);
+                    };
 
-                    try {
-                        // Attempt 1: CodeTabs Proxy (High Cloudflare bypass success rate)
-                        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/${channel}`);
-                        const data = await res.json();
-                        if (data && data.chatroom) chatroomId = data.chatroom.id;
-                    } catch (e) {
-                        console.log("[Kick] Primary proxy blocked, attempting secondary fallback...");
-                    }
-
-                    if (!chatroomId) {
-                        // Attempt 2: AllOrigins Proxy (Encrypted wrapper to trick Cloudflare)
-                        const res2 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v1/channels/' + channel)}`);
-                        const data2 = await res2.json();
-                        const parsedData = JSON.parse(data2.contents);
-                        if (parsedData && parsedData.chatroom) chatroomId = parsedData.chatroom.id;
-                    }
-
-                    if (chatroomId) {
-                        const ws = new WebSocket("wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false");
+                    ws.onmessage = (event) => {
+                        const parsed = JSON.parse(event.data);
                         
-                        ws.onopen = () => {
-                            ws.send(JSON.stringify({
-                                event: "pusher:subscribe",
-                                data: { auth: "", channel: `chatrooms.${chatroomId}.v2` }
-                            }));
-                            console.log(`[Kick] Connected successfully to ${channel} (Room ID: ${chatroomId})`);
-                        };
-
-                        ws.onmessage = (event) => {
-                            const parsed = JSON.parse(event.data);
+                        if (parsed.event === "App\\Events\\ChatMessageEvent") {
+                            const msgData = JSON.parse(parsed.data);
+                            const username = msgData.sender.username;
+                            const message = msgData.content;
                             
-                            if (parsed.event === "App\\Events\\ChatMessageEvent") {
-                                const msgData = JSON.parse(parsed.data);
-                                const username = msgData.sender.username;
-                                const message = msgData.content;
-                                
-                                // Fetch Kick Avatar or fallback to clean typography
-                                const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-                                
-                                this.masterQueue.push({ username, message, avatar });
-                            }
-                        };
+                            // Fetch Kick Avatar or fallback to clean typography
+                            const avatar = msgData.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
+                            
+                            this.masterQueue.push({ username, message, avatar });
+                        }
+                    };
 
-                        // Anti-Disconnect Ping: Keeps the connection alive during quiet streams
-                        setInterval(() => {
-                            if(ws.readyState === WebSocket.OPEN) {
-                                ws.send(JSON.stringify({ event: "pusher:ping", data: {} }));
-                            }
-                        }, 120000);
+                    // Anti-Disconnect Ping: Keeps the connection alive during quiet streams
+                    setInterval(() => {
+                        if(ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ event: "pusher:ping", data: {} }));
+                        }
+                    }, 120000);
 
-                    } else {
-                        console.error("[Kick] FATAL: Cloudflare blocked all attempts to fetch Chatroom ID.");
-                    }
                 } catch(e) {
                     console.error("[Kick] Connection Error:", e);
                 }
