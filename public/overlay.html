@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zero-GPU Stream Status Overlay</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@700&display=swap" rel="stylesheet">
+    <title>Stream Status - Zero GPU Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Solid Vector Colors - Zero GPU rendering cost */
-            --bg-dark: #0a0c10;
-            --bg-panel: #11141a;
-            --border-dim: #2a2e38;
-            --accent-purple: #9d00ff;
-            --accent-gold: #ffcc00;
-            --text-main: #ffffff;
-            --text-dim: #8a91a6;
-            
-            /* Math-based hardware-accelerated easing */
-            --snap: cubic-bezier(0.16, 1, 0.3, 1);
+            /* Void & Cyber Palette */
+            --void-obsidian: #030008;
+            --void-deep: #0a011a;
+            --purple-rich: #4d0099;
+            --purple-neon: #a200ff;
+            --gold-dark: #b38600;
+            --gold-pure: #ffd700;
+            --neon-white: #ffffff;
+
+            /* Hardware-Accelerated Easings */
+            --ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            --ease-slot: cubic-bezier(0.2, 0.9, 0.1, 1);
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,84 +27,111 @@
             width: 100vw; height: 100vh;
             background-color: transparent;
             font-family: 'Montserrat', sans-serif;
-            overflow: hidden; color: var(--text-main);
+            overflow: hidden; color: white;
             display: flex; align-items: center; justify-content: center;
-            -webkit-font-smoothing: antialiased;
         }
 
         .obs-safe-zone {
-            width: 1000px; height: 200px;
+            width: 1000px; height: 150px;
             display: flex; align-items: center; justify-content: center;
         }
 
-        /* 
-           Hardware Compositing Core:
-           No box-shadows, no backdrop-filters, no mask-images. 
-           Uses purely solid rendering and scale/translate transforms.
-        */
-        .status-bar-container {
-            width: 900px; height: 64px;
-            background-color: var(--bg-dark);
-            border: 2px solid var(--border-dim);
-            border-radius: 8px;
+        /* Solid Vector Core - NO BLURS, NO SHADOWS */
+        .master-bar {
             display: flex; align-items: stretch;
+            height: 68px; width: 860px;
+            background-color: rgba(3, 0, 8, 0.95);
+            border: 2px solid rgba(162, 0, 255, 0.5);
+            border-bottom: 4px solid var(--purple-neon);
+            border-radius: 8px;
             overflow: hidden;
-            transform-origin: center bottom;
-            animation: bootUp 0.8s var(--snap) forwards;
+            position: relative;
+            transform-origin: center;
+            animation: bootUp 0.8s var(--ease-dopamine) forwards;
             will-change: transform, opacity;
         }
 
         @keyframes bootUp {
-            0% { opacity: 0; transform: translateY(30px) scale(0.95); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
+            0% { opacity: 0; transform: scaleY(0.1) scaleX(0.8); }
+            100% { opacity: 1; transform: scaleY(1) scaleX(1); }
         }
 
-        /* ==================== AVATAR MODULE ==================== */
-        .avatar-module {
-            width: 80px; background-color: var(--bg-panel);
-            display: flex; align-items: center; justify-content: center;
-            border-right: 2px solid var(--border-dim);
-            position: relative;
+        /* 2D Background Grid (Static) */
+        .grid-bg {
+            position: absolute; inset: 0; z-index: 0; opacity: 0.2;
+            background-image: linear-gradient(var(--purple-neon) 1px, transparent 1px), linear-gradient(90deg, var(--purple-neon) 1px, transparent 1px);
+            background-size: 15px 15px;
+            pointer-events: none;
         }
-        .avatar-module::after {
-            content: ''; position: absolute; right: -2px; top: 0; bottom: 0;
-            width: 2px; background: var(--accent-purple);
+
+        /* Hardware-Accelerated Light Sweep */
+        .light-sweep {
+            position: absolute; top: 0; left: -20%; width: 10%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-20deg); z-index: 10; pointer-events: none;
+            animation: sweepPass 6s linear infinite;
+            will-change: transform;
         }
+
+        @keyframes sweepPass {
+            0%, 70% { transform: translateX(0) skewX(-20deg); }
+            100% { transform: translateX(10000%) skewX(-20deg); } /* Translates out of bounds cleanly */
+        }
+
+        /* Premium Static Crest */
+        .logo-crest {
+            position: relative; width: 85px; height: 100%;
+            background: var(--void-obsidian);
+            border-right: 2px solid var(--purple-neon);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 5;
+        }
+
         .brand-logo {
-            width: 44px; height: 44px; border-radius: 4px;
-            object-fit: cover; background: var(--border-dim);
+            width: 46px; height: 46px; border-radius: 50%;
+            object-fit: cover; border: 2px solid var(--gold-pure);
+            display: none;
         }
 
-        /* ==================== STAT MODULES ==================== */
-        .stat-module {
+        /* Data Modules */
+        .data-section {
+            display: flex; align-items: center; gap: 20px;
+            padding: 0 25px; border-right: 2px solid rgba(162, 0, 255, 0.3);
+            z-index: 5;
+        }
+
+        .data-module {
             display: flex; flex-direction: column; justify-content: center;
-            padding: 0 20px; border-right: 2px solid var(--border-dim);
-            background-color: var(--bg-dark);
-            min-width: 110px;
         }
 
-        .stat-label {
+        .data-label {
             font-family: 'Syncopate', sans-serif; font-size: 0.5rem; font-weight: 900;
-            color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase;
+            text-transform: uppercase; letter-spacing: 0.2em; color: var(--purple-neon);
             margin-bottom: 2px;
         }
 
-        .stat-value {
-            font-family: 'Rajdhani', sans-serif; font-size: 1.6rem; font-weight: 700;
-            line-height: 1; font-variant-numeric: tabular-nums;
-            transition: transform 0.3s var(--snap), color 0.3s var(--snap);
-            transform-origin: left center; will-change: transform, color;
+        /* High-Performance Slot Machine */
+        .slot-container {
+            display: flex; font-size: 1.5rem; font-weight: 900;
+            line-height: 1; letter-spacing: 0.05em; font-variant-numeric: tabular-nums;
+            color: var(--neon-white); height: 1.5rem; overflow: hidden;
         }
 
-        .stat-value.pop {
-            transform: scale(1.2); color: var(--accent-gold);
-        }
+        .slot-digit { position: relative; width: 1rem; height: 100%; text-align: center; }
+        .slot-digit.comma { width: 0.4rem; text-align: left; }
 
-        /* ==================== GOAL MODULE ==================== */
+        .slot-strip {
+            position: absolute; top: 0; left: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center;
+            /* STRICTLY TRANSFORM ONLY - NO BLUR FILTERS */
+            will-change: transform;
+        }
+        .slot-strip > span { height: 1.5rem; display: flex; justify-content: center; align-items: center; }
+
+        /* Performance Sub Goal */
         .goal-module {
-            flex-grow: 1; display: flex; flex-direction: column; justify-content: center;
-            padding: 0 20px; background-color: var(--bg-panel);
-            border-right: 2px solid var(--border-dim);
+            flex-grow: 1; padding: 0 25px; display: flex; flex-direction: column;
+            justify-content: center; z-index: 5;
         }
 
         .goal-header {
@@ -113,242 +141,276 @@
 
         .goal-title {
             font-family: 'Syncopate', sans-serif; font-size: 0.5rem; font-weight: 900;
-            color: var(--bg-dark); background: var(--accent-gold);
-            padding: 2px 6px; border-radius: 2px; letter-spacing: 0.1em;
+            color: #000; background: var(--gold-pure);
+            padding: 2px 6px; border-radius: 2px; letter-spacing: 0.15em;
         }
 
         .goal-numbers {
-            font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; font-weight: 700;
-            color: var(--text-main); line-height: 1;
+            font-size: 0.9rem; font-weight: 900; color: var(--neon-white);
+            font-variant-numeric: tabular-nums;
+            will-change: transform, color;
+            transition: transform 0.3s var(--ease-dopamine), color 0.3s;
         }
 
         .progress-track {
-            width: 100%; height: 8px; background: var(--bg-dark);
-            border-radius: 4px; overflow: hidden; position: relative;
+            width: 100%; height: 12px; background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px; overflow: hidden;
         }
 
-        /* Uses scaleX instead of width for ZERO layout repaints on the GPU */
         .progress-fill {
-            position: absolute; top: 0; left: 0; bottom: 0; width: 100%;
-            background: var(--accent-purple);
-            transform-origin: left center; transform: scaleX(0);
-            transition: transform 1s var(--snap);
+            height: 100%; width: 100%;
+            background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), var(--gold-dark));
+            transform-origin: left; transform: scaleX(0); /* GPU ACCELERATED SCALING */
+            transition: transform 1.5s var(--ease-dopamine);
             will-change: transform;
         }
 
-        /* ==================== TICKER MODULE ==================== */
+        .goal-flash .goal-numbers { transform: scale(1.15); color: var(--gold-pure); }
+
+        /* Ticker Module */
         .ticker-module {
-            width: 250px; background-color: var(--bg-dark);
-            display: flex; align-items: center; overflow: hidden;
-            position: relative;
+            display: flex; align-items: center; width: 220px;
+            background: rgba(0, 0, 0, 0.6); border-left: 2px solid var(--purple-neon);
+            padding: 0 15px; overflow: hidden; z-index: 5;
         }
-        
-        .live-badge {
-            position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
-            display: flex; gap: 3px; align-items: center; z-index: 5;
-            background: var(--bg-dark); padding-right: 10px;
-        }
-        
+
         .live-dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #ff0044; animation: blink 1.5s infinite;
+            width: 8px; height: 8px; background: #00ffcc; border-radius: 50%;
+            margin-right: 10px; flex-shrink: 0;
+            animation: pulseDot 1s infinite alternate;
         }
 
-        .ticker-wrapper {
-            width: 100%; overflow: hidden; position: relative;
-        }
+        @keyframes pulseDot { 0% { opacity: 0.3; } 100% { opacity: 1; } }
 
+        .ticker-wrapper { overflow: hidden; width: 100%; position: relative; }
+        
         .ticker-content {
-            font-family: 'Syncopate', sans-serif; font-size: 0.6rem; font-weight: 900;
-            color: var(--text-main); letter-spacing: 0.1em; white-space: nowrap;
+            font-size: 0.75rem; font-weight: 900; color: var(--neon-white);
+            letter-spacing: 1px; white-space: nowrap;
             will-change: transform; transform: translateX(100%);
         }
-
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
     </style>
 </head>
 <body>
 
-    <div class="obs-safe-zone">
-        <div class="status-bar-container">
-            
-            <div class="avatar-module">
-                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Logo" class="brand-logo" id="brand-logo">
-            </div>
+<div class="obs-safe-zone">
+    <div class="master-bar">
+        <div class="grid-bg"></div>
+        <div class="light-sweep"></div>
 
-            <div class="stat-module">
-                <div class="stat-label">SUBS</div>
-                <div class="stat-value" id="val-subs">0</div>
-            </div>
+        <div class="logo-crest">
+            <img src="" alt="Logo" class="brand-logo" id="brand-logo">
+        </div>
 
-            <div class="stat-module">
-                <div class="stat-label">LIKES</div>
-                <div class="stat-value" id="val-likes">0</div>
+        <div class="data-section">
+            <div class="data-module" id="mod-subs">
+                <div class="data-label">SUBS</div>
+                <div class="slot-container" id="slot-subs"></div>
             </div>
-
-            <div class="goal-module">
-                <div class="goal-header">
-                    <span class="goal-title">SUB GOAL</span>
-                    <span class="goal-numbers" id="val-goal">0 / 5,000</span>
-                </div>
-                <div class="progress-track">
-                    <div class="progress-fill" id="goal-bar"></div>
-                </div>
+            <div class="data-module" id="mod-likes">
+                <div class="data-label">LIKES</div>
+                <div class="slot-container" id="slot-likes"></div>
             </div>
+        </div>
 
-            <div class="ticker-module">
-                <div class="live-badge"><div class="live-dot"></div></div>
-                <div class="ticker-wrapper">
-                    <div class="ticker-content" id="ticker-text">AWAITING LIVE FEED...</div>
-                </div>
+        <div class="goal-module" id="mod-goal">
+            <div class="goal-header">
+                <span class="goal-title">SUB GOAL</span>
+                <span class="goal-numbers" id="val-goal">0 / 5,000</span>
             </div>
+            <div class="progress-track">
+                <!-- Zero GPU Scaling via transform: scaleX() -->
+                <div class="progress-fill" id="goal-bar"></div>
+            </div>
+        </div>
 
+        <div class="ticker-module">
+            <div class="live-dot"></div>
+            <div class="ticker-wrapper">
+                <div class="ticker-content" id="ticker-text">CONNECTING TO LIVE FEED...</div>
+            </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // ==========================================
-        // ZERO-GPU HARDWARE OPTIMIZED ENGINE
-        // ==========================================
-        // We replaced DOM-heavy slot machines and canvas particles with single-node 
-        // scale transforms. This takes 0.01% CPU usage and causes zero encoding lag[cite: 1].
-        
-        class PerformanceStat {
-            constructor(elementId) {
-                this.element = document.getElementById(elementId);
-                this.currentValue = -1;
-            }
+<script>
+class SlotMachineDigit {
+    constructor(char, delayOffset) {
+        this.element = document.createElement('div');
+        this.element.className = char === ',' ? 'slot-digit comma' : 'slot-digit';
+        this.strip = document.createElement('div'); this.strip.className = 'slot-strip';
+        this.element.appendChild(this.strip);
+        this.isComma = char === ','; this.currentChar = char; this.delayOffset = delayOffset;
+        this.buildStrip(char);
+    }
+    
+    buildStrip(targetChar) {
+        this.strip.innerHTML = ''; this.strip.style.transition = 'none';
+        this.strip.style.transform = 'translateY(0)';
+        if (this.isComma) { const span = document.createElement('span'); span.innerText = ','; this.strip.appendChild(span); return; }
 
-            format(num) { return (num || 0).toLocaleString('en-US'); }
+        const startDigit = parseInt(this.currentChar) || 0;
+        const targetDigit = parseInt(targetChar) || 0;
+        this.currentChar = targetChar;
 
-            update(newValue) {
-                if (this.currentValue === newValue) return;
-                
-                this.element.innerText = this.format(newValue);
-                this.element.classList.remove('pop');
-                void this.element.offsetWidth; // Force reflow
-                this.element.classList.add('pop');
-                
-                setTimeout(() => this.element.classList.remove('pop'), 300);
-                this.currentValue = newValue;
-            }
+        let html = `<span>${startDigit}</span>`;
+        for(let i=0; i<10; i++) html += `<span>${Math.floor(Math.random()*10)}</span>`;
+        html += `<span>${targetDigit}</span>`;
+        this.strip.innerHTML = html; void this.strip.offsetWidth;
+    }
+
+    rollToTarget() {
+        if(this.isComma) return;
+        const targetY = - (this.strip.children.length - 1) * this.element.offsetHeight;
+        // Transform ONLY. No CSS filters to preserve GPU.
+        this.strip.style.transition = `transform 1.2s var(--ease-slot) ${this.delayOffset}s`;
+        this.strip.style.transform = `translateY(${targetY}px)`;
+    }
+}
+
+class NumberSlotEngine {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.digits = []; this.currentString = "0"; this.updateDOM("0");
+    }
+    
+    format(num) { return (num || 0).toLocaleString('en-US'); }
+    
+    updateDOM(newStr) {
+        this.container.innerHTML = ''; this.digits = [];
+        for(let i = 0; i < newStr.length; i++) {
+            const delay = (newStr.length - 1 - i) * 0.05; // Tighter delay
+            const digit = new SlotMachineDigit(newStr[i], delay);
+            this.digits.push(digit); this.container.appendChild(digit.element);
         }
+        this.currentString = newStr;
+    }
+    
+    triggerRoll(newValue) {
+        const targetStr = this.format(newValue);
+        if(targetStr.length !== this.currentString.length) this.updateDOM(this.currentString);
 
-        class HardwareTicker {
-            constructor() {
-                this.element = document.getElementById('ticker-text');
-                this.container = this.element.parentElement;
-                this.queue = ["CONNECTING TO MULTI-STREAM FEED..."];
-                this.currentIndex = 0;
-                this.pos = 200; // Start offscreen right
-                this.speed = 1.2;
-                this.animate();
-            }
-
-            setMessages(messageString) {
-                if(!messageString) return;
-                const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
-                if(parts.length > 0) this.queue = parts;
-            }
-
-            animate() {
-                this.pos -= this.speed;
-                if (this.pos < -this.element.offsetWidth - 250) {
-                    this.currentIndex = (this.currentIndex + 1) % this.queue.length;
-                    this.element.innerText = this.queue[this.currentIndex];
-                    this.pos = 200;
-                }
-                // Uses composite thread, costs 0 GPU rendering
-                this.element.style.transform = `translateX(${this.pos}px)`;
-                requestAnimationFrame(() => this.animate());
-            }
+        for(let i=0; i<targetStr.length; i++) {
+            if(!this.digits[i]) {
+                const delay = (targetStr.length - 1 - i) * 0.05;
+                const newDigit = new SlotMachineDigit(targetStr[i], delay);
+                this.digits.push(newDigit); this.container.appendChild(newDigit.element);
+            } else { this.digits[i].buildStrip(targetStr[i]); }
         }
+        this.currentString = targetStr;
+        this.digits.forEach(digit => digit.rollToTarget());
+    }
+}
 
-        class OverlayState {
-            constructor() {
-                this.statSubs = new PerformanceStat('val-subs');
-                this.statLikes = new PerformanceStat('val-likes');
-                this.goalText = document.getElementById('val-goal');
-                this.goalBar = document.getElementById('goal-bar');
-                this.currentGoal = 5000;
-            }
-
-            updateData(subs, likes, goal) {
-                if (goal) this.currentGoal = goal;
-                
-                this.statSubs.update(subs);
-                this.statLikes.update(likes);
-
-                // Hardware-Accelerated Progress Bar Update
-                const safeSubs = subs || 0;
-                const percentage = Math.max(0, Math.min(1, safeSubs / this.currentGoal));
-                
-                this.goalText.innerText = `${this.statSubs.format(safeSubs)} / ${this.statSubs.format(this.currentGoal)}`;
-                this.goalBar.style.transform = `scaleX(${percentage})`;
-            }
+class TickerEngine {
+    constructor() {
+        this.element = document.getElementById('ticker-text'); 
+        this.container = this.element.parentElement;
+        this.queue = ["AWAITING LIVE FEED..."]; this.currentIndex = 0;
+        this.pos = this.container.offsetWidth; this.speed = 1.2; this.animate();
+    }
+    setMessages(messageString) {
+        const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
+        if(parts.length > 0) this.queue = parts;
+    }
+    animate() {
+        this.pos -= this.speed;
+        if (this.pos < -this.element.offsetWidth - 20) {
+            this.currentIndex = (this.currentIndex + 1) % this.queue.length;
+            this.element.innerText = this.queue[this.currentIndex];
+            this.pos = this.container.offsetWidth;
         }
+        // GPU safe translation
+        this.element.style.transform = `translateX(${this.pos}px)`; 
+        requestAnimationFrame(() => this.animate());
+    }
+}
 
-        class MultiStreamerLiveEngine {
-            constructor(state, ticker) {
-                this.state = state;
-                this.ticker = ticker;
-                const urlParams = new URLSearchParams(window.location.search);
-                this.username = urlParams.get('user') || '';
+class OverlayState {
+    constructor() {
+        this.state = { subs: 0, likes: 0, goal: 5000 };
+        this.slotSubs = new NumberSlotEngine('slot-subs');
+        this.slotLikes = new NumberSlotEngine('slot-likes');
+        this.elements = { 
+            goalMod: document.getElementById('mod-goal'), 
+            goalText: document.getElementById('val-goal'), 
+            goalBar: document.getElementById('goal-bar') 
+        };
+        this.rollInterval = setInterval(() => { this.executeRoll(); }, 5500);
+    }
+    
+    format(num) { return (num || 0).toLocaleString('en-US'); }
+    
+    triggerSubGoalAnimation() {
+        this.elements.goalMod.classList.remove('goal-flash'); void this.elements.goalMod.offsetWidth;
+        this.elements.goalMod.classList.add('goal-flash'); 
+        setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 1000);
+    }
+    
+    executeRoll() { this.slotSubs.triggerRoll(this.state.subs); this.slotLikes.triggerRoll(this.state.likes); }
+    
+    updateData(newSubs, newLikes, newGoal) {
+        if (newGoal) this.state.goal = newGoal;
+        let subChanged = false;
 
-                if (!this.username) {
-                    this.ticker.setMessages("ERROR: NO USER SPECIFIED IN URL");
-                    this.runDemoMode();
-                    return;
-                }
+        if (newSubs !== this.state.subs) {
+            if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
+            this.state.subs = newSubs;
+        }
+        if (newLikes !== this.state.likes) { this.state.likes = newLikes; }
 
-                this.pollData();
-                setInterval(() => this.pollData(), 10000);
-            }
+        // ScaleX is virtually free for the GPU compared to animating Width
+        let percentage = Math.max(0, Math.min(1, (this.state.subs / this.state.goal)));
+        this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
+        this.elements.goalBar.style.transform = `scaleX(${percentage})`;
 
-            async pollData() {
-                try {
-                    const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
-                    if (!res.ok) return;
-                    const data = await res.json();
+        if (subChanged) { this.triggerSubGoalAnimation(); this.executeRoll(); }
+    }
+}
 
-                    if (data.authenticated) {
-                        this.state.updateData(data.subs, data.likes, data.sub_goal);
-                        
-                        if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
-                        
-                        if (data.avatar) {
-                            const logoEl = document.getElementById('brand-logo');
-                            if (logoEl.src !== data.avatar) logoEl.src = data.avatar;
-                        }
+class MultiStreamerLiveEngine {
+    constructor(state, ticker) {
+        this.state = state; this.ticker = ticker;
+        const urlParams = new URLSearchParams(window.location.search);
+        this.username = urlParams.get('user') || '';
+
+        if (!this.username) {
+            this.ticker.setMessages("ERROR: NO USER SPECIFIED IN URL");
+            return;
+        }
+        this.pollData();
+        setInterval(() => this.pollData(), 10000);
+    }
+
+    async pollData() {
+        try {
+            const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            if (data.authenticated) {
+                this.state.updateData(data.subs, data.likes, data.sub_goal);
+                if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
+                
+                if (data.avatar) {
+                    const logoEl = document.getElementById('brand-logo');
+                    if (logoEl.src !== data.avatar) {
+                        logoEl.src = data.avatar;
+                        logoEl.style.display = 'block';
                     }
-                } catch(e) {}
+                }
             }
+        } catch(e) {}
+    }
+}
 
-            runDemoMode() {
-                const logoEl = document.getElementById('brand-logo');
-                logoEl.src = `https://ui-avatars.com/api/?name=Demo&background=11141a&color=fff&bold=true`;
-                
-                let demoSubs = 4800;
-                let demoLikes = 150;
-                
-                this.ticker.setMessages("WELCOME TO THE STREAM, DROP A LIKE, ZERO ENCODING OVERLOAD DEMO");
-
-                setInterval(() => {
-                    demoSubs += Math.floor(Math.random() * 5);
-                    demoLikes += Math.floor(Math.random() * 10);
-                    this.state.updateData(demoSubs, demoLikes, 5000);
-                }, 4000);
-                
-                this.state.updateData(demoSubs, demoLikes, 5000);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const state = new OverlayState();
-            const ticker = new HardwareTicker();
-            new MultiStreamerLiveEngine(state, ticker);
-        });
-    </script>
+document.addEventListener('DOMContentLoaded', () => {
+    const state = new OverlayState();
+    const ticker = new TickerEngine();
+    new MultiStreamerLiveEngine(state, ticker);
+});
+</script>
 </body>
 </html>
