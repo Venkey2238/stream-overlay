@@ -3,27 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Broadcast Chat: The Matrix Engine</title>
+    <title>Zero-GPU Performance Chat Matrix</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
     <style>
         :root {
-            /* Ultra-Premium Physics */
-            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --ease-whip: cubic-bezier(0.86, 0, 0.07, 1);
-            --ease-cinematic: cubic-bezier(0.25, 1, 0.5, 1);
-            --ease-glitch: cubic-bezier(0.77, 0, 0.175, 1);
+            /* Math-based easing costs 0 GPU but looks ultra-premium */
+            --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --snap: cubic-bezier(0.16, 1, 0.3, 1);
             
-            /* High-End Platform Neons */
-            --plt-yt: #ff0033;
-            --plt-tw: #b05cff;
+            /* High-Contrast Brand Colors */
+            --plt-yt: #ff0000;
+            --plt-tw: #a970ff;
             --plt-kk: #53fc18;
             
-            /* Rarity Glows */
-            --tier-rare: #00d0ff;
+            /* Rarity Colors (Solid, no glows) */
+            --tier-rare: #00e5ff;
             --tier-epic: #ff00ea;
-            --tier-mythic: #ffc400;
-            --tier-god: #ffffff; /* Secret 1% Tier */
+            --tier-mythic: #ffd700;
+            --tier-god: #ffffff;
         }
 
         body {
@@ -34,224 +32,186 @@
 
         #master-container {
             position: absolute; bottom: 40px; left: 40px;
-            width: 600px; display: flex; flex-direction: column; gap: 35px;
+            width: 550px; display: flex; flex-direction: column; gap: 30px;
         }
 
         /* ==========================================================================
-           MASSIVE STABLE VIEWER HUD
+           1. ZERO-GPU VIEWER HUD (Flat Vector Style)
            ========================================================================== */
         #viewer-hud {
             display: flex; gap: 20px; z-index: 20;
         }
 
         .hud-card {
-            display: none; align-items: center; justify-content: center; gap: 15px;
-            padding: 12px 28px 12px 20px; border-radius: 16px;
-            background: linear-gradient(180deg, rgba(15, 15, 25, 0.6), rgba(5, 5, 10, 0.9));
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: none; align-items: center; justify-content: center; gap: 14px;
+            padding: 10px 24px 10px 16px; border-radius: 8px;
+            /* Solid color with transparency - NO BACKDROP BLUR */
+            background: rgba(10, 12, 18, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.1);
             border-bottom: 4px solid var(--plt-color);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 2px 20px rgba(255,255,255,0.05);
-            transform-origin: bottom center;
-            animation: cardSpawn 1s var(--ease-spring) forwards;
-            will-change: transform, filter;
+            transform-origin: bottom left;
+            animation: popIn 0.6s var(--spring) forwards;
+            /* Pre-allocate rendering layer for 0 stutter */
+            will-change: transform, opacity;
         }
 
-        /* Ambient floating to keep it alive without tilting */
-        .hud-card { animation: cardSpawn 1s var(--ease-spring) forwards, floatIdle 6s ease-in-out infinite alternate; }
-
         .plt-icon {
-            width: 48px; height: 48px; color: var(--plt-color);
-            filter: drop-shadow(0 0 15px rgba(var(--plt-rgb), 0.8));
-            will-change: transform, filter;
+            width: 42px; height: 42px; color: var(--plt-color);
+            will-change: transform;
         }
 
         .v-count {
             font-family: 'Montserrat', sans-serif; font-size: 2.2rem; font-weight: 900;
-            color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,1);
-            font-variant-numeric: tabular-nums;
-            will-change: transform, color, text-shadow;
+            color: #fff; font-variant-numeric: tabular-nums;
+            will-change: transform, color;
         }
 
-        /* The High-End Dopamine Flare (No Tilting) */
-        .hud-card.dopamine-hit .plt-icon { animation: iconFlare 0.8s var(--ease-spring); }
-        .hud-card.dopamine-hit .v-count { animation: numberFlare 0.8s var(--ease-spring); }
-        .hud-card.dopamine-hit { animation: borderGlow 0.8s var(--ease-cinematic); }
+        /* Performance-Friendly Update Pulse (Only transforms) */
+        .hud-card.dopamine-hit .plt-icon { animation: pulseIcon 0.5s var(--spring); }
+        .hud-card.dopamine-hit .v-count { animation: pulseText 0.5s var(--spring); }
 
-        @keyframes cardSpawn { 0% { opacity: 0; transform: translateY(40px) scale(0.9); filter: blur(10px); } 100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
-        @keyframes floatIdle { 0% { transform: translateY(0); } 100% { transform: translateY(-8px); } }
-        
-        @keyframes iconFlare { 30% { transform: scale(1.3); filter: drop-shadow(0 0 35px var(--plt-color)) drop-shadow(0 0 15px #fff) brightness(200%); } }
-        @keyframes numberFlare { 30% { transform: scale(1.2); color: var(--plt-color); text-shadow: 0 0 30px var(--plt-color), 0 0 50px #fff; } }
-        @keyframes borderGlow { 30% { box-shadow: 0 15px 40px rgba(0,0,0,0.9), 0 0 50px rgba(var(--plt-rgb), 0.6); border-bottom-width: 8px; } }
+        @keyframes popIn { 0% { opacity: 0; transform: translateY(20px) scale(0.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes pulseIcon { 50% { transform: scale(1.25); } }
+        @keyframes pulseText { 50% { transform: scale(1.15); color: var(--plt-color); } }
 
         /* ==========================================================================
-           125-COMBINATION MATRIX CHAT ENGINE
+           2. ZERO-GPU MATRIX CHAT ENGINE
            ========================================================================== */
         #chat-widget {
-            position: relative; height: 420px; width: 100%;
-            perspective: 1200px; transform-style: preserve-3d; z-index: 10;
+            position: relative; height: 380px; width: 100%;
+            z-index: 10;
         }
 
         .msg-node {
             position: absolute; bottom: 0; left: 0; width: 100%;
-            transition: all 0.8s var(--ease-spring);
+            transition: transform 0.6s var(--spring), opacity 0.6s var(--snap);
             transform-origin: left bottom;
-            will-change: transform, opacity, filter;
+            will-change: transform, opacity;
             pointer-events: none;
         }
 
-        /* 3D Depth Positioning */
-        .msg-spawn { transform: translateZ(400px) translateY(100px); opacity: 0; filter: blur(20px); }
-        .msg-pos-1 { transform: translateZ(0) translateY(0) scale(1); opacity: 1; filter: blur(0); }
-        .msg-pos-2 { transform: translateZ(-100px) translateY(-110px) scale(0.95); opacity: 0.85; filter: blur(0px); }
-        .msg-pos-3 { transform: translateZ(-250px) translateY(-210px) scale(0.85); opacity: 0.5; filter: blur(2px); }
-        .msg-pos-4 { transform: translateZ(-400px) translateY(-300px) scale(0.7); opacity: 0.2; filter: blur(5px); }
-        .msg-dead  { transform: translateZ(-600px) translateY(-400px) scale(0.5); opacity: 0; filter: blur(10px); }
+        /* 2D Faux-Depth Stacking (Replaces heavy 3D rendering) */
+        .msg-pos-1 { transform: translateY(0) scale(1); opacity: 1; }
+        .msg-pos-2 { transform: translateY(-110px) scale(0.95); opacity: 0.9; }
+        .msg-pos-3 { transform: translateY(-210px) scale(0.9); opacity: 0.6; }
+        .msg-pos-4 { transform: translateY(-300px) scale(0.85); opacity: 0.2; }
+        .msg-dead  { transform: translateY(-400px) scale(0.8); opacity: 0; }
 
-        /* The Inner Wrapper handling the Box Animations */
         .msg-inner {
-            display: flex; align-items: stretch; gap: 15px; position: relative;
+            display: flex; align-items: flex-start; gap: 16px; position: relative;
+            will-change: transform, opacity;
         }
 
-        /* Glass Content Block */
+        /* Solid Vector Content Block */
         .content-block { 
             position: relative; display: flex; flex-direction: column; justify-content: center;
-            padding: 12px 24px; min-height: 60px; flex-grow: 1;
-            background: linear-gradient(90deg, rgba(10,10,15,0.7), rgba(0,0,0,0.2));
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
-            border-left: 4px solid var(--plt-color);
-            box-shadow: -10px 10px 30px rgba(0,0,0,0.6);
+            padding: 12px 20px; min-height: 50px; flex-grow: 1;
+            background: rgba(12, 14, 20, 0.95);
+            border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+            border-left: 6px solid var(--plt-color);
             overflow: hidden;
         }
 
-        /* Hologram Avatar */
-        .hologram-avatar { position: relative; width: 64px; height: 64px; flex-shrink: 0; z-index: 5; }
-        .hologram-avatar::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px dashed var(--plt-color); animation: spinRing 12s linear infinite; opacity: 0.6; }
-        .hologram-avatar::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
-        .avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; filter: grayscale(10%) contrast(120%); }
+        /* Avatar Box */
+        .avatar-box { position: relative; width: 56px; height: 56px; flex-shrink: 0; border-radius: 6px; overflow: hidden; border: 2px solid var(--plt-color); }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
-        .user-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; z-index: 2; }
-        .chat-plt-icon { width: 18px; height: 18px; color: var(--plt-color); filter: drop-shadow(0 0 8px var(--plt-color)); }
+        .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .chat-plt-icon { width: 16px; height: 16px; color: var(--plt-color); }
         
         .username {
             font-family: 'Syncopate', sans-serif; font-size: 0.75rem; font-weight: 900;
-            letter-spacing: 0.25em; color: var(--plt-color); text-transform: uppercase;
-            text-shadow: 0 0 15px var(--plt-color); z-index: 2;
+            letter-spacing: 0.15em; color: var(--plt-color); text-transform: uppercase;
         }
 
         .chat-text {
-            font-family: 'Montserrat', sans-serif; font-size: 1.5rem; font-weight: 900;
-            line-height: 1.3; letter-spacing: -0.01em; color: #ffffff;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.8); z-index: 2;
+            font-family: 'Montserrat', sans-serif; font-size: 1.4rem; font-weight: 900;
+            line-height: 1.2; letter-spacing: -0.01em; color: #ffffff;
+            word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+            will-change: transform, opacity;
         }
 
         /* ==========================================================================
-           1. THE 5 TIER RARITY SYSTEM
+           3. RARITY TIERS (Color & Border Mapping Only)
            ========================================================================== */
         .tier-badge {
-            position: absolute; right: 12px; top: 12px;
-            font-family: 'Syncopate', sans-serif; font-size: 0.5rem; font-weight: 900; letter-spacing: 0.4em;
-            padding: 4px 10px; border-radius: 6px; color: #fff; z-index: 20; display: none;
+            position: absolute; right: 10px; top: 10px;
+            font-family: 'Syncopate', sans-serif; font-size: 0.55rem; font-weight: 900; letter-spacing: 0.2em;
+            padding: 4px 8px; border-radius: 4px; color: #000; display: none; text-transform: uppercase;
         }
 
-        /* COMMON (Clean Glass) */
         .tier-COMMON .content-block { border-left-color: var(--plt-color); }
         
-        /* RARE (Neon Edge) */
-        .tier-RARE .content-block { border-left-color: var(--tier-rare); box-shadow: -10px 0 30px rgba(0, 208, 255, 0.2); }
-        .tier-RARE .username { color: var(--tier-rare); text-shadow: 0 0 15px var(--tier-rare); }
-        .tier-RARE .tier-badge { display: block; background: var(--tier-rare); color: #000; box-shadow: 0 0 15px var(--tier-rare); }
+        .tier-RARE .content-block { border-left-color: var(--tier-rare); }
+        .tier-RARE .username { color: var(--tier-rare); }
+        .tier-RARE .tier-badge { display: block; background: var(--tier-rare); }
 
-        /* EPIC (Cyberpunk Core) */
-        .tier-EPIC .content-block { border: 2px solid var(--tier-epic); background: linear-gradient(90deg, rgba(255, 0, 234, 0.15), rgba(0,0,0,0.6)); box-shadow: 0 0 40px rgba(255, 0, 234, 0.3); }
-        .tier-EPIC .username { color: var(--tier-epic); text-shadow: 0 0 20px var(--tier-epic); }
-        .tier-EPIC .hologram-avatar::before { border-color: var(--tier-epic); box-shadow: 0 0 20px var(--tier-epic); }
-        .tier-EPIC .tier-badge { display: block; background: var(--tier-epic); box-shadow: 0 0 20px var(--tier-epic); }
+        .tier-EPIC .content-block { border: 2px solid var(--tier-epic); border-left: 6px solid var(--tier-epic); }
+        .tier-EPIC .username { color: var(--tier-epic); }
+        .tier-EPIC .tier-badge { display: block; background: var(--tier-epic); }
 
-        /* MYTHIC (Golden Radiance) */
-        .tier-MYTHIC .content-block { 
-            border: 3px solid var(--tier-mythic); border-radius: 16px;
-            background: linear-gradient(135deg, rgba(255, 196, 0, 0.25), rgba(0,0,0,0.8));
-            box-shadow: 0 0 60px rgba(255, 196, 0, 0.4), inset 0 0 30px rgba(255, 196, 0, 0.2);
-        }
-        .tier-MYTHIC .username { color: var(--tier-mythic); font-size: 0.85rem; text-shadow: 0 0 25px var(--tier-mythic); }
-        .tier-MYTHIC .chat-text { background: linear-gradient(90deg, #fff, var(--tier-mythic), #fff); background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 2s linear infinite; }
-        .tier-MYTHIC .hologram-avatar::before { border-color: var(--tier-mythic); border-width: 3px; box-shadow: 0 0 30px var(--tier-mythic); }
-        .tier-MYTHIC .tier-badge { display: block; background: #fff; color: #000; border: 2px solid var(--tier-mythic); box-shadow: 0 0 30px var(--tier-mythic); }
+        .tier-MYTHIC .content-block { border: 3px solid var(--tier-mythic); border-left: 8px solid var(--tier-mythic); background: rgba(30, 25, 5, 0.95); }
+        .tier-MYTHIC .username { color: var(--tier-mythic); font-size: 0.85rem; }
+        .tier-MYTHIC .chat-text { color: var(--tier-mythic); }
+        .tier-MYTHIC .tier-badge { display: block; background: var(--tier-mythic); }
 
-        /* GOD TIER (1% Drop - Diamond Core) */
-        .tier-GOD .content-block { 
-            border: 4px solid var(--tier-god); border-radius: 20px;
-            background: rgba(255,255,255,0.9);
-            box-shadow: 0 0 80px rgba(255,255,255,1), inset 0 0 50px rgba(255,255,255,0.8);
-            animation: godShake 0.5s var(--ease-whip);
-        }
-        .tier-GOD .username { color: #000; text-shadow: none; font-weight: 900; }
-        .tier-GOD .chat-text { color: #000; text-shadow: none; font-weight: 900; letter-spacing: 0; }
-        .tier-GOD .hologram-avatar { transform: scale(1.3); }
-        .tier-GOD .hologram-avatar::before { border-color: #fff; border-width: 4px; box-shadow: 0 0 50px #fff; }
-        .tier-GOD .tier-badge { display: block; background: #000; color: #fff; border: 2px solid #fff; box-shadow: 0 0 40px #fff; font-size: 0.7rem; }
+        .tier-GOD .content-block { border: 4px solid var(--tier-god); background: #ffffff; }
+        .tier-GOD .username { color: #000; }
+        .tier-GOD .chat-text { color: #000; font-weight: 900; }
+        .tier-GOD .tier-badge { display: block; background: #000; color: #fff; }
 
         /* ==========================================================================
-           2. THE 5 BOX ANIMATIONS (Structure Reveal)
+           4. GPU-ACCELERATED ANIMATIONS (Only Transform/Opacity)
            ========================================================================== */
-        .box-anim-1 { animation: bA1 0.8s var(--ease-spring) both; } /* Cinema Slide */
-        .box-anim-2 { animation: bA2 0.8s var(--ease-spring) both; } /* 3D Flip Up */
-        .box-anim-3 { animation: bA3 0.7s var(--ease-whip) both; }   /* Hyper Warp */
-        .box-anim-4 { animation: bA4 0.9s var(--ease-spring) both; } /* Hologram Drop */
-        .box-anim-5 { animation: bA5 0.7s var(--ease-glitch) both; } /* Glitch Tear */
+        
+        /* Box Animations (5 variants) */
+        .bA-1 { animation: bA1 0.6s var(--spring) both; } /* Slide Right */
+        .bA-2 { animation: bA2 0.6s var(--spring) both; } /* Slide Up */
+        .bA-3 { animation: bA3 0.5s var(--snap) both; }   /* Scale Pop */
+        .bA-4 { animation: bA4 0.6s var(--spring) both; } /* Slide Down */
+        .bA-5 { animation: bA5 0.5s var(--snap) both; }   /* Simple Fade */
 
-        @keyframes bA1 { 0% { transform: translateX(-150px); opacity: 0; filter: blur(20px); } 100% { transform: translateX(0); opacity: 1; filter: blur(0); } }
-        @keyframes bA2 { 0% { transform: rotateX(-90deg) scale(0.8); opacity: 0; } 100% { transform: rotateX(0) scale(1); opacity: 1; } }
-        @keyframes bA3 { 0% { transform: translateZ(600px); opacity: 0; filter: brightness(300%) blur(10px); } 100% { transform: translateZ(0); opacity: 1; filter: brightness(100%) blur(0); } }
-        @keyframes bA4 { 0% { transform: translateY(-100px); clip-path: inset(100% 0 0 0); opacity: 0; } 100% { transform: translateY(0); clip-path: inset(0 0 0 0); opacity: 1; } }
-        @keyframes bA5 { 0% { transform: skewX(-30deg) scaleY(0.1); filter: hue-rotate(90deg); opacity: 0; } 100% { transform: skewX(0) scaleY(1); filter: hue-rotate(0); opacity: 1; } }
+        @keyframes bA1 { 0% { transform: translateX(-50px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+        @keyframes bA2 { 0% { transform: translateY(40px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes bA3 { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes bA4 { 0% { transform: translateY(-40px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes bA5 { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-        /* ==========================================================================
-           3. THE 5 TEXT ANIMATIONS (Typography Reveal)
-           ========================================================================== */
-        .txt-anim-1 .chat-text { animation: tA1 0.9s var(--ease-spring) both; } /* Cinematic Focus */
-        .txt-anim-2 .chat-text { animation: tA2 0.8s var(--ease-cinematic) both; } /* Matrix Decode / Mask */
-        .txt-anim-3 .chat-text { animation: tA3 0.7s var(--ease-glitch) both; } /* Cyber Glitch */
-        .txt-anim-4 .chat-text { animation: tA4 0.9s var(--ease-spring) both; } /* Bounce Drop */
-        .txt-anim-5 .chat-text { position: relative; } /* Light Sweep */
-        .txt-anim-5 .chat-text::after { content: ''; position: absolute; inset: 0; background: #fff; animation: tA5 0.8s var(--ease-cinematic) forwards; z-index: 10; }
+        /* Text Animations (5 variants) */
+        .tA-1 .chat-text { animation: tA1 0.5s 0.1s var(--spring) both; } /* Slide Right */
+        .tA-2 .chat-text { animation: tA2 0.5s 0.1s var(--spring) both; } /* Slide Up */
+        .tA-3 .chat-text { animation: tA3 0.4s 0.1s var(--snap) both; }   /* Zoom In */
+        .tA-4 .chat-text { animation: tA4 0.5s 0.1s var(--spring) both; } /* Expand Y */
+        .tA-5 .chat-text { animation: tA5 0.4s 0.1s var(--snap) both; }   /* Pure Fade */
 
-        @keyframes tA1 { 0% { letter-spacing: 0.5em; filter: blur(15px); opacity: 0; transform: scale(1.1); } 100% { letter-spacing: -0.01em; filter: blur(0); opacity: 1; transform: scale(1); } }
-        @keyframes tA2 { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); transform: translateX(-20px); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateX(0); } }
-        @keyframes tA3 { 0% { opacity: 0; transform: skewX(20deg); text-shadow: -10px 0 red, 10px 0 cyan; } 100% { opacity: 1; transform: skewX(0); text-shadow: 0 4px 8px rgba(0,0,0,0.8); } }
-        @keyframes tA4 { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        @keyframes tA5 { 0% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 100%); } }
-
-        /* Utilities */
-        @keyframes spinRing { 100% { transform: rotate(360deg); } }
-        @keyframes textShine { 0% { background-position: -100% center; } 100% { background-position: 200% center; } }
-        @keyframes godShake { 0%, 100% { transform: translateX(0) scale(1); } 25% { transform: translateX(-15px) scale(1.05); } 75% { transform: translateX(15px) scale(1.05); } }
+        @keyframes tA1 { 0% { transform: translateX(-15px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+        @keyframes tA2 { 0% { transform: translateY(15px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes tA3 { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes tA4 { 0% { transform: scaleY(0.5); opacity: 0; } 100% { transform: scaleY(1); opacity: 1; } }
+        @keyframes tA5 { 0% { opacity: 0; } 100% { opacity: 1; } }
 
     </style>
 </head>
 <body>
 
     <div id="master-container">
-        <!-- Massive Stable Viewer HUD -->
+        <!-- Massive Stable Viewer HUD (Vector) -->
         <div id="viewer-hud">
-            <div class="hud-card" id="node-yt" style="--plt-color: var(--plt-yt); --plt-rgb: 255, 0, 51;">
+            <div class="hud-card" id="node-yt" style="--plt-color: var(--plt-yt);">
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>
                 <span class="v-count" id="count-yt">0</span>
             </div>
-            <div class="hud-card" id="node-tw" style="--plt-color: var(--plt-tw); --plt-rgb: 176, 92, 255;">
+            <div class="hud-card" id="node-tw" style="--plt-color: var(--plt-tw);">
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
                 <span class="v-count" id="count-tw">0</span>
             </div>
-            <div class="hud-card" id="node-kk" style="--plt-color: var(--plt-kk); --plt-rgb: 83, 252, 24;">
+            <div class="hud-card" id="node-kk" style="--plt-color: var(--plt-kk);">
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>
                 <span class="v-count" id="count-kk">0</span>
             </div>
         </div>
 
-        <!-- Matrix Chat Canvas -->
+        <!-- GPU-Friendly Matrix Chat -->
         <div id="chat-widget"></div>
     </div>
 
@@ -262,17 +222,16 @@
             kk: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>`
         };
 
-        class HolographicChatEngine {
+        class ZeroGPUChatEngine {
             constructor() { this.container = document.getElementById('chat-widget'); }
 
-            // MATRIX ENGINE: 5 Tiers x 5 Box Anims x 5 Text Anims = 125 Combinations
             calculateMatrix() {
                 const roll = Math.random();
                 let tier = 'COMMON';
-                if (roll > 0.99) tier = 'GOD';         // 1%
-                else if (roll > 0.94) tier = 'MYTHIC'; // 5%
-                else if (roll > 0.79) tier = 'EPIC';   // 15%
-                else if (roll > 0.49) tier = 'RARE';   // 30%
+                if (roll > 0.99) tier = 'GOD';         
+                else if (roll > 0.94) tier = 'MYTHIC'; 
+                else if (roll > 0.79) tier = 'EPIC';   
+                else if (roll > 0.49) tier = 'RARE';   
 
                 const boxAnim = Math.floor(Math.random() * 5) + 1;
                 const textAnim = Math.floor(Math.random() * 5) + 1;
@@ -285,17 +244,11 @@
                 node.className = 'msg-node msg-spawn';
                 
                 const matrix = this.calculateMatrix();
-                const pltVar = `var(--plt-${platform})`;
-                const rgbVar = platform === 'yt' ? '255, 0, 51' : platform === 'tw' ? '176, 92, 255' : '83, 252, 24';
-                
-                node.style.setProperty('--plt-color', pltVar);
-                node.style.setProperty('--plt-rgb', rgbVar);
+                node.style.setProperty('--plt-color', `var(--plt-${platform})`);
 
                 node.innerHTML = `
-                    <div class="msg-inner tier-${matrix.tier} box-anim-${matrix.boxAnim} txt-anim-${matrix.textAnim}">
-                        <div class="hologram-avatar">
-                            <img src="${avatarUrl}" class="avatar-img" alt="">
-                        </div>
+                    <div class="msg-inner tier-${matrix.tier} bA-${matrix.boxAnim} tA-${matrix.textAnim}">
+                        <div class="avatar-box"><img src="${avatarUrl}" class="avatar-img" alt=""></div>
                         <div class="content-block">
                             <div class="tier-badge">${matrix.tier}</div>
                             <div class="user-row">${SVGS[platform]} <span class="username">${username}</span></div>
@@ -319,7 +272,7 @@
                     else if (index === 3) msg.classList.add('msg-pos-4');
                     else {
                         msg.classList.add('msg-dead');
-                        setTimeout(() => { if(msg.parentNode) msg.parentNode.removeChild(msg); }, 800);
+                        setTimeout(() => { if(msg.parentNode) msg.parentNode.removeChild(msg); }, 600);
                     }
                 });
             }
@@ -496,10 +449,10 @@
                 const triggerRandomChat = () => {
                     const platforms = ['yt', 'tw', 'kk'];
                     const plt = platforms[Math.floor(Math.random() * platforms.length)];
-                    const user = "Matrix_User";
+                    const user = "Performance_User";
                     const avatar = `https://ui-avatars.com/api/?name=${user}&background=random&color=fff&bold=true`;
                     
-                    this.masterQueue.push({ username: user, message: "125 unique animation combinations. Testing the massive stable HUD and Matrix Rarity engine! \ud83d\udd25", avatar: avatar, platform: plt });
+                    this.masterQueue.push({ username: user, message: "0% GPU load. Clean flat vectors. 125 combinations. This is built for multi-streaming. \ud83d\udd25", avatar: avatar, platform: plt });
                     setTimeout(triggerRandomChat, Math.floor(Math.random() * 1500) + 1200);
                 }
                 setTimeout(triggerRandomChat, 1000);
@@ -507,7 +460,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const chatEngine = new HolographicChatEngine();
+            const chatEngine = new ZeroGPUChatEngine();
             const viewerEngine = new ViewerEngine();
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || '';
