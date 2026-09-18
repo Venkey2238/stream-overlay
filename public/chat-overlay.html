@@ -3,222 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DBD Zero-GPU Chat Overlay</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Oswald:wght@500;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <title>DBD Zero-GPU Competitive Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@700&display=swap" rel="stylesheet">
     <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
     <style>
         :root {
-            /* Zero-GPU Compositor Easings */
-            --lunge-ease: cubic-bezier(0.1, 0.9, 0.2, 1);
-            --hook-drop: cubic-bezier(0.34, 1.56, 0.64, 1);
-            
-            /* Dead by Daylight UI Palette */
-            --dbd-dark: #0a0a0c;
-            --dbd-panel: #1a1a1f;
-            --dbd-red: #c10000;
-            --dbd-text: #e8e8e8;
-            
-            /* DBD Rank Colors */
-            --rank-ash: #d4cfc9;
-            --rank-bronze: #cd7f32;
-            --rank-silver: #c0c0c0;
-            --rank-gold: #ffd700;
-            --rank-iri: #ff0055;
-            --rank-pig: #ff0000; /* Entity/Pig Tier */
-
-            /* Platform Colors */
+            /* Pure Solid Colors - ZERO GPU STRAIN */
             --plt-yt: #ff0000;
             --plt-tw: #9146ff;
             --plt-kk: #53fc18;
+            
+            /* DBD Rank Colors (High Contrast) */
+            --rank-ash: #8c8b8b;
+            --rank-bronze: #d07b46;
+            --rank-silver: #cccccc;
+            --rank-gold: #ffcf24;
+            --rank-iri: #ff0055;
+            --rank-entity: #ff0000;
+
+            --bg-solid: #0d0d0d;
         }
 
+        /* 
+          ZERO ANIMATIONS. ZERO TRANSITIONS. ZERO BLURS.
+          This guarantees flawless performance while multi-streaming.
+        */
         body {
             margin: 0; padding: 0; width: 100vw; height: 100vh;
             background-color: transparent; overflow: hidden;
-            font-family: 'Rajdhani', sans-serif; -webkit-font-smoothing: antialiased;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: none; /* Crisper rendering for scaled down OBS sources */
         }
 
         #master-container {
-            position: absolute; bottom: 30px; left: 30px;
-            width: 550px; display: flex; flex-direction: column; gap: 20px;
+            position: absolute; bottom: 40px; left: 40px;
+            width: 600px; display: flex; flex-direction: column; gap: 20px;
         }
 
         /* ==========================================================================
-           1. BLOODPOINT VIEWER HUD (Solid Vectors)
+           1. ZERO-GPU FLAT VIEWER HUD
            ========================================================================== */
-        #viewer-hud {
-            display: flex; gap: 15px; z-index: 20;
+        #viewer-hud { display: flex; gap: 15px; }
+
+        .hud-card {
+            display: none; align-items: center; justify-content: center; gap: 12px;
+            padding: 10px 18px; border-radius: 4px;
+            background: var(--bg-solid);
+            border: 3px solid #222;
+            border-bottom: 6px solid var(--plt-color);
         }
 
-        .dbd-hud-card {
-            display: none; align-items: center; justify-content: center; gap: 10px;
-            padding: 8px 20px 8px 14px;
-            background-color: var(--dbd-dark);
-            border: 2px solid var(--dbd-panel);
-            border-left: 6px solid var(--plt-color);
-            /* Angled cuts similar to DBD score events */
-            clip-path: polygon(0 0, 100% 0, 100% 80%, 90% 100%, 0 100%);
-            transform-origin: left;
-            animation: lungeIn 0.5s var(--lunge-ease) forwards;
-            will-change: transform, opacity;
-        }
-
-        .plt-icon { width: 32px; height: 32px; color: var(--plt-color); }
-        
-        .v-count {
-            font-family: 'Oswald', sans-serif; font-size: 2rem; font-weight: 700;
-            color: var(--dbd-text); font-variant-numeric: tabular-nums;
-            letter-spacing: 1px; will-change: transform;
-        }
-
-        .dbd-hud-card.dopamine-hit .v-count { animation: bpScore 0.5s var(--lunge-ease); }
-
-        @keyframes lungeIn { 0% { opacity: 0; transform: translateX(-30px); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes bpScore { 30% { transform: scale(1.3); color: var(--plt-color); } }
+        .plt-icon { width: 36px; height: 36px; color: var(--plt-color); }
+        .v-count { font-size: 2.5rem; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; line-height: 1; }
 
         /* ==========================================================================
-           2. THE ENTITY CHAT ENGINE
+           2. STRICT 2-MESSAGE CHAT DISPLAY
            ========================================================================== */
-        #chat-widget {
-            position: relative; height: 400px; width: 100%;
-            z-index: 10;
+        #chat-widget { 
+            display: flex; flex-direction: column; justify-content: flex-end; 
+            gap: 15px; height: 350px; width: 100%; 
         }
 
         .msg-node {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            transition: transform 0.5s var(--lunge-ease), opacity 0.5s linear;
-            will-change: transform, opacity;
-            pointer-events: none;
+            display: flex; align-items: stretch; gap: 15px;
+            width: 100%;
         }
 
-        /* Pure 2D Transform Stacking (ZERO GPU STRAIN) */
-        .msg-pos-1 { transform: translateY(0) scale(1); opacity: 1; }
-        .msg-pos-2 { transform: translateY(-100px) scale(0.95); opacity: 0.9; }
-        .msg-pos-3 { transform: translateY(-190px) scale(0.9); opacity: 0.6; }
-        .msg-pos-4 { transform: translateY(-270px) scale(0.85); opacity: 0.2; }
-        .msg-dead  { transform: translateY(-350px) scale(0.8); opacity: 0; }
-
-        .msg-inner {
-            display: flex; align-items: center; gap: 15px; position: relative;
-            will-change: transform, opacity;
-        }
-
-        /* The DBD Perk Diamond Avatar */
-        .perk-diamond-wrapper {
-            position: relative; width: 64px; height: 64px; flex-shrink: 0;
-            /* Rotate wrapper 45deg to make diamond */
-            transform: rotate(45deg);
-            background-color: var(--dbd-dark);
-            border: 3px solid var(--tier-color);
-            overflow: hidden;
-            z-index: 5;
-        }
-        .perk-diamond-wrapper img {
-            width: 140%; height: 140%; object-fit: cover;
-            /* Rotate image back so face is upright */
-            transform: rotate(-45deg) translate(-15%, -15%);
-            filter: grayscale(30%) contrast(120%);
-        }
-
-        /* Solid Vector Content Block */
+        /* Solid Block Design for maximum readability when scaled down */
         .content-block { 
-            position: relative; display: flex; flex-direction: column; justify-content: center;
-            padding: 10px 16px; min-height: 50px; flex-grow: 1;
-            background-color: var(--dbd-panel);
-            border: 2px solid rgba(255,255,255,0.05);
-            border-left: 4px solid var(--tier-color);
-            /* DBD UI Angled Corners */
-            clip-path: polygon(0 0, 95% 0, 100% 20%, 100% 100%, 0 100%);
-            overflow: hidden;
+            display: flex; flex-direction: column; flex-grow: 1;
+            padding: 16px 20px; background: var(--bg-solid);
+            border: 3px solid #222; border-radius: 4px;
+            border-left: 10px solid var(--rank-color);
         }
 
-        /* Subtle Scratch Mark Background Overlay (Pure CSS, 0 GPU) */
-        .content-block::before {
-            content: ''; position: absolute; top: 0; right: -20px; bottom: 0; width: 100px;
-            background: repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255,0,0,0.03) 10px, rgba(255,0,0,0.03) 20px);
-            pointer-events: none; z-index: 0;
+        /* Large Clear Avatars */
+        .avatar-box {
+            width: 72px; height: 72px; flex-shrink: 0;
+            border: 4px solid var(--rank-color); background: #000; border-radius: 4px;
+            overflow: hidden; align-self: center;
         }
-
-        .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; z-index: 2; }
-        .chat-plt-icon { width: 14px; height: 14px; color: var(--plt-color); }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* High-Status Meta Header */
+        .meta-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+        .chat-plt-icon { width: 18px; height: 18px; color: var(--plt-color); }
         
         .username {
-            font-family: 'Oswald', sans-serif; font-size: 0.9rem; font-weight: 700;
-            letter-spacing: 1px; color: var(--tier-color); text-transform: uppercase;
+            font-size: 1.1rem; font-weight: 900; color: var(--plt-color); 
+            text-transform: uppercase; letter-spacing: 1px;
         }
 
+        /* THE DOPAMINE DRIVER: Ranks & Bloodpoints */
+        .rank-badge {
+            font-family: 'Syncopate', sans-serif; font-size: 0.65rem; font-weight: 900;
+            letter-spacing: 0.15em; padding: 4px 8px; border-radius: 2px;
+            background: var(--rank-color); color: #000; text-transform: uppercase;
+        }
+
+        .bp-counter {
+            font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 900;
+            color: #ff3333; margin-left: auto;
+            background: #2a0000; padding: 4px 8px; border-radius: 2px; border: 2px solid #550000;
+        }
+
+        /* Chat Text - Massive and bold */
         .chat-text {
-            font-family: 'Montserrat', sans-serif; font-size: 1.35rem; font-weight: 800;
-            line-height: 1.2; letter-spacing: -0.01em; color: var(--dbd-text);
+            font-size: 1.6rem; font-weight: 900; line-height: 1.2; color: #ffffff;
             word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-            z-index: 2;
         }
 
         /* ==========================================================================
-           3. DBD RANKS (THE LIVE CHAT META-GAME)
+           3. THE ENTITY OVERRIDE (For the #1 Chatter)
            ========================================================================== */
-        .grade-badge {
-            font-family: 'Rajdhani', sans-serif; font-size: 0.65rem; font-weight: 900;
-            color: #000; background: var(--tier-color);
-            padding: 2px 6px; border-radius: 2px; letter-spacing: 1px;
-            margin-left: auto; text-transform: uppercase;
-        }
-
-        .bp-score {
-            font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 900;
-            color: var(--dbd-red); margin-left: 6px;
-        }
-
-        /* Grade Dynamic Variable Injection (Handled in JS) */
-        .tier-Ash { --tier-color: var(--rank-ash); }
-        .tier-Bronze { --tier-color: var(--rank-bronze); }
-        .tier-Silver { --tier-color: var(--rank-silver); }
-        .tier-Gold { --tier-color: var(--rank-gold); }
-        .tier-Iridescent { --tier-color: var(--rank-iri); }
-        .tier-Pig { 
-            --tier-color: var(--rank-pig); 
-            background-color: #1a0000; 
-        }
-        .tier-Pig .chat-text { color: #fff; }
-        .tier-Pig .grade-badge { color: #fff; border: 1px solid #fff; }
-
-        /* ==========================================================================
-           4. KILLER ENTRANCE ANIMATIONS (Pure Transform)
-           ========================================================================== */
-        /* Spawn 1: The Lunge (Slide Right) */
-        .anim-lunge { animation: animLunge 0.5s var(--lunge-ease) both; }
-        @keyframes animLunge { 0% { transform: translateX(-50px) scale(0.9); opacity: 0; } 100% { transform: translateX(0) scale(1); opacity: 1; } }
-
-        /* Spawn 2: The Hook Drop (Slide Down) */
-        .anim-hook { animation: animHook 0.6s var(--hook-drop) both; }
-        @keyframes animHook { 0% { transform: translateY(-40px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-
-        /* Spawn 3: Entity Grasp (Scale Up) */
-        .anim-grasp { animation: animGrasp 0.5s var(--hook-drop) both; }
-        @keyframes animGrasp { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .is-entity .content-block { background: #0a0000; border-color: #ff0000; border-left-width: 16px; }
+        .is-entity .rank-badge { background: #ff0000; color: #fff; font-size: 0.75rem; border: 2px solid #fff; }
+        .is-entity .bp-counter { background: #ff0000; color: #fff; border-color: #fff; }
+        .is-entity .username { color: #ffffff; }
+        .is-entity .chat-text { color: #ff6666; font-weight: 900; }
+        .is-entity .avatar-box { border-color: #ff0000; }
 
     </style>
 </head>
 <body>
 
     <div id="master-container">
-        <!-- Solid Vector Viewer HUD -->
+        <!-- Solid High-Contrast Viewer HUD -->
         <div id="viewer-hud">
-            <div class="dbd-hud-card" id="node-yt" style="--plt-color: var(--plt-yt);">
+            <div class="hud-card" id="node-yt" style="--plt-color: var(--plt-yt);">
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>
                 <span class="v-count" id="count-yt">0</span>
             </div>
-            <div class="dbd-hud-card" id="node-tw" style="--plt-color: var(--plt-tw);">
+            <div class="hud-card" id="node-tw" style="--plt-color: var(--plt-tw);">
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
                 <span class="v-count" id="count-tw">0</span>
             </div>
-            <div class="dbd-hud-card" id="node-kk" style="--plt-color: var(--plt-kk);">
+            <div class="hud-card" id="node-kk" style="--plt-color: var(--plt-kk);">
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>
                 <span class="v-count" id="count-kk">0</span>
             </div>
         </div>
 
-        <!-- Zero GPU Chat Container -->
+        <!-- Strict 2-Item Chat Container -->
         <div id="chat-widget"></div>
     </div>
 
@@ -229,102 +155,139 @@
             kk: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>`
         };
 
-        // THE DBD SESSION RANK TRACKER (The Dopamine Meta-Game)
-        class DBDRankTracker {
+        // ==========================================
+        // ADVANCED DBD GAMIFICATION ALGORITHM
+        // ==========================================
+        class DBDGamificationEngine {
             constructor() {
-                this.users = new Map();
+                this.users = {}; 
+                this.entityUser = null; 
+                
+                // Active Bloodweb Decay: Removes BP from inactive users every 5 seconds
+                setInterval(() => this.decayBloodpoints(), 5000);
             }
 
-            trackMessage(username) {
-                const count = (this.users.get(username) || 0) + 1;
-                this.users.set(username, count);
-                
-                // Calculate Bloodpoints based on messages
-                const bp = (count * 1000).toLocaleString();
+            getRankData(bp) {
+                if (bp >= 25000) return { name: "Iridescent I", color: "var(--rank-iri)" };
+                if (bp >= 15000) return { name: "Gold I", color: "var(--rank-gold)" };
+                if (bp >= 8000)  return { name: "Silver I", color: "var(--rank-silver)" };
+                if (bp >= 3000)  return { name: "Bronze I", color: "var(--rank-bronze)" };
+                return { name: "Ash I", color: "var(--rank-ash)" };
+            }
 
-                // Assign Grade based on chat frequency
-                if (count >= 50) return { tier: 'Pig', name: "THE PIG'S DISCIPLE", bp: bp };
-                if (count >= 30) return { tier: 'Iridescent', name: "IRIDESCENT I", bp: bp };
-                if (count >= 15) return { tier: 'Gold', name: "GOLD I", bp: bp };
-                if (count >= 7)  return { tier: 'Silver', name: "SILVER I", bp: bp };
-                if (count >= 3)  return { tier: 'Bronze', name: "BRONZE I", bp: bp };
-                return { tier: 'Ash', name: "ASH IV", bp: bp };
+            processChat(username) {
+                const now = Date.now();
+                if (!this.users[username]) {
+                    this.users[username] = { bp: 0, lastActive: now };
+                }
+
+                const user = this.users[username];
+                
+                // Base BP Gain
+                let bpGain = 2000;
+                
+                // Combo Modifier: If chatting frequently (under 10 seconds), give bonus BP to build addiction
+                if (now - user.lastActive < 10000) {
+                    bpGain = 3500;
+                }
+                
+                user.bp += bpGain;
+                user.lastActive = now;
+
+                // Identify "The Entity" (Top Chatter)
+                let highestBP = 0;
+                let newEntity = null;
+                for (const [name, data] of Object.entries(this.users)) {
+                    if (data.bp > highestBP) {
+                        highestBP = data.bp;
+                        newEntity = name;
+                    }
+                }
+                
+                // Must be at least Gold rank to be crowned the Entity
+                if (highestBP >= 15000) this.entityUser = newEntity;
+                else this.entityUser = null;
+
+                return {
+                    bp: user.bp,
+                    rank: this.getRankData(user.bp),
+                    isEntity: (username === this.entityUser)
+                };
+            }
+
+            decayBloodpoints() {
+                const now = Date.now();
+                for (const [username, user] of Object.entries(this.users)) {
+                    // Punish inactivity > 10 seconds. Lose 10% of BP every 5 seconds.
+                    if (now - user.lastActive > 10000) {
+                        user.bp = Math.floor(user.bp * 0.90);
+                        if (user.bp < 0) user.bp = 0;
+                    }
+                }
+                
+                // Re-evaluate Entity after decay
+                let highestBP = 0; let newEntity = null;
+                for (const [name, data] of Object.entries(this.users)) {
+                    if (data.bp > highestBP) { highestBP = data.bp; newEntity = name; }
+                }
+                if (highestBP >= 15000) this.entityUser = newEntity; else this.entityUser = null;
             }
         }
 
-        class DBDZeroGPUChat {
-            constructor() { 
+        // ==========================================
+        // ZERO-GPU CHAT CONTROLLER
+        // ==========================================
+        class ZeroGPUChatEngine {
+            constructor(gamification) { 
                 this.container = document.getElementById('chat-widget');
-                this.rankTracker = new DBDRankTracker();
-                this.animations = ['anim-lunge', 'anim-hook', 'anim-grasp'];
+                this.game = gamification;
             }
 
             addMessage(username, message, avatarUrl, platform) {
+                const stats = this.game.processChat(username);
+                
                 const node = document.createElement('div');
-                node.className = 'msg-node msg-spawn';
-                
-                // Track user and get their live DBD Rank
-                const rankData = this.rankTracker.trackMessage(username);
-                const animStyle = this.animations[Math.floor(Math.random() * this.animations.length)];
-                
-                node.style.setProperty('--plt-color', `var(--plt-${platform})`);
+                let entityClass = stats.isEntity ? "is-entity" : "";
+                let rankLabel = stats.isEntity ? "THE ENTITY" : stats.rank.name;
 
-                // Generate the HTML payload (Zero GPU, Pure Vector)
+                node.className = `msg-node ${entityClass}`;
+                node.style.setProperty('--plt-color', `var(--plt-${platform})`);
+                node.style.setProperty('--rank-color', stats.rank.color);
+
                 node.innerHTML = `
-                    <div class="msg-inner ${animStyle} tier-${rankData.tier}">
-                        <div class="perk-diamond-wrapper">
-                            <img src="${avatarUrl}" alt="">
+                    <div class="avatar-box"><img src="${avatarUrl}" class="avatar-img" alt=""></div>
+                    <div class="content-block">
+                        <div class="meta-row">
+                            ${SVGS[platform]}
+                            <span class="username">${username}</span>
+                            <span class="rank-badge">${rankLabel}</span>
+                            <span class="bp-counter">${stats.bp.toLocaleString()} BP</span>
                         </div>
-                        <div class="content-block">
-                            <div class="user-row">
-                                ${SVGS[platform]} 
-                                <span class="username">${username}</span>
-                                <span class="bp-score">+${rankData.bp} BP</span>
-                                <div class="grade-badge">${rankData.name}</div>
-                            </div>
-                            <div class="chat-text">${message}</div>
-                        </div>
+                        <div class="chat-text">${message}</div>
                     </div>
                 `;
 
                 this.container.appendChild(node);
-                void node.offsetWidth; 
-                this.updateZDepth();
-            }
-
-            updateZDepth() {
-                const messages = Array.from(this.container.children).reverse();
-                messages.forEach((msg, index) => {
-                    msg.classList.remove('msg-spawn', 'msg-pos-1', 'msg-pos-2', 'msg-pos-3', 'msg-pos-4');
-                    if (index === 0) msg.classList.add('msg-pos-1');
-                    else if (index === 1) msg.classList.add('msg-pos-2');
-                    else if (index === 2) msg.classList.add('msg-pos-3');
-                    else if (index === 3) msg.classList.add('msg-pos-4');
-                    else {
-                        msg.classList.add('msg-dead');
-                        // Fast cleanup to keep DOM light
-                        setTimeout(() => { if(msg.parentNode) msg.parentNode.removeChild(msg); }, 500);
-                    }
-                });
+                
+                // STRICT 2-CHAT LIMIT. NO ANIMATIONS. Instant Snapping.
+                const messages = Array.from(this.container.children);
+                if (messages.length > 2) {
+                    this.container.removeChild(messages[0]);
+                }
             }
         }
 
+        // ==========================================
+        // STANDARD POLLING LOGIC (UNCHANGED)
+        // ==========================================
         class ViewerEngine {
             constructor() { this.state = { yt: 0, tw: 0, kk: 0 }; }
             format(num) { return (num || 0).toLocaleString('en-US'); }
-
-            triggerDopamine(nodeId) {
-                const node = document.getElementById(nodeId);
-                node.classList.remove('dopamine-hit');
-                void node.offsetWidth; 
-                node.classList.add('dopamine-hit');
-            }
 
             update(platform, count) {
                 const node = document.getElementById(`node-${platform}`);
                 if (node.style.display !== 'flex') node.style.display = 'flex';
                 if (count !== this.state[platform]) {
-                    if (count > this.state[platform]) this.triggerDopamine(`node-${platform}`);
                     this.state[platform] = count;
                     document.getElementById(`count-${platform}`).innerText = this.format(count);
                 }
@@ -334,11 +297,9 @@
                 if (twitchUser) {
                     try {
                         const res = await fetch(`https://decapi.me/twitch/viewercount/${twitchUser}`);
-                        const count = parseInt(await res.text()) || 0;
-                        this.update('tw', count);
+                        this.update('tw', parseInt(await res.text()) || 0);
                     } catch(e) {}
                 }
-
                 let kickUserSlug = kickConfig ? (kickConfig.includes("|||") ? kickConfig.split("|||")[0] : isNaN(kickConfig) ? kickConfig : "") : "";
                 if (kickUserSlug) {
                     try {
@@ -360,7 +321,7 @@
                 if (!this.handle) this.runDemoMode();
                 else this.fetchConfigAndStart();
 
-                setInterval(() => this.processQueue(), 2500); 
+                setInterval(() => this.processQueue(), 1500); // 1.5s pacing
                 setInterval(() => this.viewerEngine.pollExternal(this.config.tw, this.config.kk), 10000);
             }
 
@@ -477,23 +438,29 @@
                     this.viewerEngine.update('kk', Math.floor(Math.random() * 100) + 2100);
                 }, 8000);
 
-                const demoUsers = ["DwightMain", "Entity_Dweller", "HexRuin", "LoopGod"];
+                const users = ["DwightMain", "TrapperBoi", "Nea_Toxicity", "HexRuin", "EntityEnjoyer"];
                 
                 const triggerRandomChat = () => {
                     const platforms = ['yt', 'tw', 'kk'];
                     const plt = platforms[Math.floor(Math.random() * platforms.length)];
-                    const user = demoUsers[Math.floor(Math.random() * demoUsers.length)];
+                    const user = users[Math.floor(Math.random() * users.length)];
                     const avatar = `https://ui-avatars.com/api/?name=${user}&background=random&color=fff&bold=true`;
                     
-                    this.masterQueue.push({ username: user, message: "Grinding for Iridescent! The perk diamond avatars look sick! \ud83d\udd25", avatar: avatar, platform: plt });
-                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 1200) + 800); // Fast pacing to demo ranks
+                    this.masterQueue.push({ 
+                        username: user, 
+                        message: "Farming Bloodpoints! I'm trying to steal the Entity crown before the decay hits!", 
+                        avatar: avatar, platform: plt 
+                    });
+                    
+                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 1200) + 800);
                 }
                 setTimeout(triggerRandomChat, 1000);
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const chatEngine = new DBDZeroGPUChat();
+            const gameEngine = new DBDGamificationEngine();
+            const chatEngine = new ZeroGPUChatEngine(gameEngine);
             const viewerEngine = new ViewerEngine();
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || '';
