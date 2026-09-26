@@ -1,513 +1,1037 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DBD Gamified Chat - Zero GPU Performance</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@700;900&display=swap" rel="stylesheet">
+
+    <title>AR Broadcast Chat: The Matrix Engine</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+
     <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
+
     <style>
+
         :root {
-            /* Zero GPU Performance Easings */
-            --ease-fast: cubic-bezier(0.16, 1, 0.3, 1);
+
+            /* Ultra-Premium Physics */
+
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+            --ease-whip: cubic-bezier(0.86, 0, 0.07, 1);
+
+            --ease-cinematic: cubic-bezier(0.25, 1, 0.5, 1);
+
+            --ease-glitch: cubic-bezier(0.77, 0, 0.175, 1);
+
             
-            /* Core Platforms */
-            --plt-yt: #ff0000;
-            --plt-tw: #a970ff;
+
+            /* High-End Platform Neons */
+
+            --plt-yt: #ff0033;
+
+            --plt-tw: #b05cff;
+
             --plt-kk: #53fc18;
+
             
-            /* DBD Rank Colors (Solid, high contrast, ZERO glows/blurs) */
-            --rank-ash: #8c8b8b;
-            --rank-bronze: #cd7f32;
-            --rank-silver: #e0e0e0;
-            --rank-gold: #ffbc00;
-            --rank-iri: #ff0033;
-            --rank-entity: #000000;
+
+            /* Rarity Glows */
+
+            --tier-rare: #00d0ff;
+
+            --tier-epic: #ff00ea;
+
+            --tier-mythic: #ffc400;
+
+            --tier-god: #ffffff; /* Secret 1% Tier */
+
         }
+
+
 
         body {
+
             margin: 0; padding: 0; width: 100vw; height: 100vh;
+
             background-color: transparent; overflow: hidden;
+
             font-family: 'Rajdhani', sans-serif; -webkit-font-smoothing: antialiased;
+
         }
+
+
 
         #master-container {
+
             position: absolute; bottom: 40px; left: 40px;
-            width: 550px; display: flex; flex-direction: column; gap: 15px;
+
+            width: 600px; display: flex; flex-direction: column; gap: 35px;
+
         }
 
+
+
         /* ==========================================================================
-           1. ZERO-GPU FLAT VIEWER HUD
+
+           MASSIVE STABLE VIEWER HUD
+
            ========================================================================== */
-        #viewer-hud { display: flex; gap: 12px; z-index: 20; }
+
+        #viewer-hud {
+
+            display: flex; gap: 20px; z-index: 20;
+
+        }
+
+
 
         .hud-card {
-            display: none; align-items: center; justify-content: center; gap: 10px;
-            padding: 8px 18px; border-radius: 4px;
-            background: #111111; /* Solid, opaque background. No blur. */
-            border: 2px solid #222;
+
+            display: none; align-items: center; justify-content: center; gap: 15px;
+
+            padding: 12px 28px 12px 20px; border-radius: 16px;
+
+            background: linear-gradient(180deg, rgba(15, 15, 25, 0.6), rgba(5, 5, 10, 0.9));
+
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+
+            border: 1px solid rgba(255, 255, 255, 0.08);
+
             border-bottom: 4px solid var(--plt-color);
-            transition: transform 0.1s var(--ease-fast), border-color 0.1s;
-            will-change: transform;
+
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 2px 20px rgba(255,255,255,0.05);
+
+            transform-origin: bottom center;
+
+            animation: cardSpawn 1s var(--ease-spring) forwards;
+
+            will-change: transform, filter;
+
         }
 
-        .plt-icon { width: 28px; height: 28px; color: var(--plt-color); }
-        .v-count { 
-            font-family: 'Montserrat', sans-serif; font-size: 1.8rem; font-weight: 900; 
-            color: #fff; font-variant-numeric: tabular-nums; 
+
+
+        /* Ambient floating to keep it alive without tilting */
+
+        .hud-card { animation: cardSpawn 1s var(--ease-spring) forwards, floatIdle 6s ease-in-out infinite alternate; }
+
+
+
+        .plt-icon {
+
+            width: 48px; height: 48px; color: var(--plt-color);
+
+            filter: drop-shadow(0 0 15px rgba(var(--plt-rgb), 0.8));
+
+            will-change: transform, filter;
+
         }
+
+
+
+        .v-count {
+
+            font-family: 'Montserrat', sans-serif; font-size: 2.2rem; font-weight: 900;
+
+            color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,1);
+
+            font-variant-numeric: tabular-nums;
+
+            will-change: transform, color, text-shadow;
+
+        }
+
+
+
+        /* The High-End Dopamine Flare (No Tilting) */
+
+        .hud-card.dopamine-hit .plt-icon { animation: iconFlare 0.8s var(--ease-spring); }
+
+        .hud-card.dopamine-hit .v-count { animation: numberFlare 0.8s var(--ease-spring); }
+
+        .hud-card.dopamine-hit { animation: borderGlow 0.8s var(--ease-cinematic); }
+
+
+
+        @keyframes cardSpawn { 0% { opacity: 0; transform: translateY(40px) scale(0.9); filter: blur(10px); } 100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+
+        @keyframes floatIdle { 0% { transform: translateY(0); } 100% { transform: translateY(-8px); } }
+
         
-        /* Instant pop instead of heavy continuous animation */
-        .hud-card.data-flash { transform: scale(1.08); border-color: var(--plt-color); }
+
+        @keyframes iconFlare { 30% { transform: scale(1.3); filter: drop-shadow(0 0 35px var(--plt-color)) drop-shadow(0 0 15px #fff) brightness(200%); } }
+
+        @keyframes numberFlare { 30% { transform: scale(1.2); color: var(--plt-color); text-shadow: 0 0 30px var(--plt-color), 0 0 50px #fff; } }
+
+        @keyframes borderGlow { 30% { box-shadow: 0 15px 40px rgba(0,0,0,0.9), 0 0 50px rgba(var(--plt-rgb), 0.6); border-bottom-width: 8px; } }
+
+
 
         /* ==========================================================================
-           2. ZERO-GPU FLAT CHAT WIDGET (MAX 2 MESSAGES)
+
+           125-COMBINATION MATRIX CHAT ENGINE
+
            ========================================================================== */
-        #chat-widget { 
-            position: relative; height: 260px; width: 100%; z-index: 10; 
-            display: flex; flex-direction: column; justify-content: flex-end; gap: 12px;
+
+        #chat-widget {
+
+            position: relative; height: 420px; width: 100%;
+
+            perspective: 1200px; transform-style: preserve-3d; z-index: 10;
+
         }
+
+
 
         .msg-node {
-            width: 100%;
-            /* Only animate transform and opacity. Hardware composite only. */
-            transition: transform 0.3s var(--ease-fast), opacity 0.3s var(--ease-fast);
-            transform-origin: left bottom; will-change: transform, opacity;
+
+            position: absolute; bottom: 0; left: 0; width: 100%;
+
+            transition: all 0.8s var(--ease-spring);
+
+            transform-origin: left bottom;
+
+            will-change: transform, opacity, filter;
+
+            pointer-events: none;
+
         }
 
-        /* Initial spawn state */
-        .msg-spawn { transform: translateY(20px); opacity: 0; }
-        
-        /* Active states */
-        .msg-active { transform: translateY(0); opacity: 1; }
-        
-        /* Solid Vector Content Block */
+
+
+        /* 3D Depth Positioning */
+
+        .msg-spawn { transform: translateZ(400px) translateY(100px); opacity: 0; filter: blur(20px); }
+
+        .msg-pos-1 { transform: translateZ(0) translateY(0) scale(1); opacity: 1; filter: blur(0); }
+
+        .msg-pos-2 { transform: translateZ(-100px) translateY(-110px) scale(0.95); opacity: 0.85; filter: blur(0px); }
+
+        .msg-pos-3 { transform: translateZ(-250px) translateY(-210px) scale(0.85); opacity: 0.5; filter: blur(2px); }
+
+        .msg-pos-4 { transform: translateZ(-400px) translateY(-300px) scale(0.7); opacity: 0.2; filter: blur(5px); }
+
+        .msg-dead  { transform: translateZ(-600px) translateY(-400px) scale(0.5); opacity: 0; filter: blur(10px); }
+
+
+
+        /* The Inner Wrapper handling the Box Animations */
+
+        .msg-inner {
+
+            display: flex; align-items: stretch; gap: 15px; position: relative;
+
+        }
+
+
+
+        /* Glass Content Block */
+
         .content-block { 
-            display: flex; align-items: flex-start; gap: 14px;
-            padding: 14px 18px; background: var(--bg-color, #161616);
-            border-radius: 6px; border: 2px solid #2a2a2a;
-            border-left: 10px solid var(--rank-color);
+
+            position: relative; display: flex; flex-direction: column; justify-content: center;
+
+            padding: 12px 24px; min-height: 60px; flex-grow: 1;
+
+            background: linear-gradient(90deg, rgba(10,10,15,0.7), rgba(0,0,0,0.2));
+
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+
+            border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+
+            border-left: 4px solid var(--plt-color);
+
+            box-shadow: -10px 10px 30px rgba(0,0,0,0.6);
+
             overflow: hidden;
+
         }
 
-        /* Avatar Box matching rank */
-        .avatar-box {
-            position: relative; width: 54px; height: 54px; flex-shrink: 0;
-            border: 3px solid var(--rank-color); background: #000; border-radius: 4px;
-        }
-        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Text Layout */
-        .text-col { display: flex; flex-direction: column; flex-grow: 1; justify-content: center; }
+
+        /* Hologram Avatar */
+
+        .hologram-avatar { position: relative; width: 64px; height: 64px; flex-shrink: 0; z-index: 5; }
+
+        .hologram-avatar::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px dashed var(--plt-color); animation: spinRing 12s linear infinite; opacity: 0.6; }
+
+        .hologram-avatar::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+
+        .avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; filter: grayscale(10%) contrast(120%); }
+
+
+
+        .user-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; z-index: 2; }
+
+        .chat-plt-icon { width: 18px; height: 18px; color: var(--plt-color); filter: drop-shadow(0 0 8px var(--plt-color)); }
+
         
-        /* The Meta Header (Icons, Names, Ranks, Bloodpoints) */
-        .meta-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-        .chat-plt-icon { width: 14px; height: 14px; color: var(--plt-color); }
-        
+
         .username {
-            font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 900;
-            color: var(--plt-color); text-transform: uppercase;
+
+            font-family: 'Syncopate', sans-serif; font-size: 0.75rem; font-weight: 900;
+
+            letter-spacing: 0.25em; color: var(--plt-color); text-transform: uppercase;
+
+            text-shadow: 0 0 15px var(--plt-color); z-index: 2;
+
         }
 
-        /* DBD GAMIFICATION BADGES */
-        .rank-badge {
-            font-family: 'Syncopate', sans-serif; font-size: 0.6rem; font-weight: 900;
-            letter-spacing: 0.1em; padding: 2px 6px; border-radius: 3px;
-            background: var(--rank-color); color: #000; text-transform: uppercase;
-        }
 
-        .bp-counter {
-            font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; font-weight: 900;
-            color: #ff4d4d; margin-left: auto; display: flex; align-items: center; gap: 4px;
-            background: #2a0000; padding: 2px 6px; border-radius: 3px; border: 1px solid #550000;
-        }
 
-        /* The actual chat message - Massive for scale-down readability */
         .chat-text {
-            font-family: 'Montserrat', sans-serif; font-size: 1.45rem; font-weight: 800;
-            line-height: 1.2; color: #ffffff;
-            word-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+
+            font-family: 'Montserrat', sans-serif; font-size: 1.5rem; font-weight: 900;
+
+            line-height: 1.3; letter-spacing: -0.01em; color: #ffffff;
+
+            text-shadow: 0 4px 8px rgba(0,0,0,0.8); z-index: 2;
+
         }
+
+
 
         /* ==========================================================================
-           3. DBD RANK OVERRIDES (No Glows, High Contrast Colors)
+
+           1. THE 5 TIER RARITY SYSTEM
+
            ========================================================================== */
+
+        .tier-badge {
+
+            position: absolute; right: 12px; top: 12px;
+
+            font-family: 'Syncopate', sans-serif; font-size: 0.5rem; font-weight: 900; letter-spacing: 0.4em;
+
+            padding: 4px 10px; border-radius: 6px; color: #fff; z-index: 20; display: none;
+
+        }
+
+
+
+        /* COMMON (Clean Glass) */
+
+        .tier-COMMON .content-block { border-left-color: var(--plt-color); }
+
         
-        /* THE ENTITY (Top Chatter Override) */
-        .is-entity .content-block { background: #000000; border-color: #ff0000; border-left-width: 14px; }
-        .is-entity .rank-badge { background: #ff0000; color: #fff; font-size: 0.7rem; }
-        .is-entity .bp-counter { background: #ff0000; color: #fff; border-color: #ff0000; }
-        .is-entity .username { color: #ff0000; }
-        .is-entity .chat-text { color: #ffcccc; }
-        .is-entity .avatar-box { border-color: #ff0000; border-radius: 50%; }
+
+        /* RARE (Neon Edge) */
+
+        .tier-RARE .content-block { border-left-color: var(--tier-rare); box-shadow: -10px 0 30px rgba(0, 208, 255, 0.2); }
+
+        .tier-RARE .username { color: var(--tier-rare); text-shadow: 0 0 15px var(--tier-rare); }
+
+        .tier-RARE .tier-badge { display: block; background: var(--tier-rare); color: #000; box-shadow: 0 0 15px var(--tier-rare); }
+
+
+
+        /* EPIC (Cyberpunk Core) */
+
+        .tier-EPIC .content-block { border: 2px solid var(--tier-epic); background: linear-gradient(90deg, rgba(255, 0, 234, 0.15), rgba(0,0,0,0.6)); box-shadow: 0 0 40px rgba(255, 0, 234, 0.3); }
+
+        .tier-EPIC .username { color: var(--tier-epic); text-shadow: 0 0 20px var(--tier-epic); }
+
+        .tier-EPIC .hologram-avatar::before { border-color: var(--tier-epic); box-shadow: 0 0 20px var(--tier-epic); }
+
+        .tier-EPIC .tier-badge { display: block; background: var(--tier-epic); box-shadow: 0 0 20px var(--tier-epic); }
+
+
+
+        /* MYTHIC (Golden Radiance) */
+
+        .tier-MYTHIC .content-block { 
+
+            border: 3px solid var(--tier-mythic); border-radius: 16px;
+
+            background: linear-gradient(135deg, rgba(255, 196, 0, 0.25), rgba(0,0,0,0.8));
+
+            box-shadow: 0 0 60px rgba(255, 196, 0, 0.4), inset 0 0 30px rgba(255, 196, 0, 0.2);
+
+        }
+
+        .tier-MYTHIC .username { color: var(--tier-mythic); font-size: 0.85rem; text-shadow: 0 0 25px var(--tier-mythic); }
+
+        .tier-MYTHIC .chat-text { background: linear-gradient(90deg, #fff, var(--tier-mythic), #fff); background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 2s linear infinite; }
+
+        .tier-MYTHIC .hologram-avatar::before { border-color: var(--tier-mythic); border-width: 3px; box-shadow: 0 0 30px var(--tier-mythic); }
+
+        .tier-MYTHIC .tier-badge { display: block; background: #fff; color: #000; border: 2px solid var(--tier-mythic); box-shadow: 0 0 30px var(--tier-mythic); }
+
+
+
+        /* GOD TIER (1% Drop - Diamond Core) */
+
+        .tier-GOD .content-block { 
+
+            border: 4px solid var(--tier-god); border-radius: 20px;
+
+            background: rgba(255,255,255,0.9);
+
+            box-shadow: 0 0 80px rgba(255,255,255,1), inset 0 0 50px rgba(255,255,255,0.8);
+
+            animation: godShake 0.5s var(--ease-whip);
+
+        }
+
+        .tier-GOD .username { color: #000; text-shadow: none; font-weight: 900; }
+
+        .tier-GOD .chat-text { color: #000; text-shadow: none; font-weight: 900; letter-spacing: 0; }
+
+        .tier-GOD .hologram-avatar { transform: scale(1.3); }
+
+        .tier-GOD .hologram-avatar::before { border-color: #fff; border-width: 4px; box-shadow: 0 0 50px #fff; }
+
+        .tier-GOD .tier-badge { display: block; background: #000; color: #fff; border: 2px solid #fff; box-shadow: 0 0 40px #fff; font-size: 0.7rem; }
+
+
+
+        /* ==========================================================================
+
+           2. THE 5 BOX ANIMATIONS (Structure Reveal)
+
+           ========================================================================== */
+
+        .box-anim-1 { animation: bA1 0.8s var(--ease-spring) both; } /* Cinema Slide */
+
+        .box-anim-2 { animation: bA2 0.8s var(--ease-spring) both; } /* 3D Flip Up */
+
+        .box-anim-3 { animation: bA3 0.7s var(--ease-whip) both; }   /* Hyper Warp */
+
+        .box-anim-4 { animation: bA4 0.9s var(--ease-spring) both; } /* Hologram Drop */
+
+        .box-anim-5 { animation: bA5 0.7s var(--ease-glitch) both; } /* Glitch Tear */
+
+
+
+        @keyframes bA1 { 0% { transform: translateX(-150px); opacity: 0; filter: blur(20px); } 100% { transform: translateX(0); opacity: 1; filter: blur(0); } }
+
+        @keyframes bA2 { 0% { transform: rotateX(-90deg) scale(0.8); opacity: 0; } 100% { transform: rotateX(0) scale(1); opacity: 1; } }
+
+        @keyframes bA3 { 0% { transform: translateZ(600px); opacity: 0; filter: brightness(300%) blur(10px); } 100% { transform: translateZ(0); opacity: 1; filter: brightness(100%) blur(0); } }
+
+        @keyframes bA4 { 0% { transform: translateY(-100px); clip-path: inset(100% 0 0 0); opacity: 0; } 100% { transform: translateY(0); clip-path: inset(0 0 0 0); opacity: 1; } }
+
+        @keyframes bA5 { 0% { transform: skewX(-30deg) scaleY(0.1); filter: hue-rotate(90deg); opacity: 0; } 100% { transform: skewX(0) scaleY(1); filter: hue-rotate(0); opacity: 1; } }
+
+
+
+        /* ==========================================================================
+
+           3. THE 5 TEXT ANIMATIONS (Typography Reveal)
+
+           ========================================================================== */
+
+        .txt-anim-1 .chat-text { animation: tA1 0.9s var(--ease-spring) both; } /* Cinematic Focus */
+
+        .txt-anim-2 .chat-text { animation: tA2 0.8s var(--ease-cinematic) both; } /* Matrix Decode / Mask */
+
+        .txt-anim-3 .chat-text { animation: tA3 0.7s var(--ease-glitch) both; } /* Cyber Glitch */
+
+        .txt-anim-4 .chat-text { animation: tA4 0.9s var(--ease-spring) both; } /* Bounce Drop */
+
+        .txt-anim-5 .chat-text { position: relative; } /* Light Sweep */
+
+        .txt-anim-5 .chat-text::after { content: ''; position: absolute; inset: 0; background: #fff; animation: tA5 0.8s var(--ease-cinematic) forwards; z-index: 10; }
+
+
+
+        @keyframes tA1 { 0% { letter-spacing: 0.5em; filter: blur(15px); opacity: 0; transform: scale(1.1); } 100% { letter-spacing: -0.01em; filter: blur(0); opacity: 1; transform: scale(1); } }
+
+        @keyframes tA2 { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); transform: translateX(-20px); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateX(0); } }
+
+        @keyframes tA3 { 0% { opacity: 0; transform: skewX(20deg); text-shadow: -10px 0 red, 10px 0 cyan; } 100% { opacity: 1; transform: skewX(0); text-shadow: 0 4px 8px rgba(0,0,0,0.8); } }
+
+        @keyframes tA4 { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+        @keyframes tA5 { 0% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 100%); } }
+
+
+
+        /* Utilities */
+
+        @keyframes spinRing { 100% { transform: rotate(360deg); } }
+
+        @keyframes textShine { 0% { background-position: -100% center; } 100% { background-position: 200% center; } }
+
+        @keyframes godShake { 0%, 100% { transform: translateX(0) scale(1); } 25% { transform: translateX(-15px) scale(1.05); } 75% { transform: translateX(15px) scale(1.05); } }
+
+
 
     </style>
+
 </head>
+
 <body>
 
+
+
     <div id="master-container">
-        <!-- Solid High-Contrast Viewer HUD -->
+
+        <!-- Massive Stable Viewer HUD -->
+
         <div id="viewer-hud">
-            <div class="hud-card" id="node-yt" style="--plt-color: var(--plt-yt);">
+
+            <div class="hud-card" id="node-yt" style="--plt-color: var(--plt-yt); --plt-rgb: 255, 0, 51;">
+
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>
+
                 <span class="v-count" id="count-yt">0</span>
+
             </div>
-            <div class="hud-card" id="node-tw" style="--plt-color: var(--plt-tw);">
+
+            <div class="hud-card" id="node-tw" style="--plt-color: var(--plt-tw); --plt-rgb: 176, 92, 255;">
+
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
+
                 <span class="v-count" id="count-tw">0</span>
+
             </div>
-            <div class="hud-card" id="node-kk" style="--plt-color: var(--plt-kk);">
+
+            <div class="hud-card" id="node-kk" style="--plt-color: var(--plt-kk); --plt-rgb: 83, 252, 24;">
+
                 <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>
+
                 <span class="v-count" id="count-kk">0</span>
+
             </div>
+
         </div>
 
-        <!-- Zero-GPU Gamified Chat Container -->
+
+
+        <!-- Matrix Chat Canvas -->
+
         <div id="chat-widget"></div>
+
     </div>
 
+
+
     <script>
+
         const SVGS = {
+
             yt: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>`,
+
             tw: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>`,
+
             kk: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>`
+
         };
 
-        // ==========================================
-        // THE DBD GAMIFICATION ALGORITHM
-        // ==========================================
-        class DBDGamificationEngine {
-            constructor() {
-                this.users = {}; 
-                this.entityUser = null; 
-                
-                // Decay Bloodpoints every 10 seconds to force continuous chatting
-                setInterval(() => this.decayBloodpoints(), 10000);
+
+
+        class HolographicChatEngine {
+
+            constructor() { this.container = document.getElementById('chat-widget'); }
+
+
+
+            // MATRIX ENGINE: 5 Tiers x 5 Box Anims x 5 Text Anims = 125 Combinations
+
+            calculateMatrix() {
+
+                const roll = Math.random();
+
+                let tier = 'COMMON';
+
+                if (roll > 0.99) tier = 'GOD';         // 1%
+
+                else if (roll > 0.94) tier = 'MYTHIC'; // 5%
+
+                else if (roll > 0.79) tier = 'EPIC';   // 15%
+
+                else if (roll > 0.49) tier = 'RARE';   // 30%
+
+
+
+                const boxAnim = Math.floor(Math.random() * 5) + 1;
+
+                const textAnim = Math.floor(Math.random() * 5) + 1;
+
+
+
+                return { tier, boxAnim, textAnim };
+
             }
 
-            getRankData(bp) {
-                if (bp >= 30000) return { name: "Iridescent", color: "var(--rank-iri)", bg: "#1f0006" };
-                if (bp >= 15000) return { name: "Gold", color: "var(--rank-gold)", bg: "#1f1800" };
-                if (bp >= 7000)  return { name: "Silver", color: "var(--rank-silver)", bg: "#1c1c1c" };
-                if (bp >= 2000)  return { name: "Bronze", color: "var(--rank-bronze)", bg: "#1c1109" };
-                return { name: "Ash", color: "var(--rank-ash)", bg: "#141414" };
-            }
 
-            processChat(username) {
-                const now = Date.now();
-                
-                if (!this.users[username]) {
-                    this.users[username] = { bp: 0, lastActive: now };
-                }
-
-                const user = this.users[username];
-                
-                // Add base BP
-                let bpGain = 1200;
-                
-                // Combo Bonus: If they chat again within 15 seconds, multiply earnings
-                if (now - user.lastActive < 15000) {
-                    bpGain = 2000;
-                }
-                
-                user.bp += bpGain;
-                user.lastActive = now;
-
-                // Evaluate "The Entity" (Top Chatter)
-                let highestBP = 0;
-                let newEntity = null;
-                for (const [name, data] of Object.entries(this.users)) {
-                    if (data.bp > highestBP) {
-                        highestBP = data.bp;
-                        newEntity = name;
-                    }
-                }
-                
-                // Must have at least Silver Rank to become The Entity
-                if (highestBP >= 7000) {
-                    this.entityUser = newEntity;
-                } else {
-                    this.entityUser = null;
-                }
-
-                return {
-                    bp: user.bp,
-                    rank: this.getRankData(user.bp),
-                    isEntity: (username === this.entityUser)
-                };
-            }
-
-            decayBloodpoints() {
-                const now = Date.now();
-                for (const [username, user] of Object.entries(this.users)) {
-                    // Decay triggers if silent for 15 seconds
-                    if (now - user.lastActive > 15000) {
-                        user.bp = Math.floor(user.bp * 0.85); // Lose 15% to create urgency
-                        if (user.bp < 0) user.bp = 0;
-                    }
-                }
-            }
-        }
-
-        class ZeroGPUChatEngine {
-            constructor(gamification) { 
-                this.container = document.getElementById('chat-widget');
-                this.game = gamification;
-            }
 
             addMessage(username, message, avatarUrl, platform) {
+
                 const node = document.createElement('div');
+
+                node.className = 'msg-node msg-spawn';
+
                 
-                const stats = this.game.processChat(username);
+
+                const matrix = this.calculateMatrix();
+
                 const pltVar = `var(--plt-${platform})`;
-                let entityClass = stats.isEntity ? "is-entity" : "";
-                let rankLabel = stats.isEntity ? "THE ENTITY" : stats.rank.name;
 
-                node.className = `msg-node msg-spawn ${entityClass}`;
+                const rgbVar = platform === 'yt' ? '255, 0, 51' : platform === 'tw' ? '176, 92, 255' : '83, 252, 24';
+
+                
+
                 node.style.setProperty('--plt-color', pltVar);
-                node.style.setProperty('--rank-color', stats.rank.color);
-                node.style.setProperty('--bg-color', stats.rank.bg);
 
-                // Blood drop emoji ensures thematic feel without needing image assets
+                node.style.setProperty('--plt-rgb', rgbVar);
+
+
+
                 node.innerHTML = `
-                    <div class="content-block">
-                        <div class="avatar-box"><img src="${avatarUrl}" class="avatar-img" alt=""></div>
-                        <div class="text-col">
-                            <div class="meta-row">
-                                ${SVGS[platform]}
-                                <span class="username">${username}</span>
-                                <span class="rank-badge">${rankLabel}</span>
-                                <span class="bp-counter">🩸 ${stats.bp.toLocaleString()}</span>
-                            </div>
-                            <div class="chat-text">${message}</div>
+
+                    <div class="msg-inner tier-${matrix.tier} box-anim-${matrix.boxAnim} txt-anim-${matrix.textAnim}">
+
+                        <div class="hologram-avatar">
+
+                            <img src="${avatarUrl}" class="avatar-img" alt="">
+
                         </div>
+
+                        <div class="content-block">
+
+                            <div class="tier-badge">${matrix.tier}</div>
+
+                            <div class="user-row">${SVGS[platform]} <span class="username">${username}</span></div>
+
+                            <div class="chat-text">${message}</div>
+
+                        </div>
+
                     </div>
+
                 `;
 
+
+
                 this.container.appendChild(node);
-                
-                // Allow DOM to register spawn state, then transition to active
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        node.classList.remove('msg-spawn');
-                        node.classList.add('msg-active');
-                        this.enforceLimit();
-                    });
-                });
+
+                void node.offsetWidth; 
+
+                this.updateZDepth();
+
             }
 
-            enforceLimit() {
-                // STRICT 2 MESSAGE LIMIT for zero clutter
-                const messages = Array.from(this.container.children);
-                if (messages.length > 2) {
-                    const oldest = messages[0];
-                    oldest.style.opacity = '0';
-                    oldest.style.transform = 'translateY(-20px)';
-                    setTimeout(() => {
-                        if (oldest.parentNode) oldest.parentNode.removeChild(oldest);
-                    }, 300); // Matches CSS transition duration
-                }
+
+
+            updateZDepth() {
+
+                const messages = Array.from(this.container.children).reverse();
+
+                messages.forEach((msg, index) => {
+
+                    msg.classList.remove('msg-spawn', 'msg-pos-1', 'msg-pos-2', 'msg-pos-3', 'msg-pos-4');
+
+                    if (index === 0) msg.classList.add('msg-pos-1');
+
+                    else if (index === 1) msg.classList.add('msg-pos-2');
+
+                    else if (index === 2) msg.classList.add('msg-pos-3');
+
+                    else if (index === 3) msg.classList.add('msg-pos-4');
+
+                    else {
+
+                        msg.classList.add('msg-dead');
+
+                        setTimeout(() => { if(msg.parentNode) msg.parentNode.removeChild(msg); }, 800);
+
+                    }
+
+                });
+
             }
+
         }
+
+
 
         class ViewerEngine {
+
             constructor() { this.state = { yt: 0, tw: 0, kk: 0 }; }
+
             format(num) { return (num || 0).toLocaleString('en-US'); }
 
-            triggerFlash(nodeId) {
+
+
+            triggerDopamine(nodeId) {
+
                 const node = document.getElementById(nodeId);
-                node.classList.remove('data-flash');
+
+                node.classList.remove('dopamine-hit');
+
                 void node.offsetWidth; 
-                node.classList.add('data-flash');
-                setTimeout(() => node.classList.remove('data-flash'), 150); // Fast, sharp pop
+
+                node.classList.add('dopamine-hit');
+
             }
+
+
 
             update(platform, count) {
+
                 const node = document.getElementById(`node-${platform}`);
+
                 if (node.style.display !== 'flex') node.style.display = 'flex';
+
                 if (count !== this.state[platform]) {
-                    if (count > this.state[platform]) this.triggerFlash(`node-${platform}`);
+
+                    if (count > this.state[platform]) this.triggerDopamine(`node-${platform}`);
+
                     this.state[platform] = count;
+
                     document.getElementById(`count-${platform}`).innerText = this.format(count);
+
                 }
+
             }
+
+
 
             async pollExternal(twitchUser, kickConfig) {
+
                 if (twitchUser) {
+
                     try {
+
                         const res = await fetch(`https://decapi.me/twitch/viewercount/${twitchUser}`);
+
                         const count = parseInt(await res.text()) || 0;
+
                         this.update('tw', count);
+
                     } catch(e) {}
+
                 }
+
+
 
                 let kickUserSlug = kickConfig ? (kickConfig.includes("|||") ? kickConfig.split("|||")[0] : isNaN(kickConfig) ? kickConfig : "") : "";
+
                 if (kickUserSlug) {
+
                     try {
+
                         const res = await fetch(`/api/kick_viewers/${kickUserSlug}?t=${new Date().getTime()}`);
+
                         const data = await res.json();
+
                         if (data && data.viewers !== undefined) this.update('kk', data.viewers);
+
                     } catch(e) {}
+
                 }
+
             }
+
         }
 
+
+
         class MasterUnifiedEngine {
+
             constructor(chatEngine, viewerEngine, handle) {
+
                 this.chatEngine = chatEngine; this.viewerEngine = viewerEngine;
+
                 this.handle = handle; this.masterQueue = [];
+
                 this.ytNextPageToken = ""; this.ytPolling = false;
+
                 this.config = { tw: "", kk: "" };
 
+
+
                 if (!this.handle) this.runDemoMode();
+
                 else this.fetchConfigAndStart();
 
-                setInterval(() => this.processQueue(), 1500); // Fast pacing to support 2-message limit
+
+
+                setInterval(() => this.processQueue(), 2500); 
+
                 setInterval(() => this.viewerEngine.pollExternal(this.config.tw, this.config.kk), 10000);
+
             }
+
+
 
             async fetchConfigAndStart() {
+
                 try {
+
                     const res = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
+
                     const data = await res.json();
+
                     
+
                     if (data.authenticated) {
+
                         this.config.tw = data.twitch_user; this.config.kk = data.kick_user;
+
                         this.pollYouTube();
+
                         this.viewerEngine.pollExternal(this.config.tw, this.config.kk);
 
+
+
                         if (this.config.tw) this.connectTwitch(this.config.tw);
+
                         if (this.config.kk) {
+
                             let kId = this.config.kk;
+
                             if (kId.includes("|||")) kId = kId.split("|||")[1];
+
                             if (kId) this.connectKick(kId); 
+
                         }
+
                     }
+
                 } catch(e) {}
+
             }
+
+
 
             async pollYouTube() {
+
                 if(this.ytPolling) return;
+
                 this.ytPolling = true; let delay = 5000; 
+
                 try {
+
                     const statRes = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
+
                     const statData = await statRes.json();
+
                     if(statData.yt_viewers !== undefined) this.viewerEngine.update('yt', statData.yt_viewers);
 
+
+
                     const res = await fetch(`/api/streamer/${this.handle}/chat?pageToken=${this.ytNextPageToken}`);
+
                     const data = await res.json();
+
                     
+
                     if (res.ok && !data.error) {
+
                         if (data.pollingIntervalMillis) delay = data.pollingIntervalMillis;
+
                         if (data.nextPageToken) this.ytNextPageToken = data.nextPageToken;
 
+
+
                         if (data.items && data.items.length > 0) {
+
                             data.items.forEach(item => {
+
                                 this.masterQueue.push({
+
                                     username: item.authorDetails.displayName,
+
                                     message: item.snippet.displayMessage,
+
                                     avatar: item.authorDetails.profileImageUrl,
+
                                     platform: 'yt'
+
                                 });
+
                             });
+
                         }
+
                     } else { delay = 10000; }
+
                 } catch (e) { delay = 10000; }
+
                 setTimeout(() => { this.ytPolling = false; this.pollYouTube(); }, delay);
+
             }
+
+
 
             connectTwitch(channel) {
+
                 const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
                 ws.onopen = () => {
+
                     ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+
                     ws.send(`NICK justinfan${Math.floor(Math.random() * 100000)}`);
+
                     ws.send(`JOIN #${channel.toLowerCase()}`);
+
                 };
+
                 ws.onmessage = (event) => {
+
                     const lines = event.data.split('\r\n');
+
                     for (let line of lines) {
+
                         if (line === 'PING :tmi.twitch.tv') ws.send('PONG :tmi.twitch.tv');
+
                         else if (line.includes('PRIVMSG')) {
+
                             const nameMatch = line.match(/display-name=([^;]+)/);
+
                             const msgMatch = line.match(/PRIVMSG #[^:]+:(.+)/);
+
                             if (nameMatch && msgMatch) {
+
                                 const username = nameMatch[1];
+
                                 const avatar = `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
+
                                 this.masterQueue.push({ username, message: msgMatch[1], avatar, platform: 'tw' });
+
                             }
+
                         }
+
                     }
+
                 };
+
             }
 
+
+
             connectKick(chatroomId) {
+
                 if (!/^\d+$/.test(chatroomId)) return;
+
                 const pusherKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
+
                 let keyIndex = 0;
 
+
+
                 const tryConnect = () => {
+
                     if (keyIndex >= pusherKeys.length) return;
+
                     const pusher = new Pusher(pusherKeys[keyIndex], { cluster: 'us2', forceTLS: true });
+
+
 
                     pusher.connection.bind('error', () => { pusher.disconnect(); keyIndex++; setTimeout(tryConnect, 1000); });
 
+
+
                     const channel = pusher.subscribe(`chatrooms.${chatroomId}.v2`);
+
                     channel.bind('App\\Events\\ChatMessageEvent', (data) => {
+
                         const username = data.sender.username;
+
                         const avatar = data.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
+
                         this.masterQueue.push({ username, message: data.content, avatar, platform: 'kk' });
+
                     });
+
                 };
+
                 tryConnect();
+
             }
+
+
 
             processQueue() {
+
                 if (this.masterQueue.length > 0) {
+
                     const msg = this.masterQueue.shift();
+
                     this.chatEngine.addMessage(msg.username, msg.message, msg.avatar, msg.platform);
+
                 }
+
             }
+
+
 
             runDemoMode() {
+
                 document.getElementById('node-yt').style.display = 'flex';
+
                 document.getElementById('node-tw').style.display = 'flex';
+
                 document.getElementById('node-kk').style.display = 'flex';
+
                 
+
                 setInterval(() => this.viewerEngine.update('yt', Math.floor(Math.random() * 50) + 1200), 5000);
+
                 setInterval(() => {
+
                     this.viewerEngine.update('tw', Math.floor(Math.random() * 20) + 800);
+
                     this.viewerEngine.update('kk', Math.floor(Math.random() * 100) + 2100);
+
                 }, 8000);
 
-                const users = ["DwightMain", "TrapperBoi", "Nea_Toxicity", "HexRuin", "EntityEnjoyer"];
-                
+
+
                 const triggerRandomChat = () => {
+
                     const platforms = ['yt', 'tw', 'kk'];
+
                     const plt = platforms[Math.floor(Math.random() * platforms.length)];
-                    const user = users[Math.floor(Math.random() * users.length)];
+
+                    const user = "Matrix_User";
+
                     const avatar = `https://ui-avatars.com/api/?name=${user}&background=random&color=fff&bold=true`;
+
                     
-                    this.masterQueue.push({ 
-                        username: user, 
-                        message: "Farming Bloodpoints! The decay makes me want to spam chat so I don't lose Iridescent Rank!", 
-                        avatar: avatar, platform: plt 
-                    });
-                    
-                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 1000) + 800);
+
+                    this.masterQueue.push({ username: user, message: "125 unique animation combinations. Testing the massive stable HUD and Matrix Rarity engine! \ud83d\udd25", avatar: avatar, platform: plt });
+
+                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 1500) + 1200);
+
                 }
+
                 setTimeout(triggerRandomChat, 1000);
+
             }
+
         }
 
+
+
         document.addEventListener('DOMContentLoaded', () => {
-            const gameEngine = new DBDGamificationEngine();
-            const chatEngine = new ZeroGPUChatEngine(gameEngine);
+
+            const chatEngine = new HolographicChatEngine();
+
             const viewerEngine = new ViewerEngine();
+
             const urlParams = new URLSearchParams(window.location.search);
+
             const username = urlParams.get('user') || '';
+
             
+
             new MasterUnifiedEngine(chatEngine, viewerEngine, username);
+
         });
+
     </script>
+
 </body>
+
 </html>
