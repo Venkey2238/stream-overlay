@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -128,8 +129,8 @@ async def login(request: Request):
 async def auth_callback(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
-    except Exception:
-        return RedirectResponse(url="/dashboard?error=auth_denied")
+    except Exception as e:
+        return {"error": "Google Auth Denied", "details": str(e)}
 
     access_token = token.get('access_token')
     refresh_token = token.get('refresh_token')
@@ -146,26 +147,43 @@ async def auth_callback(request: Request):
         return RedirectResponse(url="/dashboard?error=no_channel")
 
     channel = data["items"][0]
+    
+    # Safely extract handle and avatar
     handle = channel["snippet"].get("customUrl", channel["snippet"]["title"]).replace("@", "").lower()
+    
+    # Safely get thumbnail, falling back to default if medium doesn't exist
+    thumbnails = channel["snippet"].get("thumbnails", {})
+    avatar_url = thumbnails.get("medium", thumbnails.get("default", {})).get("url", "")
 
+    # Prepare database record
     record = {
         "handle": handle,
         "channel_id": channel["id"],
         "title": channel["snippet"]["title"],
-        "avatar": channel["snippet"]["thumbnails"]["medium"]["url"],
+        "avatar": avatar_url,
         "access_token": access_token,
         "token_expires_at": expires_at,
         "current_subs": int(channel["statistics"].get("subscriberCount", 0)),
-        "updated_at": "now()"
+        "updated_at": datetime.utcnow().isoformat() # Fixed: Real Python timestamp instead of "now()" string
     }
     if refresh_token:
         record["refresh_token"] = refresh_token
 
-    supabase.table("streamers").upsert(record, on_conflict="handle").execute()
-    if handle in CACHE:
-        del CACHE[handle]
+    try:
+        # ATTEMPT TO SAVE TO SUPABASE
+        supabase.table("streamers").upsert(record, on_conflict="handle").execute()
+        
+        if handle in CACHE:
+            del CACHE[handle]
 
-    return RedirectResponse(url=f"/dashboard?user={handle}")
+        return RedirectResponse(url=f"/dashboard?user={handle}")
+    
+    except Exception as db_error:
+        # IF IT CRASHES, SHOW THE EXACT DATABASE ERROR ON SCREEN
+        return {
+            "CRITICAL_DATABASE_ERROR": str(db_error),
+            "Hint": "Check your Supabase table columns and ensure 'handle' is set as Unique/Primary Key."
+        }
 
 # ==========================================
 # 5. LIVE DATA & OVERLAY ROUTES
