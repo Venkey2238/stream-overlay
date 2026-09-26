@@ -1,1037 +1,597 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>AR Broadcast Chat: The Matrix Engine</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
-
-    <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
-
+    <title>Fast Sync Stream Overlay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Syncopate:wght@700;900&display=swap" rel="stylesheet">
     <style>
-
         :root {
+            --void-obsidian: #030008;
+            --void-deep: #0a011a;
+            --purple-core: #2b00ff;
+            --purple-rich: #4d0099;
+            --purple-neon: #a200ff;
+            --purple-glare: rgba(162, 0, 255, 0.8);
+            --gold-dark: #b38600;
+            --gold-pure: #ffd700;
+            --gold-bright: #ffea75;
+            --neon-white: #ffffff;
+            --glass-sheen: rgba(255, 255, 255, 0.15);
 
-            /* Ultra-Premium Physics */
-
-            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-            --ease-whip: cubic-bezier(0.86, 0, 0.07, 1);
-
-            --ease-cinematic: cubic-bezier(0.25, 1, 0.5, 1);
-
-            --ease-glitch: cubic-bezier(0.77, 0, 0.175, 1);
-
+            --overlay-width: 860px; 
+            --overlay-height: 76px;  
+            --logo-size: 104px;        
             
-
-            /* High-End Platform Neons */
-
-            --plt-yt: #ff0033;
-
-            --plt-tw: #b05cff;
-
-            --plt-kk: #53fc18;
-
-            
-
-            /* Rarity Glows */
-
-            --tier-rare: #00d0ff;
-
-            --tier-epic: #ff00ea;
-
-            --tier-mythic: #ffc400;
-
-            --tier-god: #ffffff; /* Secret 1% Tier */
-
+            --sweep-progress: 0%; 
+            --logo-rot: 0deg; 
+            --ease-dopamine: cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            --ease-slot: cubic-bezier(0.2, 0.9, 0.1, 1);
         }
 
-
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-
-            margin: 0; padding: 0; width: 100vw; height: 100vh;
-
-            background-color: transparent; overflow: hidden;
-
-            font-family: 'Rajdhani', sans-serif; -webkit-font-smoothing: antialiased;
-
+            width: 100vw; height: 100vh;
+            background-color: transparent; 
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden; color: white;
+            display: flex; align-items: center; justify-content: center;
         }
 
-
-
-        #master-container {
-
-            position: absolute; bottom: 40px; left: 40px;
-
-            width: 600px; display: flex; flex-direction: column; gap: 35px;
-
+        .obs-safe-zone {
+            width: 1000px; height: 250px;
+            display: flex; align-items: center; justify-content: center; position: relative;
         }
 
-
-
-        /* ==========================================================================
-
-           MASSIVE STABLE VIEWER HUD
-
-           ========================================================================== */
-
-        #viewer-hud {
-
-            display: flex; gap: 20px; z-index: 20;
-
+        .scene-container {
+            position: relative; width: var(--overlay-width); height: var(--overlay-height);
+            display: flex; align-items: center; z-index: 10;
         }
 
-
-
-        .hud-card {
-
-            display: none; align-items: center; justify-content: center; gap: 15px;
-
-            padding: 12px 28px 12px 20px; border-radius: 16px;
-
-            background: linear-gradient(180deg, rgba(15, 15, 25, 0.6), rgba(5, 5, 10, 0.9));
-
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-
-            border: 1px solid rgba(255, 255, 255, 0.08);
-
-            border-bottom: 4px solid var(--plt-color);
-
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 2px 20px rgba(255,255,255,0.05);
-
-            transform-origin: bottom center;
-
-            animation: cardSpawn 1s var(--ease-spring) forwards;
-
-            will-change: transform, filter;
-
+        .master-overlay-wrapper {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            padding: 3px; border-radius: 40px;
+            background: linear-gradient(90deg, var(--void-obsidian), var(--purple-rich), var(--purple-neon), var(--purple-rich), var(--void-obsidian));
+            background-size: 300% 100%; animation: borderFlow 8s linear infinite;
+            clip-path: inset(0 calc(100% - var(--sweep-progress)) 0 0);
+            z-index: 1; will-change: clip-path; box-shadow: inset 0 0 10px rgba(0,0,0,1);
         }
 
-
-
-        /* Ambient floating to keep it alive without tilting */
-
-        .hud-card { animation: cardSpawn 1s var(--ease-spring) forwards, floatIdle 6s ease-in-out infinite alternate; }
-
-
-
-        .plt-icon {
-
-            width: 48px; height: 48px; color: var(--plt-color);
-
-            filter: drop-shadow(0 0 15px rgba(var(--plt-rgb), 0.8));
-
-            will-change: transform, filter;
-
+        .overlay-core {
+            position: relative; width: 100%; height: 100%;
+            background-color: var(--void-obsidian); border-radius: 37px; overflow: hidden; 
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 25px 0 75px; gap: 25px; z-index: 2;
+            box-shadow: inset 0 0 50px rgba(0,0,0,1), inset 0 0 15px rgba(162, 0, 255, 0.2);
         }
 
-
-
-        .v-count {
-
-            font-family: 'Montserrat', sans-serif; font-size: 2.2rem; font-weight: 900;
-
-            color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,1);
-
-            font-variant-numeric: tabular-nums;
-
-            will-change: transform, color, text-shadow;
-
+        .holo-grid {
+            position: absolute; inset: 0; z-index: 1; opacity: 0.35;
+            background-image: linear-gradient(var(--purple-glare) 1px, transparent 1px), linear-gradient(90deg, var(--purple-glare) 1px, transparent 1px);
+            background-size: 20px 20px; animation: panGrid 15s linear infinite;
+            mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
+            -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
         }
 
+        .scanlines {
+            position: absolute; inset: 0; z-index: 2; opacity: 0.15;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.5));
+            background-size: 100% 4px; pointer-events: none;
+        }
 
+        .glass-reflection {
+            position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(180deg, var(--glass-sheen) 0%, transparent 100%);
+            border-radius: 37px 37px 0 0; z-index: 99; pointer-events: none;
+        }
 
-        /* The High-End Dopamine Flare (No Tilting) */
+        #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; mix-blend-mode: screen; }
 
-        .hud-card.dopamine-hit .plt-icon { animation: iconFlare 0.8s var(--ease-spring); }
+        .logo-sweeper {
+            position: absolute; top: 50%; left: var(--sweep-progress);
+            transform: translate(-50%, -50%); width: var(--logo-size); height: var(--logo-size); z-index: 100;
+            background-color: var(--void-deep); border-radius: 50%; padding: 5px;
+            filter: drop-shadow(0 0 10px rgba(162, 0, 255, 0.8));
+            display: flex; justify-content: center; align-items: center; will-change: left;
+        }
 
-        .hud-card.dopamine-hit .v-count { animation: numberFlare 0.8s var(--ease-spring); }
+        .logo-sweeper::before, .logo-sweeper::after {
+            content: ''; position: absolute; inset: -6px; border-radius: 50%;
+            border: 2px dashed rgba(162, 0, 255, 0.8); pointer-events: none; z-index: -1;
+        }
+        .logo-sweeper::before { animation: spinCW 8s linear infinite; }
+        .logo-sweeper::after { inset: -12px; border: 1px dotted rgba(255, 215, 0, 0.6); animation: spinCCW 12s linear infinite; }
 
-        .hud-card.dopamine-hit { animation: borderGlow 0.8s var(--ease-cinematic); }
-
-
-
-        @keyframes cardSpawn { 0% { opacity: 0; transform: translateY(40px) scale(0.9); filter: blur(10px); } 100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
-
-        @keyframes floatIdle { 0% { transform: translateY(0); } 100% { transform: translateY(-8px); } }
-
+        .logo-inner-ring {
+            width: 100%; height: 100%; border-radius: 50%; padding: 3px;
+            background: linear-gradient(135deg, var(--gold-pure), var(--gold-dark), var(--gold-pure), var(--gold-bright));
+            background-size: 200% 200%; animation: borderFlow 4s ease infinite;
+            display: flex; justify-content: center; align-items: center;
+            transform: rotate(var(--logo-rot)); will-change: transform; transition: filter 0.3s ease;
+        }
+        .logo-inner-ring.overdrive { filter: brightness(1.5) drop-shadow(0 0 10px var(--gold-pure)); }
         
-
-        @keyframes iconFlare { 30% { transform: scale(1.3); filter: drop-shadow(0 0 35px var(--plt-color)) drop-shadow(0 0 15px #fff) brightness(200%); } }
-
-        @keyframes numberFlare { 30% { transform: scale(1.2); color: var(--plt-color); text-shadow: 0 0 30px var(--plt-color), 0 0 50px #fff; } }
-
-        @keyframes borderGlow { 30% { box-shadow: 0 15px 40px rgba(0,0,0,0.9), 0 0 50px rgba(var(--plt-rgb), 0.6); border-bottom-width: 8px; } }
-
-
-
-        /* ==========================================================================
-
-           125-COMBINATION MATRIX CHAT ENGINE
-
-           ========================================================================== */
-
-        #chat-widget {
-
-            position: relative; height: 420px; width: 100%;
-
-            perspective: 1200px; transform-style: preserve-3d; z-index: 10;
-
+        .brand-logo {
+            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+            background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
         }
 
-
-
-        .msg-node {
-
-            position: absolute; bottom: 0; left: 0; width: 100%;
-
-            transition: all 0.8s var(--ease-spring);
-
-            transform-origin: left bottom;
-
-            will-change: transform, opacity, filter;
-
-            pointer-events: none;
-
+        .data-module {
+            position: relative; z-index: 10;
+            display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+            height: 100%; min-width: 85px; 
         }
 
-
-
-        /* 3D Depth Positioning */
-
-        .msg-spawn { transform: translateZ(400px) translateY(100px); opacity: 0; filter: blur(20px); }
-
-        .msg-pos-1 { transform: translateZ(0) translateY(0) scale(1); opacity: 1; filter: blur(0); }
-
-        .msg-pos-2 { transform: translateZ(-100px) translateY(-110px) scale(0.95); opacity: 0.85; filter: blur(0px); }
-
-        .msg-pos-3 { transform: translateZ(-250px) translateY(-210px) scale(0.85); opacity: 0.5; filter: blur(2px); }
-
-        .msg-pos-4 { transform: translateZ(-400px) translateY(-300px) scale(0.7); opacity: 0.2; filter: blur(5px); }
-
-        .msg-dead  { transform: translateZ(-600px) translateY(-400px) scale(0.5); opacity: 0; filter: blur(10px); }
-
-
-
-        /* The Inner Wrapper handling the Box Animations */
-
-        .msg-inner {
-
-            display: flex; align-items: stretch; gap: 15px; position: relative;
-
+        .data-label {
+            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.3em; color: var(--void-obsidian); 
+            background: var(--neon-white); padding: 3px 6px; border-radius: 2px; margin-bottom: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.8); position: relative; overflow: hidden;
         }
 
-
-
-        /* Glass Content Block */
-
-        .content-block { 
-
-            position: relative; display: flex; flex-direction: column; justify-content: center;
-
-            padding: 12px 24px; min-height: 60px; flex-grow: 1;
-
-            background: linear-gradient(90deg, rgba(10,10,15,0.7), rgba(0,0,0,0.2));
-
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-
-            border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
-
-            border-left: 4px solid var(--plt-color);
-
-            box-shadow: -10px 10px 30px rgba(0,0,0,0.6);
-
-            overflow: hidden;
-
+        .data-label::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            animation: glassShine 4s linear infinite;
         }
 
+        .slot-machine-container {
+            display: flex; font-family: 'Montserrat', sans-serif; font-size: 1.7rem; font-weight: 900;
+            line-height: 1; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; 
+            color: var(--neon-white); text-shadow: 0 3px 5px rgba(0, 0, 0, 1), 0 0 15px rgba(255, 255, 255, 0.5);
+            height: 1.7rem; overflow: hidden; position: relative;
+        }
 
+        .slot-digit-window { position: relative; width: 1.1rem; height: 100%; text-align: center; }
+        .slot-digit-window.comma { width: 0.5rem; text-align: left; }
 
-        /* Hologram Avatar */
+        .slot-strip {
+            position: absolute; top: 0; left: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center; will-change: transform, filter;
+        }
+        .slot-strip.rolling { transition: transform 1.5s var(--ease-slot), filter 1.5s var(--ease-slot); }
+        .slot-strip > span { height: 1.7rem; display: flex; justify-content: center; align-items: center; }
 
-        .hologram-avatar { position: relative; width: 64px; height: 64px; flex-shrink: 0; z-index: 5; }
+        .flare-layer {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%);
+            opacity: 0; z-index: 99; pointer-events: none; mix-blend-mode: screen;
+        }
+        .data-module.flare-active .flare-layer { animation: quickFlare 0.5s ease-out; }
 
-        .hologram-avatar::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px dashed var(--plt-color); animation: spinRing 12s linear infinite; opacity: 0.6; }
+        .separator {
+            position: relative; z-index: 10; width: 3px; height: 35px;
+            background: rgba(255, 255, 255, 0.1); border-radius: 2px;
+            box-shadow: inset 0 0 5px rgba(255,255,255,0.5), 0 0 10px rgba(162, 0, 255, 0.6);
+        }
 
-        .hologram-avatar::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+        .goal-module {
+            display: flex; flex-direction: column; justify-content: center;
+            flex-grow: 1; min-width: 220px; z-index: 10; position: relative;
+        }
 
-        .avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; filter: grayscale(10%) contrast(120%); }
+        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
 
+        .goal-title {
+            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
+            color: var(--void-obsidian); background: var(--gold-pure);
+            padding: 3px 6px; border-radius: 2px; letter-spacing: 0.25em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 15px rgba(255,215,0,0.5);
+            animation: pulseGold 2s infinite alternate;
+        }
 
+        .goal-numbers {
+            font-size: 0.9rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1px;
+            font-variant-numeric: tabular-nums; text-shadow: 0 2px 4px rgba(0,0,0,1);
+            transition: transform 0.3s var(--ease-dopamine);
+        }
 
-        .user-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; z-index: 2; }
+        .progress-track {
+            position: relative; width: 100%; height: 16px;
+            background: rgba(0,0,0,0.9); overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2); transform: skewX(-25deg); box-shadow: inset 0 3px 8px rgba(0,0,0,1);
+        }
 
-        .chat-plt-icon { width: 18px; height: 18px; color: var(--plt-color); filter: drop-shadow(0 0 8px var(--plt-color)); }
+        .progress-fill {
+            position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
+            background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), var(--gold-dark));
+            background-size: 200% 100%; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 0 20px rgba(162, 0, 255, 0.9);
+            transition: width 1.5s var(--ease-dopamine); overflow: hidden; animation: borderFlow 3s linear infinite;
+        }
 
+        .progress-fill::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 300%; height: 100%;
+            background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.4) 8px, rgba(255,255,255,0.4) 16px);
+            animation: kineticFlow 1s linear infinite;
+        }
+
+        .progress-fill::after {
+            content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 5px;
+            background: var(--neon-white); box-shadow: -3px 0 12px var(--neon-white), 0 0 25px var(--gold-pure);
+        }
+
+        .goal-flash .progress-fill { filter: brightness(1.8); box-shadow: 0 0 40px var(--gold-pure); }
+        .goal-flash .goal-numbers { transform: scale(1.2); color: var(--gold-pure); text-shadow: 0 0 20px var(--gold-pure); }
+
+        .ticker-module {
+            display: flex; align-items: center; background: rgba(0, 0, 0, 0.75); border-left: 3px solid var(--purple-neon);
+            padding: 0 15px; height: 100%; width: 250px; overflow: hidden; position: relative; z-index: 10;
+            box-shadow: inset 5px 0 15px rgba(0,0,0,0.8);
+        }
+
+        .live-eq-container { display: flex; align-items: flex-end; gap: 3px; height: 16px; margin-right: 15px; flex-shrink: 0; }
+        .eq-bar { width: 4px; background: #00ffcc; border-radius: 1px 1px 0 0; box-shadow: 0 0 10px #00ffcc; transition: height 0.08s ease; }
+        .ticker-wrapper { overflow: hidden; width: 100%; position: relative; }
         
-
-        .username {
-
-            font-family: 'Syncopate', sans-serif; font-size: 0.75rem; font-weight: 900;
-
-            letter-spacing: 0.25em; color: var(--plt-color); text-transform: uppercase;
-
-            text-shadow: 0 0 15px var(--plt-color); z-index: 2;
-
+        .ticker-content {
+            font-size: 0.8rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1.5px; white-space: nowrap; 
+            transform: translateX(100%); will-change: transform;
+            text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 12px var(--purple-neon), 0 0 24px var(--purple-neon);
         }
 
-
-
-        .chat-text {
-
-            font-family: 'Montserrat', sans-serif; font-size: 1.5rem; font-weight: 900;
-
-            line-height: 1.3; letter-spacing: -0.01em; color: #ffffff;
-
-            text-shadow: 0 4px 8px rgba(0,0,0,0.8); z-index: 2;
-
+        @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        @keyframes panGrid { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
+        @keyframes spinCW { 100% { transform: rotate(360deg); } }
+        @keyframes spinCCW { 100% { transform: rotate(-360deg); } }
+        @keyframes kineticFlow { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
+        @keyframes glassShine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+        @keyframes quickFlare { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+        @keyframes pulseGold { 0% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 5px rgba(255,215,0,0.2); } 100% { box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 20px rgba(255,215,0,0.8); } }
+        @keyframes pureFlash {
+            0% { color: #fff; text-shadow: 0 0 20px #fff, 0 0 40px #fff; transform: scale(1.05); }
+            100% { color: #fff; text-shadow: 0 3px 5px rgba(0,0,0,1), 0 0 15px rgba(255, 255, 255, 0.5); transform: scale(1); }
         }
-
-
-
-        /* ==========================================================================
-
-           1. THE 5 TIER RARITY SYSTEM
-
-           ========================================================================== */
-
-        .tier-badge {
-
-            position: absolute; right: 12px; top: 12px;
-
-            font-family: 'Syncopate', sans-serif; font-size: 0.5rem; font-weight: 900; letter-spacing: 0.4em;
-
-            padding: 4px 10px; border-radius: 6px; color: #fff; z-index: 20; display: none;
-
-        }
-
-
-
-        /* COMMON (Clean Glass) */
-
-        .tier-COMMON .content-block { border-left-color: var(--plt-color); }
-
-        
-
-        /* RARE (Neon Edge) */
-
-        .tier-RARE .content-block { border-left-color: var(--tier-rare); box-shadow: -10px 0 30px rgba(0, 208, 255, 0.2); }
-
-        .tier-RARE .username { color: var(--tier-rare); text-shadow: 0 0 15px var(--tier-rare); }
-
-        .tier-RARE .tier-badge { display: block; background: var(--tier-rare); color: #000; box-shadow: 0 0 15px var(--tier-rare); }
-
-
-
-        /* EPIC (Cyberpunk Core) */
-
-        .tier-EPIC .content-block { border: 2px solid var(--tier-epic); background: linear-gradient(90deg, rgba(255, 0, 234, 0.15), rgba(0,0,0,0.6)); box-shadow: 0 0 40px rgba(255, 0, 234, 0.3); }
-
-        .tier-EPIC .username { color: var(--tier-epic); text-shadow: 0 0 20px var(--tier-epic); }
-
-        .tier-EPIC .hologram-avatar::before { border-color: var(--tier-epic); box-shadow: 0 0 20px var(--tier-epic); }
-
-        .tier-EPIC .tier-badge { display: block; background: var(--tier-epic); box-shadow: 0 0 20px var(--tier-epic); }
-
-
-
-        /* MYTHIC (Golden Radiance) */
-
-        .tier-MYTHIC .content-block { 
-
-            border: 3px solid var(--tier-mythic); border-radius: 16px;
-
-            background: linear-gradient(135deg, rgba(255, 196, 0, 0.25), rgba(0,0,0,0.8));
-
-            box-shadow: 0 0 60px rgba(255, 196, 0, 0.4), inset 0 0 30px rgba(255, 196, 0, 0.2);
-
-        }
-
-        .tier-MYTHIC .username { color: var(--tier-mythic); font-size: 0.85rem; text-shadow: 0 0 25px var(--tier-mythic); }
-
-        .tier-MYTHIC .chat-text { background: linear-gradient(90deg, #fff, var(--tier-mythic), #fff); background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 2s linear infinite; }
-
-        .tier-MYTHIC .hologram-avatar::before { border-color: var(--tier-mythic); border-width: 3px; box-shadow: 0 0 30px var(--tier-mythic); }
-
-        .tier-MYTHIC .tier-badge { display: block; background: #fff; color: #000; border: 2px solid var(--tier-mythic); box-shadow: 0 0 30px var(--tier-mythic); }
-
-
-
-        /* GOD TIER (1% Drop - Diamond Core) */
-
-        .tier-GOD .content-block { 
-
-            border: 4px solid var(--tier-god); border-radius: 20px;
-
-            background: rgba(255,255,255,0.9);
-
-            box-shadow: 0 0 80px rgba(255,255,255,1), inset 0 0 50px rgba(255,255,255,0.8);
-
-            animation: godShake 0.5s var(--ease-whip);
-
-        }
-
-        .tier-GOD .username { color: #000; text-shadow: none; font-weight: 900; }
-
-        .tier-GOD .chat-text { color: #000; text-shadow: none; font-weight: 900; letter-spacing: 0; }
-
-        .tier-GOD .hologram-avatar { transform: scale(1.3); }
-
-        .tier-GOD .hologram-avatar::before { border-color: #fff; border-width: 4px; box-shadow: 0 0 50px #fff; }
-
-        .tier-GOD .tier-badge { display: block; background: #000; color: #fff; border: 2px solid #fff; box-shadow: 0 0 40px #fff; font-size: 0.7rem; }
-
-
-
-        /* ==========================================================================
-
-           2. THE 5 BOX ANIMATIONS (Structure Reveal)
-
-           ========================================================================== */
-
-        .box-anim-1 { animation: bA1 0.8s var(--ease-spring) both; } /* Cinema Slide */
-
-        .box-anim-2 { animation: bA2 0.8s var(--ease-spring) both; } /* 3D Flip Up */
-
-        .box-anim-3 { animation: bA3 0.7s var(--ease-whip) both; }   /* Hyper Warp */
-
-        .box-anim-4 { animation: bA4 0.9s var(--ease-spring) both; } /* Hologram Drop */
-
-        .box-anim-5 { animation: bA5 0.7s var(--ease-glitch) both; } /* Glitch Tear */
-
-
-
-        @keyframes bA1 { 0% { transform: translateX(-150px); opacity: 0; filter: blur(20px); } 100% { transform: translateX(0); opacity: 1; filter: blur(0); } }
-
-        @keyframes bA2 { 0% { transform: rotateX(-90deg) scale(0.8); opacity: 0; } 100% { transform: rotateX(0) scale(1); opacity: 1; } }
-
-        @keyframes bA3 { 0% { transform: translateZ(600px); opacity: 0; filter: brightness(300%) blur(10px); } 100% { transform: translateZ(0); opacity: 1; filter: brightness(100%) blur(0); } }
-
-        @keyframes bA4 { 0% { transform: translateY(-100px); clip-path: inset(100% 0 0 0); opacity: 0; } 100% { transform: translateY(0); clip-path: inset(0 0 0 0); opacity: 1; } }
-
-        @keyframes bA5 { 0% { transform: skewX(-30deg) scaleY(0.1); filter: hue-rotate(90deg); opacity: 0; } 100% { transform: skewX(0) scaleY(1); filter: hue-rotate(0); opacity: 1; } }
-
-
-
-        /* ==========================================================================
-
-           3. THE 5 TEXT ANIMATIONS (Typography Reveal)
-
-           ========================================================================== */
-
-        .txt-anim-1 .chat-text { animation: tA1 0.9s var(--ease-spring) both; } /* Cinematic Focus */
-
-        .txt-anim-2 .chat-text { animation: tA2 0.8s var(--ease-cinematic) both; } /* Matrix Decode / Mask */
-
-        .txt-anim-3 .chat-text { animation: tA3 0.7s var(--ease-glitch) both; } /* Cyber Glitch */
-
-        .txt-anim-4 .chat-text { animation: tA4 0.9s var(--ease-spring) both; } /* Bounce Drop */
-
-        .txt-anim-5 .chat-text { position: relative; } /* Light Sweep */
-
-        .txt-anim-5 .chat-text::after { content: ''; position: absolute; inset: 0; background: #fff; animation: tA5 0.8s var(--ease-cinematic) forwards; z-index: 10; }
-
-
-
-        @keyframes tA1 { 0% { letter-spacing: 0.5em; filter: blur(15px); opacity: 0; transform: scale(1.1); } 100% { letter-spacing: -0.01em; filter: blur(0); opacity: 1; transform: scale(1); } }
-
-        @keyframes tA2 { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); transform: translateX(-20px); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translateX(0); } }
-
-        @keyframes tA3 { 0% { opacity: 0; transform: skewX(20deg); text-shadow: -10px 0 red, 10px 0 cyan; } 100% { opacity: 1; transform: skewX(0); text-shadow: 0 4px 8px rgba(0,0,0,0.8); } }
-
-        @keyframes tA4 { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-
-        @keyframes tA5 { 0% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 100%); } }
-
-
-
-        /* Utilities */
-
-        @keyframes spinRing { 100% { transform: rotate(360deg); } }
-
-        @keyframes textShine { 0% { background-position: -100% center; } 100% { background-position: 200% center; } }
-
-        @keyframes godShake { 0%, 100% { transform: translateX(0) scale(1); } 25% { transform: translateX(-15px) scale(1.05); } 75% { transform: translateX(15px) scale(1.05); } }
-
-
-
     </style>
-
 </head>
-
 <body>
 
-
-
-    <div id="master-container">
-
-        <!-- Massive Stable Viewer HUD -->
-
-        <div id="viewer-hud">
-
-            <div class="hud-card" id="node-yt" style="--plt-color: var(--plt-yt); --plt-rgb: 255, 0, 51;">
-
-                <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>
-
-                <span class="v-count" id="count-yt">0</span>
-
+    <div class="obs-safe-zone">
+        <div class="scene-container" id="scene-wrapper">
+            
+            <div class="logo-sweeper" id="logo-sweeper">
+                <div class="logo-inner-ring" id="logo-ring">
+                    <img src="" alt="Logo" class="brand-logo" id="brand-logo" style="display:none;">
+                </div>
             </div>
 
-            <div class="hud-card" id="node-tw" style="--plt-color: var(--plt-tw); --plt-rgb: 176, 92, 255;">
+            <div class="master-overlay-wrapper" id="overlay">
+                <div class="overlay-core">
+                    
+                    <div class="holo-grid"></div>
+                    <div class="scanlines"></div>
+                    <div class="glass-reflection"></div>
+                    <canvas id="particle-canvas"></canvas> 
 
-                <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
+                    <div class="data-module" id="mod-subs">
+                        <div class="data-label">SUBS</div>
+                        <div class="slot-machine-container" id="slot-subs"></div>
+                        <div class="flare-layer"></div>
+                    </div>
+                    <div class="separator"></div>
 
-                <span class="v-count" id="count-tw">0</span>
+                    <div class="data-module" id="mod-likes">
+                        <div class="data-label">LIKES</div>
+                        <div class="slot-machine-container" id="slot-likes"></div>
+                        <div class="flare-layer"></div>
+                    </div>
+                    <div class="separator"></div>
 
-            </div>
-
-            <div class="hud-card" id="node-kk" style="--plt-color: var(--plt-kk); --plt-rgb: 83, 252, 24;">
-
-                <svg class="plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>
-
-                <span class="v-count" id="count-kk">0</span>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- Matrix Chat Canvas -->
-
-        <div id="chat-widget"></div>
-
-    </div>
-
-
-
-    <script>
-
-        const SVGS = {
-
-            yt: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>`,
-
-            tw: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>`,
-
-            kk: `<svg class="chat-plt-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M2.333 1.1h3.914v9.845L16.234 1.1h5.433L10.354 11.378 22.38 22.9H16.63l-8.497-8.627v8.627H2.333V1.1Z"/></svg>`
-
-        };
-
-
-
-        class HolographicChatEngine {
-
-            constructor() { this.container = document.getElementById('chat-widget'); }
-
-
-
-            // MATRIX ENGINE: 5 Tiers x 5 Box Anims x 5 Text Anims = 125 Combinations
-
-            calculateMatrix() {
-
-                const roll = Math.random();
-
-                let tier = 'COMMON';
-
-                if (roll > 0.99) tier = 'GOD';         // 1%
-
-                else if (roll > 0.94) tier = 'MYTHIC'; // 5%
-
-                else if (roll > 0.79) tier = 'EPIC';   // 15%
-
-                else if (roll > 0.49) tier = 'RARE';   // 30%
-
-
-
-                const boxAnim = Math.floor(Math.random() * 5) + 1;
-
-                const textAnim = Math.floor(Math.random() * 5) + 1;
-
-
-
-                return { tier, boxAnim, textAnim };
-
-            }
-
-
-
-            addMessage(username, message, avatarUrl, platform) {
-
-                const node = document.createElement('div');
-
-                node.className = 'msg-node msg-spawn';
-
-                
-
-                const matrix = this.calculateMatrix();
-
-                const pltVar = `var(--plt-${platform})`;
-
-                const rgbVar = platform === 'yt' ? '255, 0, 51' : platform === 'tw' ? '176, 92, 255' : '83, 252, 24';
-
-                
-
-                node.style.setProperty('--plt-color', pltVar);
-
-                node.style.setProperty('--plt-rgb', rgbVar);
-
-
-
-                node.innerHTML = `
-
-                    <div class="msg-inner tier-${matrix.tier} box-anim-${matrix.boxAnim} txt-anim-${matrix.textAnim}">
-
-                        <div class="hologram-avatar">
-
-                            <img src="${avatarUrl}" class="avatar-img" alt="">
-
+                    <div class="goal-module" id="mod-goal">
+                        <div class="goal-header">
+                            <span class="goal-title">SUB GOAL</span>
+                            <span class="goal-numbers" id="val-goal">0 / 5,000</span>
                         </div>
-
-                        <div class="content-block">
-
-                            <div class="tier-badge">${matrix.tier}</div>
-
-                            <div class="user-row">${SVGS[platform]} <span class="username">${username}</span></div>
-
-                            <div class="chat-text">${message}</div>
-
+                        <div class="progress-track">
+                            <div class="progress-fill" id="goal-bar"></div>
                         </div>
-
                     </div>
 
-                `;
+                    <div class="ticker-module">
+                        <div class="live-eq-container" id="live-eq">
+                            <div class="eq-bar" style="height: 4px;"></div>
+                            <div class="eq-bar" style="height: 8px;"></div>
+                            <div class="eq-bar" style="height: 6px;"></div>
+                            <div class="eq-bar" style="height: 12px;"></div>
+                        </div>
+                        <div class="ticker-wrapper">
+                            <div class="ticker-content" id="ticker-text">CONNECTING TO LIVE FEED...</div>
+                        </div>
+                    </div>
 
+                </div>
+            </div>
+        </div>
+    </div>
 
-
-                this.container.appendChild(node);
-
-                void node.offsetWidth; 
-
-                this.updateZDepth();
-
+    <script>
+        class ParticleEngine {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId); 
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = []; this.isSweeping = false; this.sweepX = 0;
+                window.particleEngineInstance = this; 
+                this.resize(); window.addEventListener('resize', () => this.resize()); this.render();
             }
-
-
-
-            updateZDepth() {
-
-                const messages = Array.from(this.container.children).reverse();
-
-                messages.forEach((msg, index) => {
-
-                    msg.classList.remove('msg-spawn', 'msg-pos-1', 'msg-pos-2', 'msg-pos-3', 'msg-pos-4');
-
-                    if (index === 0) msg.classList.add('msg-pos-1');
-
-                    else if (index === 1) msg.classList.add('msg-pos-2');
-
-                    else if (index === 2) msg.classList.add('msg-pos-3');
-
-                    else if (index === 3) msg.classList.add('msg-pos-4');
-
-                    else {
-
-                        msg.classList.add('msg-dead');
-
-                        setTimeout(() => { if(msg.parentNode) msg.parentNode.removeChild(msg); }, 800);
-
-                    }
-
-                });
-
-            }
-
-        }
-
-
-
-        class ViewerEngine {
-
-            constructor() { this.state = { yt: 0, tw: 0, kk: 0 }; }
-
-            format(num) { return (num || 0).toLocaleString('en-US'); }
-
-
-
-            triggerDopamine(nodeId) {
-
-                const node = document.getElementById(nodeId);
-
-                node.classList.remove('dopamine-hit');
-
-                void node.offsetWidth; 
-
-                node.classList.add('dopamine-hit');
-
-            }
-
-
-
-            update(platform, count) {
-
-                const node = document.getElementById(`node-${platform}`);
-
-                if (node.style.display !== 'flex') node.style.display = 'flex';
-
-                if (count !== this.state[platform]) {
-
-                    if (count > this.state[platform]) this.triggerDopamine(`node-${platform}`);
-
-                    this.state[platform] = count;
-
-                    document.getElementById(`count-${platform}`).innerText = this.format(count);
-
-                }
-
-            }
-
-
-
-            async pollExternal(twitchUser, kickConfig) {
-
-                if (twitchUser) {
-
-                    try {
-
-                        const res = await fetch(`https://decapi.me/twitch/viewercount/${twitchUser}`);
-
-                        const count = parseInt(await res.text()) || 0;
-
-                        this.update('tw', count);
-
-                    } catch(e) {}
-
-                }
-
-
-
-                let kickUserSlug = kickConfig ? (kickConfig.includes("|||") ? kickConfig.split("|||")[0] : isNaN(kickConfig) ? kickConfig : "") : "";
-
-                if (kickUserSlug) {
-
-                    try {
-
-                        const res = await fetch(`/api/kick_viewers/${kickUserSlug}?t=${new Date().getTime()}`);
-
-                        const data = await res.json();
-
-                        if (data && data.viewers !== undefined) this.update('kk', data.viewers);
-
-                    } catch(e) {}
-
-                }
-
-            }
-
-        }
-
-
-
-        class MasterUnifiedEngine {
-
-            constructor(chatEngine, viewerEngine, handle) {
-
-                this.chatEngine = chatEngine; this.viewerEngine = viewerEngine;
-
-                this.handle = handle; this.masterQueue = [];
-
-                this.ytNextPageToken = ""; this.ytPolling = false;
-
-                this.config = { tw: "", kk: "" };
-
-
-
-                if (!this.handle) this.runDemoMode();
-
-                else this.fetchConfigAndStart();
-
-
-
-                setInterval(() => this.processQueue(), 2500); 
-
-                setInterval(() => this.viewerEngine.pollExternal(this.config.tw, this.config.kk), 10000);
-
-            }
-
-
-
-            async fetchConfigAndStart() {
-
-                try {
-
-                    const res = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
-
-                    const data = await res.json();
-
-                    
-
-                    if (data.authenticated) {
-
-                        this.config.tw = data.twitch_user; this.config.kk = data.kick_user;
-
-                        this.pollYouTube();
-
-                        this.viewerEngine.pollExternal(this.config.tw, this.config.kk);
-
-
-
-                        if (this.config.tw) this.connectTwitch(this.config.tw);
-
-                        if (this.config.kk) {
-
-                            let kId = this.config.kk;
-
-                            if (kId.includes("|||")) kId = kId.split("|||")[1];
-
-                            if (kId) this.connectKick(kId); 
-
-                        }
-
-                    }
-
-                } catch(e) {}
-
-            }
-
-
-
-            async pollYouTube() {
-
-                if(this.ytPolling) return;
-
-                this.ytPolling = true; let delay = 5000; 
-
-                try {
-
-                    const statRes = await fetch(`/api/streamer/${this.handle}?t=${new Date().getTime()}`);
-
-                    const statData = await statRes.json();
-
-                    if(statData.yt_viewers !== undefined) this.viewerEngine.update('yt', statData.yt_viewers);
-
-
-
-                    const res = await fetch(`/api/streamer/${this.handle}/chat?pageToken=${this.ytNextPageToken}`);
-
-                    const data = await res.json();
-
-                    
-
-                    if (res.ok && !data.error) {
-
-                        if (data.pollingIntervalMillis) delay = data.pollingIntervalMillis;
-
-                        if (data.nextPageToken) this.ytNextPageToken = data.nextPageToken;
-
-
-
-                        if (data.items && data.items.length > 0) {
-
-                            data.items.forEach(item => {
-
-                                this.masterQueue.push({
-
-                                    username: item.authorDetails.displayName,
-
-                                    message: item.snippet.displayMessage,
-
-                                    avatar: item.authorDetails.profileImageUrl,
-
-                                    platform: 'yt'
-
-                                });
-
-                            });
-
-                        }
-
-                    } else { delay = 10000; }
-
-                } catch (e) { delay = 10000; }
-
-                setTimeout(() => { this.ytPolling = false; this.pollYouTube(); }, delay);
-
-            }
-
-
-
-            connectTwitch(channel) {
-
-                const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-
-                ws.onopen = () => {
-
-                    ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-
-                    ws.send(`NICK justinfan${Math.floor(Math.random() * 100000)}`);
-
-                    ws.send(`JOIN #${channel.toLowerCase()}`);
-
-                };
-
-                ws.onmessage = (event) => {
-
-                    const lines = event.data.split('\r\n');
-
-                    for (let line of lines) {
-
-                        if (line === 'PING :tmi.twitch.tv') ws.send('PONG :tmi.twitch.tv');
-
-                        else if (line.includes('PRIVMSG')) {
-
-                            const nameMatch = line.match(/display-name=([^;]+)/);
-
-                            const msgMatch = line.match(/PRIVMSG #[^:]+:(.+)/);
-
-                            if (nameMatch && msgMatch) {
-
-                                const username = nameMatch[1];
-
-                                const avatar = `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-
-                                this.masterQueue.push({ username, message: msgMatch[1], avatar, platform: 'tw' });
-
-                            }
-
-                        }
-
-                    }
-
-                };
-
-            }
-
-
-
-            connectKick(chatroomId) {
-
-                if (!/^\d+$/.test(chatroomId)) return;
-
-                const pusherKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
-
-                let keyIndex = 0;
-
-
-
-                const tryConnect = () => {
-
-                    if (keyIndex >= pusherKeys.length) return;
-
-                    const pusher = new Pusher(pusherKeys[keyIndex], { cluster: 'us2', forceTLS: true });
-
-
-
-                    pusher.connection.bind('error', () => { pusher.disconnect(); keyIndex++; setTimeout(tryConnect, 1000); });
-
-
-
-                    const channel = pusher.subscribe(`chatrooms.${chatroomId}.v2`);
-
-                    channel.bind('App\\Events\\ChatMessageEvent', (data) => {
-
-                        const username = data.sender.username;
-
-                        const avatar = data.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true`;
-
-                        this.masterQueue.push({ username, message: data.content, avatar, platform: 'kk' });
-
+            resize() { this.canvas.width = this.canvas.clientWidth; this.canvas.height = this.canvas.clientHeight; }
+            setSweeping(active, xPosition) { this.isSweeping = active; this.sweepX = xPosition; }
+            
+            spawnBurst(x, y) {
+                for(let i=0; i<20; i++) {
+                    this.particles.push({ 
+                        x: x, y: y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
+                        life: 1.0, decay: Math.random()*0.04+0.02, size: Math.random()*4+2, 
+                        color: Math.random() > 0.4 ? '#ffffff' : '#ffd700', isSquare: true
                     });
-
-                };
-
-                tryConnect();
-
+                }
             }
 
-
-
-            processQueue() {
-
-                if (this.masterQueue.length > 0) {
-
-                    const msg = this.masterQueue.shift();
-
-                    this.chatEngine.addMessage(msg.username, msg.message, msg.avatar, msg.platform);
-
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                if(Math.random() > 0.8) {
+                    this.particles.push({
+                        x: -10, y: Math.random() * this.canvas.height, vx: Math.random() * 5 + 2, vy: (Math.random() - 0.5) * 1,
+                        life: 1.0, decay: 0.008, size: Math.random() * 2 + 1, color: 'rgba(162, 0, 255, 0.9)', isLine: true, length: Math.random() * 40 + 10
+                    });
+                }
+                if (this.isSweeping) {
+                    const px = (this.sweepX / 100) * this.canvas.width, py = this.canvas.height / 2;
+                    for(let i=0; i<3; i++) this.particles.push({ 
+                        x: px, y: py + (Math.random()*60-30), vx: (Math.random()-0.5)*5 - 2, vy: (Math.random()-0.5)*5, 
+                        life: 1.0, decay: Math.random()*0.05+0.03, size: Math.random()*3+2, color: '#a200ff', isSquare: true
+                    });
                 }
 
-            }
-
-
-
-            runDemoMode() {
-
-                document.getElementById('node-yt').style.display = 'flex';
-
-                document.getElementById('node-tw').style.display = 'flex';
-
-                document.getElementById('node-kk').style.display = 'flex';
-
-                
-
-                setInterval(() => this.viewerEngine.update('yt', Math.floor(Math.random() * 50) + 1200), 5000);
-
-                setInterval(() => {
-
-                    this.viewerEngine.update('tw', Math.floor(Math.random() * 20) + 800);
-
-                    this.viewerEngine.update('kk', Math.floor(Math.random() * 100) + 2100);
-
-                }, 8000);
-
-
-
-                const triggerRandomChat = () => {
-
-                    const platforms = ['yt', 'tw', 'kk'];
-
-                    const plt = platforms[Math.floor(Math.random() * platforms.length)];
-
-                    const user = "Matrix_User";
-
-                    const avatar = `https://ui-avatars.com/api/?name=${user}&background=random&color=fff&bold=true`;
-
-                    
-
-                    this.masterQueue.push({ username: user, message: "125 unique animation combinations. Testing the massive stable HUD and Matrix Rarity engine! \ud83d\udd25", avatar: avatar, platform: plt });
-
-                    setTimeout(triggerRandomChat, Math.floor(Math.random() * 1500) + 1200);
-
+                for(let i = this.particles.length - 1; i >= 0; i--) {
+                    let p = this.particles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+                    if(p.y < 0 || p.y > this.canvas.height) p.vy *= -0.8;
+                    if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+                    this.ctx.fillStyle = p.color; this.ctx.shadowBlur = 12; this.ctx.shadowColor = p.color; this.ctx.globalAlpha = p.life;
+                    if (p.isLine) this.ctx.fillRect(p.x, p.y, p.length, p.size);
+                    else if (p.isSquare) this.ctx.fillRect(p.x, p.y, p.size, p.size);
+                    else { this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); this.ctx.fill(); }
                 }
-
-                setTimeout(triggerRandomChat, 1000);
-
+                this.ctx.globalAlpha = 1.0; requestAnimationFrame(() => this.render());
             }
-
         }
 
+        class SlotMachineDigit {
+            constructor(char, delayOffset) {
+                this.element = document.createElement('div');
+                this.element.className = char === ',' ? 'slot-digit-window comma' : 'slot-digit-window';
+                this.strip = document.createElement('div'); this.strip.className = 'slot-strip';
+                this.element.appendChild(this.strip);
+                this.isComma = char === ','; this.currentChar = char; this.delayOffset = delayOffset;
+                this.buildStrip(char);
+            }
+            buildStrip(targetChar) {
+                this.strip.innerHTML = ''; this.strip.style.transition = 'none';
+                this.strip.style.transform = 'translateY(0)'; this.strip.style.filter = 'blur(0px)';
+                if (this.isComma) { const span = document.createElement('span'); span.innerText = ','; this.strip.appendChild(span); return; }
 
+                const startDigit = parseInt(this.currentChar) || 0;
+                const targetDigit = parseInt(targetChar) || 0;
+                this.currentChar = targetChar;
+                
+                let html = `<span>${startDigit}</span>`;
+                for(let i=0; i<15; i++) html += `<span>${Math.floor(Math.random()*10)}</span>`;
+                html += `<span>${targetDigit}</span>`;
+                this.strip.innerHTML = html; void this.strip.offsetWidth; 
+            }
+            rollToTarget() {
+                if(this.isComma) return;
+                const targetY = - (this.strip.children.length - 1) * this.element.offsetHeight;
+                this.strip.style.transition = `transform 1.5s var(--ease-slot) ${this.delayOffset}s, filter 0.75s ease-in-out ${this.delayOffset}s`;
+                this.strip.style.filter = 'blur(4px)'; this.strip.style.transform = `translateY(${targetY}px)`;
+                setTimeout(() => { this.strip.style.filter = 'blur(0px)'; }, (1.0 + this.delayOffset) * 1000 - 400); 
+            }
+        }
+
+        class NumberSlotEngine {
+            constructor(containerId) {
+                this.container = document.getElementById(containerId); this.moduleParent = this.container.parentElement;
+                this.digits = []; this.currentString = "0"; this.updateDOM("0", true);
+            }
+            format(num) { return (num || 0).toLocaleString('en-US'); }
+            updateDOM(newStr, forceInstant = false) {
+                this.container.innerHTML = ''; this.digits = [];
+                for(let i = 0; i < newStr.length; i++) {
+                    const delay = (newStr.length - 1 - i) * 0.08; 
+                    const digit = new SlotMachineDigit(newStr[i], delay);
+                    this.digits.push(digit); this.container.appendChild(digit.element);
+                }
+                this.currentString = newStr;
+            }
+            triggerRoll(newValue) {
+                const targetStr = this.format(newValue);
+                if(targetStr.length !== this.currentString.length) this.updateDOM(this.currentString);
+                
+                for(let i=0; i<targetStr.length; i++) {
+                    if(!this.digits[i]) {
+                         const delay = (targetStr.length - 1 - i) * 0.08; 
+                         const newDigit = new SlotMachineDigit(targetStr[i], delay);
+                         this.digits.push(newDigit); this.container.appendChild(newDigit.element);
+                    } else { this.digits[i].buildStrip(targetStr[i]); }
+                }
+                this.currentString = targetStr;
+                this.digits.forEach(digit => digit.rollToTarget());
+
+                const maxDelay = (targetStr.length - 1) * 0.08;
+                setTimeout(() => {
+                    this.moduleParent.classList.remove('flare-active'); void this.moduleParent.offsetWidth; this.moduleParent.classList.add('flare-active');
+                    
+                    // Flash text exactly when the number settles
+                    this.container.style.animation = 'none';
+                    void this.container.offsetWidth; 
+                    this.container.style.animation = 'pureFlash 0.5s ease-out forwards';
+
+                    if(window.particleEngineInstance) {
+                        const rect = this.container.getBoundingClientRect(); const pCanvas = document.getElementById('particle-canvas').getBoundingClientRect();
+                        window.particleEngineInstance.spawnBurst((rect.left - pCanvas.left) + rect.width/2, (rect.top - pCanvas.top) + rect.height/2);
+                    }
+                }, (1.5 + maxDelay) * 1000);
+            }
+        }
+
+        class AudioEQSimulator {
+            constructor() { this.bars = document.querySelectorAll('.eq-bar'); this.animate(); }
+            animate() { setInterval(() => { this.bars.forEach(bar => { bar.style.height = `${Math.floor(Math.random() * 12) + 4}px`; }); }, 100); }
+        }
+
+        class TickerEngine {
+            constructor() {
+                this.element = document.getElementById('ticker-text'); this.container = this.element.parentElement;
+                this.queue = ["AWAITING LIVE FEED..."]; this.currentIndex = 0; 
+                this.pos = this.container.offsetWidth; this.speed = 1.5; this.animate();
+            }
+            setMessages(messageString) {
+                const parts = messageString.split(',').map(m => m.trim()).filter(m => m.length > 0);
+                if(parts.length > 0) this.queue = parts;
+            }
+            animate() {
+                this.pos -= this.speed;
+                if (this.pos < -this.element.offsetWidth - 50) {
+                    this.currentIndex = (this.currentIndex + 1) % this.queue.length;
+                    this.element.innerText = this.queue[this.currentIndex]; 
+                    this.pos = this.container.offsetWidth;
+                }
+                this.element.style.transform = `translateX(${this.pos}px)`; requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        class OverlayState {
+            constructor() {
+                this.state = { subs: 0, likes: 0, goal: 5000 };
+                this.slotSubs = new NumberSlotEngine('slot-subs');
+                this.slotLikes = new NumberSlotEngine('slot-likes');
+                this.elements = { 
+                    goalMod: document.getElementById('mod-goal'), 
+                    goalText: document.getElementById('val-goal'), 
+                    goalBar: document.getElementById('goal-bar'),
+                    logoRing: document.getElementById('logo-ring')
+                };
+            }
+            format(num) { return (num || 0).toLocaleString('en-US'); }
+            
+            triggerSubGoalAnimation() {
+                this.elements.goalMod.classList.remove('goal-flash'); void this.elements.goalMod.offsetWidth; 
+                this.elements.goalMod.classList.add('goal-flash'); setTimeout(() => this.elements.goalMod.classList.remove('goal-flash'), 1000);
+            }
+
+            updateData(newSubs, newLikes, newGoal) {
+                if (newGoal) this.state.goal = newGoal;
+                let subChanged = false;
+
+                // STRICT SYNC: Only spin the slot machine when real data physically changes.
+                if (newSubs !== this.state.subs) { 
+                    if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
+                    this.slotSubs.triggerRoll(newSubs);
+                    this.state.subs = newSubs; 
+                }
+                
+                if (newLikes !== this.state.likes) { 
+                    // Stagger the like roll slightly if both update at the exact same second
+                    setTimeout(() => this.slotLikes.triggerRoll(newLikes), 500);
+                    this.state.likes = newLikes; 
+                }
+                
+                let percentage = Math.max(0, Math.min(100, (this.state.subs / this.state.goal) * 100));
+                this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
+                this.elements.goalBar.style.width = `${percentage}%`;
+
+                if (subChanged) { 
+                    this.triggerSubGoalAnimation(); 
+                }
+            }
+        }
+
+        class CinematicSweepController {
+            constructor(particleEngine) { this.scene = document.getElementById('scene-wrapper'); this.particleEngine = particleEngine; this.runCycle(); }
+            sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+            tweenSweep(startPct, endPct, duration) {
+                return new Promise(resolve => {
+                    let startTime = null; this.particleEngine.setSweeping(true, startPct);
+                    const update = (currentTime) => {
+                        if (!startTime) startTime = currentTime; let progress = Math.min((currentTime - startTime) / duration, 1);
+                        let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                        const currentPct = startPct + (endPct - startPct) * ease;
+                        
+                        this.scene.style.setProperty('--sweep-progress', `${currentPct}%`);
+                        this.particleEngine.setSweeping(true, currentPct);
+                        document.documentElement.style.setProperty('--logo-rot', `${(currentPct / 100) * 1440}deg`);
+
+                        if (progress < 1) requestAnimationFrame(update); else {
+                            this.scene.style.setProperty('--sweep-progress', `${endPct}%`); this.particleEngine.setSweeping(false, endPct); resolve();
+                        }
+                    }; requestAnimationFrame(update);
+                });
+            }
+            async runCycle() {
+                await this.sleep(1000); 
+                while(true) { await this.tweenSweep(0, 100, 2500); await this.sleep(20000); await this.tweenSweep(100, 0, 2500); await this.sleep(2000); }
+            }
+        }
+
+        // ==============================================================
+        // THE ENGINE THAT POWERS REAL-TIME YOUTUBE PINGS
+        // ==============================================================
+        class MultiStreamerLiveEngine {
+            constructor(state, ticker) {
+                this.state = state;
+                this.ticker = ticker;
+                const urlParams = new URLSearchParams(window.location.search);
+                this.username = urlParams.get('user') || '';
+
+                if (!this.username) {
+                    this.ticker.setMessages("ERROR: NO USER SPECIFIED IN URL");
+                    return;
+                }
+
+                // Initial fetch
+                this.pollData();
+                
+                // Hyper-fast 5-second polling loop
+                setInterval(() => this.pollData(), 5000);
+            }
+
+            async pollData() {
+                try {
+                    const res = await fetch(`/api/streamer/${this.username}?t=${new Date().getTime()}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    
+                    if (data.authenticated) {
+                        // Triggers the UI to update ONLY if numbers changed
+                        this.state.updateData(data.subs, data.likes, data.sub_goal);
+                        
+                        if (data.ticker_text) {
+                            this.ticker.setMessages(data.ticker_text);
+                        }
+                        
+                        if (data.avatar) {
+                            const logoEl = document.getElementById('brand-logo');
+                            if (logoEl.src !== data.avatar) {
+                                logoEl.src = data.avatar;
+                                logoEl.style.display = 'block';
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.error("Poll failed:", e);
+                }
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
-
-            const chatEngine = new HolographicChatEngine();
-
-            const viewerEngine = new ViewerEngine();
-
-            const urlParams = new URLSearchParams(window.location.search);
-
-            const username = urlParams.get('user') || '';
-
+            const particles = new ParticleEngine('particle-canvas');
+            const state = new OverlayState();
+            const ticker = new TickerEngine();
+            new AudioEQSimulator();
+            new CinematicSweepController(particles);
             
-
-            new MasterUnifiedEngine(chatEngine, viewerEngine, username);
-
+            // Replaces the fake looping demo with the real-time data engine
+            new MultiStreamerLiveEngine(state, ticker);
         });
-
     </script>
-
 </body>
-
 </html>
