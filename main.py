@@ -1,5 +1,6 @@
 import os
 import time
+import re
 import httpx
 from typing import Optional
 from fastapi import FastAPI, Request, HTTPException, Response
@@ -11,7 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from supabase import create_client, Client
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -43,7 +44,32 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==========================================
-# 2. GOOGLE OAUTH 2.0 SETUP
+# 2. UTILITY FUNCTIONS
+# ==========================================
+
+def get_utc_now() -> str:
+    """Returns a valid ISO formatted timestamp for Supabase."""
+    return datetime.now(timezone.utc).isoformat()
+
+def extract_youtube_video_id(url: str) -> str:
+    """Extracts the 11-character video ID from any YouTube URL format."""
+    if not url:
+        return ""
+    url = url.strip()
+    
+    # If it's already exactly 11 characters with no URL fluff
+    if len(url) == 11 and " " not in url and "/" not in url:
+        return url
+    
+    # Regex to handle youtube.com/watch?v=ID, youtu.be/ID, youtube.com/live/ID, etc.
+    match = re.search(r'(?:v=|live/|shorts/|youtu\.be/)([\w-]{11})', url)
+    if match:
+        return match.group(1)
+        
+    return url # Return original as fallback
+
+# ==========================================
+# 3. GOOGLE OAUTH 2.0 SETUP
 # ==========================================
 
 oauth = OAuth()
@@ -54,8 +80,6 @@ oauth.register(
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={
         'scope': 'openid email profile https://www.googleapis.com/auth/youtube.readonly',
-        'access_type': 'offline',
-        'prompt': 'consent'
     }
 )
 
@@ -67,7 +91,7 @@ class SettingsPayload(BaseModel):
     kick_user: Optional[str] = ""
 
 # ==========================================
-# 3. TOKEN MANAGEMENT
+# 4. TOKEN MANAGEMENT (Fixed Expiration Crash)
 # ==========================================
 
 async def get_valid_access_token(handle: str) -> str:
@@ -78,9 +102,17 @@ async def get_valid_access_token(handle: str) -> str:
     record = res.data[0]
     access_token = record.get("access_token")
     refresh_token = record.get("refresh_token")
-    expires_at = record.get("token_expires_at", 0)
+    
+    # Safely parse expires_at to prevent crashes
+    raw_expires_at = record.get("token_expires_at")
+    try:
+        expires_at = int(float(raw_expires_at)) if raw_expires_at is not None else 0
+    except (ValueError, TypeError):
+        expires_at = 0
+        
     now = int(time.time())
     
+    # Token is still valid (give a 2-minute buffer)
     if now < (expires_at - 120) and access_token:
         return access_token
 
@@ -97,16 +129,17 @@ async def get_valid_access_token(handle: str) -> str:
                 "grant_type": "refresh_token",
             }
         )
-        token_data = token_res.json()
-
+        
     if token_res.status_code != 200:
         raise HTTPException(status_code=401, detail="Google rejected token refresh. Re-authenticate.")
 
+    token_data = token_res.json()
     new_access_token = token_data["access_token"]
+    
     update_data = {
         "access_token": new_access_token,
-        "token_expires_at": now + token_data.get("expires_in", 3600),
-        "updated_at": "now()"
+        "token_expires_at": now + int(token_data.get("expires_in", 3600)),
+        "updated_at": get_utc_now() # Fixed the "now()" bug
     }
     if "refresh_token" in token_data:
         update_data["refresh_token"] = token_data["refresh_token"]
@@ -115,7 +148,7 @@ async def get_valid_access_token(handle: str) -> str:
     return new_access_token
 
 # ==========================================
-# 4. AUTHENTICATION ROUTES
+# 5. AUTHENTICATION ROUTES
 # ==========================================
 
 @app.get("/login")
@@ -123,7 +156,14 @@ async def login(request: Request):
     redirect_uri = str(request.url_for('auth_callback')).replace("127.0.0.1", "localhost")
     if "localhost" not in redirect_uri:
         redirect_uri = redirect_uri.replace("http://", "https://")
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    
+    # Forced access_type and prompt ensure Google ALWAYS returns a refresh_token
+    return await oauth.google.authorize_redirect(
+        request, 
+        redirect_uri,
+        access_type='offline',
+        prompt='consent'
+    )
 
 @app.get("/auth/callback")
 async def auth_callback(request: Request):
@@ -147,15 +187,11 @@ async def auth_callback(request: Request):
         return RedirectResponse(url="/dashboard?error=no_channel")
 
     channel = data["items"][0]
-    
-    # Safely extract handle and avatar
     handle = channel["snippet"].get("customUrl", channel["snippet"]["title"]).replace("@", "").lower()
     
-    # Safely get thumbnail, falling back to default if medium doesn't exist
     thumbnails = channel["snippet"].get("thumbnails", {})
     avatar_url = thumbnails.get("medium", thumbnails.get("default", {})).get("url", "")
 
-    # Prepare database record
     record = {
         "handle": handle,
         "channel_id": channel["id"],
@@ -164,29 +200,21 @@ async def auth_callback(request: Request):
         "access_token": access_token,
         "token_expires_at": expires_at,
         "current_subs": int(channel["statistics"].get("subscriberCount", 0)),
-        "updated_at": datetime.utcnow().isoformat() # Fixed: Real Python timestamp instead of "now()" string
+        "updated_at": get_utc_now()
     }
     if refresh_token:
         record["refresh_token"] = refresh_token
 
     try:
-        # ATTEMPT TO SAVE TO SUPABASE
         supabase.table("streamers").upsert(record, on_conflict="handle").execute()
-        
         if handle in CACHE:
             del CACHE[handle]
-
         return RedirectResponse(url=f"/dashboard?user={handle}")
-    
     except Exception as db_error:
-        # IF IT CRASHES, SHOW THE EXACT DATABASE ERROR ON SCREEN
-        return {
-            "CRITICAL_DATABASE_ERROR": str(db_error),
-            "Hint": "Check your Supabase table columns and ensure 'handle' is set as Unique/Primary Key."
-        }
+        return {"CRITICAL_DATABASE_ERROR": str(db_error)}
 
 # ==========================================
-# 5. LIVE DATA & OVERLAY ROUTES
+# 6. LIVE DATA & OVERLAY ROUTES
 # ==========================================
 
 @app.get("/api/streamer/{handle}")
@@ -207,12 +235,14 @@ async def get_live_overlay_data(handle: str, response: Response):
     try:
         token = await get_valid_access_token(user)
     except HTTPException as e:
-        return {"authenticated": False, "error": e.detail}
+        return {"authenticated": False, "error": str(e.detail)}
 
     current_subs = profile.get("current_subs", 0)
     likes = 0
     yt_viewers = 0
-    video_id = profile.get("video_id")
+    
+    # Extract the 11 character ID safely
+    video_id = extract_youtube_video_id(profile.get("video_id", ""))
 
     async with httpx.AsyncClient() as client:
         yt_res = await client.get(
@@ -221,7 +251,11 @@ async def get_live_overlay_data(handle: str, response: Response):
         )
         if yt_res.status_code == 200 and yt_res.json().get("items"):
             current_subs = int(yt_res.json()["items"][0]["statistics"].get("subscriberCount", current_subs))
-            supabase.table("streamers").update({"current_subs": current_subs, "updated_at": "now()"}).eq("handle", user).execute()
+            # Fixed Real-time DB Update
+            supabase.table("streamers").update({
+                "current_subs": current_subs, 
+                "updated_at": get_utc_now()
+            }).eq("handle", user).execute()
 
         if video_id:
             vid_res = await client.get(
@@ -235,14 +269,14 @@ async def get_live_overlay_data(handle: str, response: Response):
 
     response_data = {
         "authenticated": True,
-        "title": profile["title"],
-        "avatar": profile["avatar"],
+        "title": profile.get("title", ""),
+        "avatar": profile.get("avatar", ""),
         "subs": current_subs,
         "likes": likes,
         "yt_viewers": yt_viewers,
-        "sub_goal": profile["sub_goal"] if profile["sub_goal"] else 5000,
+        "sub_goal": profile.get("sub_goal") if profile.get("sub_goal") else 5000,
         "video_id": video_id,
-        "ticker_text": profile["ticker_text"],
+        "ticker_text": profile.get("ticker_text", ""),
         "twitch_user": profile.get("twitch_user", ""),
         "kick_user": profile.get("kick_user", "")
     }
@@ -263,9 +297,9 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
     if not res.data:
         return {"error": "Not found", "pollingIntervalMillis": 10000}
     
-    video_id = res.data[0].get("video_id")
-    if not video_id:
-        return {"error": "No stream URL", "pollingIntervalMillis": 15000}
+    # Strip the URL to just the ID
+    raw_video_id = res.data[0].get("video_id", "")
+    video_id = extract_youtube_video_id(raw_video_id)
 
     try:
         token = await get_valid_access_token(user)
@@ -276,49 +310,69 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
         CACHE[user] = {}
 
     async with httpx.AsyncClient() as client:
-        if "live_chat_id" not in CACHE[user] or CACHE[user].get("cached_video_id") != video_id:
-            vid_res = await client.get(
-                f"https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id={video_id}",
-                headers={"Authorization": f"Bearer {token}"}
-            )
-            if vid_res.status_code == 200 and vid_res.json().get("items"):
-                details = vid_res.json()["items"][0].get("liveStreamingDetails", {})
-                live_chat_id = details.get("activeLiveChatId")
-                if not live_chat_id:
-                    return {"error": "Chat is disabled", "pollingIntervalMillis": 15000}
-                CACHE[user]["live_chat_id"] = live_chat_id
-                CACHE[user]["cached_video_id"] = video_id
-            else:
-                return {"error": "Failed to resolve live chat", "pollingIntervalMillis": 10000}
+        live_chat_id = CACHE[user].get("live_chat_id")
+        
+        # Resolve Chat ID if not cached, or if the video ID changed
+        if not live_chat_id or CACHE[user].get("cached_video_id") != video_id:
+            found_chat_id = None
+            
+            # Approach 1: Try using the extracted video ID
+            if video_id:
+                vid_res = await client.get(
+                    f"https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id={video_id}",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                if vid_res.status_code == 200 and vid_res.json().get("items"):
+                    found_chat_id = vid_res.json()["items"][0].get("liveStreamingDetails", {}).get("activeLiveChatId")
 
-        live_chat_id = CACHE[user]["live_chat_id"]
+            # Approach 2: If we still don't have it, auto-detect the active broadcast
+            if not found_chat_id:
+                broadcast_res = await client.get(
+                    "https://www.googleapis.com/youtube/v3/liveBroadcasts?part=snippet&broadcastStatus=active&broadcastType=all",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                if broadcast_res.status_code == 200 and broadcast_res.json().get("items"):
+                    found_chat_id = broadcast_res.json()["items"][0].get("snippet", {}).get("liveChatId")
+            
+            if not found_chat_id:
+                return {"error": "Chat is disabled or stream not live", "pollingIntervalMillis": 15000}
+                
+            CACHE[user]["live_chat_id"] = found_chat_id
+            CACHE[user]["cached_video_id"] = video_id
+            live_chat_id = found_chat_id
+
+        # Fetch Messages
         chat_url = f"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={live_chat_id}&part=snippet,authorDetails"
         if pageToken:
             chat_url += f"&pageToken={pageToken}"
 
         chat_res = await client.get(chat_url, headers={"Authorization": f"Bearer {token}"})
+        
         if chat_res.status_code == 200:
             return chat_res.json()
+        elif chat_res.status_code == 401:
+            # Token issue, clear cache so it retries completely next time
+            if "live_chat_id" in CACHE[user]: del CACHE[user]["live_chat_id"]
+            return {"error": "Unauthorized", "pollingIntervalMillis": 10000}
         elif chat_res.status_code == 403:
             return {"error": "Quota limit reached", "pollingIntervalMillis": 30000}
         else:
-            return {"error": "API Error", "pollingIntervalMillis": 10000}
+            # Stream might have ended, clear cache to force re-detection next check
+            if "live_chat_id" in CACHE[user]: del CACHE[user]["live_chat_id"]
+            return {"error": f"API Error {chat_res.status_code}", "pollingIntervalMillis": 10000}
 
 # ==========================================
-# 6. KICK VIEWER PROXY (OBS CLOUDFLARE BYPASS)
+# 7. KICK VIEWER PROXY (OBS CLOUDFLARE BYPASS)
 # ==========================================
 @app.get("/api/kick_viewers/{username}")
 async def get_kick_viewers(username: str, response: Response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    
-    # We fake a perfect human Chrome User-Agent here to stop Cloudflare from blocking us
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json"
     }
     
     async with httpx.AsyncClient() as client:
-        # Fallback 1: CodeTabs
         try:
             res = await client.get(f"https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/{username}", headers=headers, timeout=5.0)
             if res.status_code == 200:
@@ -329,7 +383,6 @@ async def get_kick_viewers(username: str, response: Response):
         except:
             pass
             
-        # Fallback 2: AllOrigins
         try:
             res = await client.get(f"https://api.allorigins.win/get?url=https://kick.com/api/v1/channels/{username}", headers=headers, timeout=5.0)
             if res.status_code == 200:
@@ -352,19 +405,21 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
         "ticker_text": payload.ticker_text,
         "twitch_user": payload.twitch_user,
         "kick_user": payload.kick_user,
-        "updated_at": "now()"
+        "updated_at": get_utc_now() # Fixed the "now()" bug
     }).eq("handle", user).execute()
 
     if not res.data:
         raise HTTPException(status_code=404, detail="Streamer profile not found.")
     
+    # Instantly clear cache so the dashboard overlay updates right away
     if user in CACHE:
-        CACHE[user] = {} 
+        if "data" in CACHE[user]: del CACHE[user]["data"]
+        if "live_chat_id" in CACHE[user]: del CACHE[user]["live_chat_id"]
         
     return {"status": "success"}
 
 # ==========================================
-# 7. STATIC FILES (Vercel Fix)
+# 8. STATIC FILES (Vercel Fix)
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
