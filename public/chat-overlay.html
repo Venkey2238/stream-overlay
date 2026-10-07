@@ -332,7 +332,6 @@
             { name: 'IRIDESCENT IV', limit: 75, cls: 'role-9' }, { name: 'IRIDESCENT I', limit: 9999, cls: 'role-10' }
         ];
 
-        // The 5 Sequential Effects
         const ANIMATIONS = ['eff-scratch', 'eff-skillcheck', 'eff-bloodweb', 'eff-aura', 'eff-entity'];
 
         class HolographicChatEngine {
@@ -344,7 +343,6 @@
             getRoleData(username) {
                 const key = String(username).trim().toLowerCase();
                 
-                // EVERY USER GETS A UNIQUE, PERMANENT ANIMATION ASSIGNED TO THEM
                 if (!this.viewerProfiles.has(key)) {
                     this.viewerProfiles.set(key, { 
                         msgs: 0, 
@@ -391,7 +389,6 @@
                 
                 const node = document.createElement('div');
                 
-                // Ensures perfect 3D spacing
                 node.style.setProperty('--spawn-x', `${(Math.random() * 40 - 20)}px`);
                 node.style.setProperty('--spawn-y', `${(Math.random() * 30 + 10)}px`);
                 node.style.setProperty('--spawn-z', `${(Math.random() * 60 + 60)}px`);
@@ -399,7 +396,6 @@
                 node.style.setProperty('--spawn-rotY', `${(Math.random() * 10 - 5)}deg`);
                 node.style.setProperty('--spawn-scale', `${(Math.random() * 0.1 + 0.9)}`);
                 
-                // Living Liquid Avatars
                 node.style.setProperty('--ava-morph-speed', `${(Math.random() * 4 + 3).toFixed(1)}s`); 
                 node.style.setProperty('--ava-spin-speed', `${(Math.random() * 8 + 4).toFixed(1)}s`);  
                 node.style.setProperty('--ava-delay', `-${(Math.random() * 5).toFixed(1)}s`);
@@ -407,7 +403,6 @@
                 node.style.setProperty('--plt-color', `var(--${platform})`);
                 node.className = `msg-node msg-spawn ${roleData.role.cls}`;
 
-                // FX Plays First -> Then Chat Inner Materializes
                 node.innerHTML = `
                     <div class="fx-layer">
                         ${this.getFxHTML(roleData.fx)}
@@ -438,13 +433,10 @@
                 `;
 
                 this.container.prepend(node);
-                void node.offsetWidth; // Force CSS repaint
+                void node.offsetWidth; 
                 this.updateZDepth();
             }
 
-            // ==========================================================
-            // STRICTLY 2 CHATS ONLY - Perfect Pushback
-            // ==========================================================
             updateZDepth() {
                 const messages = Array.from(this.container.children);
                 messages.forEach((msg, i) => {
@@ -459,7 +451,6 @@
             }
         }
 
-        // --- CORE ENGINES ---
         class ViewerEngine {
             constructor() { this.state = { yt: 0, tw: 0, kk: 0 }; }
             update(plt, count) {
@@ -476,23 +467,71 @@
         class MasterUnifiedEngine {
             constructor(cEng, vEng, handle) {
                 this.c = cEng; this.v = vEng; this.h = handle;
-                this.q = []; this.config = { tw: "", kk: "" };
+                this.q = []; 
+                this.ytNextPageToken = "";
+                this.ytPolling = false;
+                this.config = { tw: "", kk: "" };
+                
                 if (!this.h) this.demo(); else this.start();
                 
-                // Slower queue to let the epic FX play out beautifully
                 setInterval(() => this.process(), 3500); 
             }
+
             async start() {
                 try {
                     const r = await fetch(`/api/streamer/${this.h}`); const d = await r.json();
                     if (d.authenticated) {
                         this.config.tw = d.twitch_user; this.config.kk = d.kick_user;
                         this.v.pollExternal(this.config.tw, this.config.kk);
-                        if (this.config.tw) this.connTw(this.config.tw);
-                        if (this.config.kk) { let kid = this.config.kk.includes("|||") ? this.config.kk.split("|||")[1] : this.config.kk; if(kid) this.connKk(kid); }
+                        
+                        // FIX 1: Start YouTube Polling
+                        this.pollYouTube();
+                        
+                        // FIX 4: Sanitize Twitch name so it doesn't break IRC
+                        if (this.config.tw) this.connTw(this.config.tw.replace(/^[@#]/, '').trim());
+                        
+                        if (this.config.kk) { 
+                            let kid = this.config.kk.includes("|||") ? this.config.kk.split("|||")[1] : this.config.kk; 
+                            if(kid) this.connKk(kid); 
+                        }
                     }
                 } catch(e) {}
             }
+
+            // FIX 2: Restored YouTube Poller with correct matching variable names (u, m, a, p)
+            async pollYouTube() {
+                if (this.ytPolling) return;
+                this.ytPolling = true;
+                let delay = 5000;
+                
+                try {
+                    const res = await fetch(`/api/streamer/${this.h}/chat?pageToken=${this.ytNextPageToken || ""}`);
+                    const data = await res.json();
+                    
+                    if (res.ok && !data.error) {
+                        if (data.pollingIntervalMillis) delay = data.pollingIntervalMillis;
+                        if (data.nextPageToken) this.ytNextPageToken = data.nextPageToken;
+                        
+                        if (data.items && data.items.length > 0) {
+                            data.items.forEach(item => {
+                                this.q.push({
+                                    u: item.authorDetails.displayName,
+                                    m: item.snippet.displayMessage,
+                                    a: item.authorDetails.profileImageUrl,
+                                    p: 'yt'
+                                });
+                            });
+                        }
+                    } else if (data.pollingIntervalMillis) {
+                        delay = data.pollingIntervalMillis; // Respect quotas on errors
+                    }
+                } catch(e) {
+                    delay = 10000;
+                }
+                
+                setTimeout(() => { this.ytPolling = false; this.pollYouTube(); }, delay);
+            }
+
             connTw(ch) {
                 const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
                 ws.onopen = () => { ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); ws.send(`NICK jf${Math.random()}`); ws.send(`JOIN #${ch.toLowerCase()}`); };
@@ -507,14 +546,30 @@
                     }
                 };
             }
-            connKk(id) {
-                if(!/^\d+$/.test(id)) return;
+
+            // FIX 3: Automatically resolve Kick slug into numeric chatroom ID to fix Push connection
+            async connKk(username) {
+                let chatroomId = username;
+                
+                // If the user typed their slug instead of their chat ID, fetch the ID for them
+                if (!/^\d+$/.test(username)) {
+                    try {
+                        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/${username}`);
+                        const data = await res.json();
+                        if (data && data.chatroom && data.chatroom.id) {
+                            chatroomId = data.chatroom.id.toString();
+                        } else return;
+                    } catch(e) { return; }
+                }
+
                 const p = new Pusher('eb1d5f283081a78b932c', { cluster: 'us2', forceTLS: true });
-                p.subscribe(`chatrooms.${id}.v2`).bind('App\\Events\\ChatMessageEvent', (d) => {
+                p.subscribe(`chatrooms.${chatroomId}.v2`).bind('App\\Events\\ChatMessageEvent', (d) => {
                     this.q.push({ u: d.sender.username, m: d.content, p: 'kk', a: d.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${d.sender.username}&background=random&color=fff&bold=true` });
                 });
             }
+
             process() { if (this.q.length > 0) { const msg = this.q.shift(); this.c.addMessage(msg.u, msg.m, msg.a, msg.p); } }
+            
             demo() {
                 ['yt','tw','kk'].forEach(p => document.getElementById(`node-${p}`).style.display = 'flex');
                 setInterval(() => this.v.update('yt', Math.floor(Math.random()*50)+1200), 5000);
