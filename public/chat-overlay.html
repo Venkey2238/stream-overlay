@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entity Chat - Ultimate Authentic DBD</title>
+    <title>Entity Chat - Authentic DBD FX</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Syncopate:wght@700;900&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
     <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
@@ -322,7 +322,6 @@
             { name: 'IRIDESCENT IV', limit: 75, cls: 'role-9' }, { name: 'IRIDESCENT I', limit: 9999, cls: 'role-10' }
         ];
 
-        // The 5 Sequential Effects
         const ANIMATIONS = ['eff-scratch', 'eff-skillcheck', 'eff-bloodweb', 'eff-aura', 'eff-entity'];
 
         class HolographicChatEngine {
@@ -334,7 +333,6 @@
             getRoleData(username) {
                 const key = String(username).trim().toLowerCase();
                 
-                // EVERY USER GETS A UNIQUE, PERMANENT ANIMATION ASSIGNED TO THEM
                 if (!this.viewerProfiles.has(key)) {
                     this.viewerProfiles.set(key, { 
                         msgs: 0, 
@@ -381,7 +379,6 @@
                 
                 const node = document.createElement('div');
                 
-                // Ensures perfect 3D spacing
                 node.style.setProperty('--spawn-x', `${(Math.random() * 40 - 20)}px`);
                 node.style.setProperty('--spawn-y', `${(Math.random() * 30 + 10)}px`);
                 node.style.setProperty('--spawn-z', `${(Math.random() * 60 + 60)}px`);
@@ -389,7 +386,6 @@
                 node.style.setProperty('--spawn-rotY', `${(Math.random() * 10 - 5)}deg`);
                 node.style.setProperty('--spawn-scale', `${(Math.random() * 0.1 + 0.9)}`);
                 
-                // Living Liquid Avatars
                 node.style.setProperty('--ava-morph-speed', `${(Math.random() * 4 + 3).toFixed(1)}s`); 
                 node.style.setProperty('--ava-spin-speed', `${(Math.random() * 8 + 4).toFixed(1)}s`);  
                 node.style.setProperty('--ava-delay', `-${(Math.random() * 5).toFixed(1)}s`);
@@ -397,7 +393,6 @@
                 node.style.setProperty('--plt-color', `var(--${platform})`);
                 node.className = `msg-node msg-spawn ${roleData.role.cls}`;
 
-                // FX Plays First -> Then Chat Inner Materializes
                 node.innerHTML = `
                     <div class="fx-layer">
                         ${this.getFxHTML(roleData.fx)}
@@ -428,13 +423,10 @@
                 `;
 
                 this.container.prepend(node);
-                void node.offsetWidth; // Force CSS repaint
+                void node.offsetWidth; 
                 this.updateZDepth();
             }
 
-            // ==========================================================
-            // STRICTLY 2 CHATS ONLY - Perfect Pushback
-            // ==========================================================
             updateZDepth() {
                 const messages = Array.from(this.container.children);
                 messages.forEach((msg, i) => {
@@ -449,7 +441,6 @@
             }
         }
 
-        // --- CORE ENGINES & STATS POLLER ---
         class ViewerEngine {
             constructor() { this.state = { yt: 0, tw: 0, kk: 0 }; }
             update(plt, count) {
@@ -473,14 +464,10 @@
                 
                 if (!this.h) this.demo(); else this.start();
                 
-                // Set to 3500ms so the cinematic entrance FX doesn't overlap the next message
                 setInterval(() => this.process(), 3500); 
             }
 
-            // ==========================================================
             // FIX: UNIFIED STATS POLLER
-            // Ensures YT, Twitch, and Kick Viewer counts update continuously
-            // ==========================================================
             startStatsLoop() {
                 const fetchStats = async () => {
                     try {
@@ -490,8 +477,8 @@
                     } catch(e) {}
                     this.v.pollExternal(this.config.tw, this.config.kk);
                 };
-                fetchStats(); // Run immediately
-                setInterval(fetchStats, 15000); // Check all platforms every 15 seconds
+                fetchStats(); 
+                setInterval(fetchStats, 15000); 
             }
 
             async start() {
@@ -500,13 +487,13 @@
                     if (d.authenticated) {
                         this.config.tw = d.twitch_user; this.config.kk = d.kick_user;
                         
-                        // FIX: Launch the unified stats loop so viewer counts always work
                         this.startStatsLoop();
-                        
-                        // Launch YouTube Chat loop
                         this.pollYouTube();
                         
+                        // FIX: Strict Twitch protocol nickname formatting
                         if (this.config.tw) this.connTw(this.config.tw.replace(/^[@#]/, '').trim());
+                        
+                        // FIX: Kick chatroom fallback parsing
                         if (this.config.kk) { 
                             let kid = this.config.kk.includes("|||") ? this.config.kk.split("|||")[1] : this.config.kk; 
                             if(kid) this.connKk(kid); 
@@ -548,26 +535,45 @@
                 setTimeout(() => { this.ytPolling = false; this.pollYouTube(); }, delay);
             }
 
+            // FIX: Restored correct NICK syntax for Twitch IRC
             connTw(ch) {
                 const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-                ws.onopen = () => { ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); ws.send(`NICK jf${Math.random()}`); ws.send(`JOIN #${ch.toLowerCase()}`); };
+                ws.onopen = () => { 
+                    ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); 
+                    ws.send(`NICK justinfan${Math.floor(Math.random() * 100000)}`); 
+                    ws.send(`JOIN #${ch.toLowerCase()}`); 
+                };
                 ws.onmessage = (e) => {
                     const lines = e.data.split('\r\n');
                     for (let l of lines) {
-                        if (l === 'PING :tmi.twitch.tv') ws.send('PONG :tmi.twitch.tv');
+                        if (l.startsWith('PING')) ws.send('PONG :tmi.twitch.tv');
                         else if (l.includes('PRIVMSG')) {
-                            const nm = l.match(/display-name=([^;]+)/); const m = l.match(/PRIVMSG #[^:]+:(.+)/);
-                            if(nm && m) this.q.push({ u: nm[1], m: m[1], p: 'tw', a: `https://ui-avatars.com/api/?name=${nm[1]}&background=random&color=fff&bold=true` });
+                            let nm = l.match(/display-name=([^;]*)/);
+                            let username = (nm && nm[1]) ? nm[1] : null;
+                            if (!username) {
+                                let un = l.match(/:([^!]+)!/);
+                                if (un) username = un[1];
+                            }
+                            const m = l.match(/PRIVMSG #[^:]+:(.+)/);
+                            if(username && m) {
+                                this.q.push({ 
+                                    u: username, 
+                                    m: m[1].trim(), 
+                                    p: 'tw', 
+                                    a: `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true` 
+                                });
+                            }
                         }
                     }
                 };
             }
 
+            // FIX: Added Pusher Key rotation loop to prevent dead keys
             async connKk(username) {
-                let chatroomId = username;
-                if (!/^\d+$/.test(username)) {
+                let chatroomId = username.trim();
+                if (!/^\d+$/.test(chatroomId)) {
                     try {
-                        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/${username}`);
+                        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/${chatroomId}`);
                         const data = await res.json();
                         if (data && data.chatroom && data.chatroom.id) {
                             chatroomId = data.chatroom.id.toString();
@@ -575,10 +581,31 @@
                     } catch(e) { return; }
                 }
 
-                const p = new Pusher('eb1d5f283081a78b932c', { cluster: 'us2', forceTLS: true });
-                p.subscribe(`chatrooms.${chatroomId}.v2`).bind('App\\Events\\ChatMessageEvent', (d) => {
-                    this.q.push({ u: d.sender.username, m: d.content, p: 'kk', a: d.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${d.sender.username}&background=random&color=fff&bold=true` });
-                });
+                const pusherKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
+                let keyIndex = 0;
+                
+                const tryConnect = () => {
+                    if (keyIndex >= pusherKeys.length) return;
+                    const p = new Pusher(pusherKeys[keyIndex], { cluster: 'us2', forceTLS: true });
+                    
+                    p.connection.bind('error', () => {
+                        p.disconnect();
+                        keyIndex++;
+                        setTimeout(tryConnect, 1000);
+                    });
+                    
+                    p.subscribe(`chatrooms.${chatroomId}.v2`).bind('App\\Events\\ChatMessageEvent', (d) => {
+                        if (d && d.sender) {
+                            this.q.push({ 
+                                u: d.sender.username, 
+                                m: d.content, 
+                                p: 'kk', 
+                                a: d.sender.identity.profile_pic || `https://ui-avatars.com/api/?name=${d.sender.username}&background=random&color=fff&bold=true` 
+                            });
+                        }
+                    });
+                };
+                tryConnect();
             }
 
             process() { if (this.q.length > 0) { const msg = this.q.shift(); this.c.addMessage(msg.u, msg.m, msg.a, msg.p); } }
