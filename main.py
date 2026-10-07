@@ -1,11 +1,8 @@
 import os
-import re
 import time
+import re
 import httpx
-import asyncio
-
-from typing import Optional, Any
-from datetime import datetime, timezone
+from typing import Optional
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,55 +12,57 @@ from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from datetime import datetime, timezone
+
+load_dotenv()
 
 # ==========================================
 # 1. CONFIGURATION & ENVIRONMENT VARIABLES
 # ==========================================
-load_dotenv()
-
 SESSION_SECRET = os.getenv("SESSION_SECRET", "super-secure-random-token-xyz")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
-# Polling Limits (Protects YouTube Quotas)
-STATS_REFRESH_SECONDS = 5  # Fetch new likes/subs/viewers every 5 seconds
-DB_UPDATE_SECONDS = 60     # Only write stats to Supabase once a minute to prevent DB lag
+# Cache Configuration
+CACHE = {}
+SUBS_CACHE_TTL = 60   # Update subs via API once per minute (Saves Quota)
+STATS_CACHE_TTL = 10  # Scrape likes/viewers every 10 seconds (Zero Quota)
 
 app = FastAPI()
 
-# FIX: Regex ".*" bypasses the FastAPI wildcard crash while allowing credentials for Auth
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=".*",
-    allow_credentials=True,
+    allow_origins=["*"], 
+    allow_credentials=False, # Fixed fatal CORS crash
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Server-Side Cache to prevent API Spam
-CACHE: dict[str, dict[str, Any]] = {}
 
 # ==========================================
 # 2. UTILITY FUNCTIONS
 # ==========================================
 def get_utc_now() -> str:
-    """Returns valid ISO formatted timestamp for Supabase."""
+    """Returns a valid ISO formatted timestamp for Supabase."""
     return datetime.now(timezone.utc).isoformat()
 
 def extract_youtube_video_id(url: str) -> str:
-    """Extracts the 11-character video ID safely."""
-    if not url: return ""
+    """Extracts the 11-character video ID from any YouTube URL format."""
+    if not url:
+        return ""
     url = url.strip()
     if len(url) == 11 and " " not in url and "/" not in url:
         return url
     match = re.search(r'(?:v=|live/|shorts/|youtu\.be/)([\w-]{11})', url)
-    return match.group(1) if match else url
+    if match:
+        return match.group(1)
+    return url 
+
 
 # ==========================================
 # 3. GOOGLE OAUTH 2.0 SETUP
@@ -86,19 +85,123 @@ class SettingsPayload(BaseModel):
     twitch_user: Optional[str] = ""
     kick_user: Optional[str] = ""
 
+
 # ==========================================
-# 4. BULLETPROOF TOKEN MANAGEMENT
+# 4. ZERO-QUOTA SCRAPERS (Highly Advanced)
 # ==========================================
-async def get_valid_access_token(handle: str, force_refresh: bool = False) -> str:
-    user = handle.lower().strip()
-    res = supabase.table("streamers").select("access_token, refresh_token, token_expires_at").eq("handle", user).execute()
+async def scrape_video_stats(video_id: str, last_known_likes: int) -> tuple[int, int]:
+    """Scrapes likes and viewers directly from the public video link. Uses ZERO quota."""
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9"
+    }
+    likes, viewers = last_known_likes, 0
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers=headers, timeout=5.0)
+            html = res.text
+            
+            # Scrape Viewers
+            viewers_match = re.search(r'"concurrentViewers"\s*:\s*\{\s*"simpleText"\s*:\s*"([\d,]+)"', html)
+            if viewers_match: 
+                viewers = int(viewers_match.group(1).replace(",", ""))
+            
+            # Scrape Likes
+            likes_match = re.search(r'"accessibilityData"\s*:\s*\{\s*"label"\s*:\s*"([\d,]+)\s+likes"', html)
+            if likes_match:
+                scraped_likes = int(likes_match.group(1).replace(",", ""))
+                likes = max(last_known_likes, scraped_likes) # Prevent dropping to zero
+            else:
+                likes_match_2 = re.search(r'"likeCount"\s*:\s*"([\d]+)"', html)
+                if likes_match_2: 
+                    scraped_likes = int(likes_match_2.group(1))
+                    likes = max(last_known_likes, scraped_likes)
+    except Exception:
+        pass
     
+    return likes, viewers
+
+
+async def scrape_innertube_chat(video_id: str, continuation: str = "") -> dict:
+    """Connects to YouTube's internal hidden API for Live Chat. Costs ZERO quota."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    cache_key = f"innertube_{video_id}"
+    api_key = CACHE.get(cache_key)
+
+    async with httpx.AsyncClient() as client:
+        # Step 1: If we don't have the API key or token, visit the popout chat to steal them
+        if not continuation or not api_key:
+            res = await client.get(f"https://www.youtube.com/live_chat?v={video_id}", headers=headers)
+            key_match = re.search(r'"INNERTUBE_API_KEY":"([^"]+)"', res.text)
+            token_match = re.search(r'"continuation":"([^"]+)"', res.text)
+            
+            if not key_match or not token_match:
+                return {"error": "Chat unavailable", "pollingIntervalMillis": 10000}
+                
+            api_key = key_match.group(1)
+            continuation = token_match.group(1)
+            CACHE[cache_key] = api_key
+
+        # Step 2: Request new messages via hidden internal API
+        url = f"https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key={api_key}"
+        payload = {
+            "context": {"client": {"clientName": "WEB", "clientVersion": "2.20231017.00.00"}},
+            "continuation": continuation
+        }
+        
+        try:
+            res = await client.post(url, json=payload, headers=headers)
+            data = res.json()
+            
+            mapped_items = []
+            next_token = continuation
+            
+            actions = data.get("continuationContents", {}).get("liveChatContinuation", {}).get("actions", [])
+            continuations = data.get("continuationContents", {}).get("liveChatContinuation", {}).get("continuations", [])
+            
+            if continuations:
+                c = continuations[0]
+                if "invalidationContinuationData" in c:
+                    next_token = c["invalidationContinuationData"]["continuation"]
+                elif "timedContinuationData" in c:
+                    next_token = c["timedContinuationData"]["continuation"]
+                        
+            # Format to exactly match Data API so your frontend HTML doesn't break
+            for action in actions:
+                item = action.get("addChatItemAction", {}).get("item", {})
+                msg_data = item.get("liveChatTextMessageRenderer")
+                if msg_data:
+                    runs = msg_data.get("message", {}).get("runs", [])
+                    text = "".join([r.get("text", "") for r in runs])
+                    author = msg_data.get("authorName", {}).get("simpleText", "User")
+                    avatars = msg_data.get("authorPhoto", {}).get("thumbnails", [])
+                    avatar = avatars[0]["url"] if avatars else ""
+                    
+                    mapped_items.append({
+                        "snippet": {"displayMessage": text},
+                        "authorDetails": {"displayName": author, "profileImageUrl": avatar}
+                    })
+                    
+            return {
+                "pollingIntervalMillis": 5000,
+                "nextPageToken": next_token,
+                "items": mapped_items
+            }
+        except Exception:
+            return {"error": "Failed to parse chat", "pollingIntervalMillis": 10000}
+
+
+# ==========================================
+# 5. TOKEN MANAGEMENT (Subs API Only)
+# ==========================================
+async def get_valid_access_token(handle: str) -> str:
+    res = supabase.table("streamers").select("access_token, refresh_token, token_expires_at").eq("handle", handle.lower()).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Streamer record not found.")
-    
+
     record = res.data[0]
-    access_token = record.get("access_token")
-    refresh_token = record.get("refresh_token")
+    access_token, refresh_token = record.get("access_token"), record.get("refresh_token")
     
     try:
         expires_at = int(float(record.get("token_expires_at", 0)))
@@ -106,74 +209,40 @@ async def get_valid_access_token(handle: str, force_refresh: bool = False) -> st
         expires_at = 0
         
     now = int(time.time())
-    
-    # If token is valid for at least 2 more minutes, return it
-    if not force_refresh and now < (expires_at - 120) and access_token:
+    if now < (expires_at - 120) and access_token:
         return access_token
 
     if not refresh_token:
-        raise HTTPException(status_code=401, detail="No refresh token available. User must re-authenticate.")
+        raise HTTPException(status_code=401, detail="No refresh token available. Re-authenticate.")
 
-    # Token is expired or forced to refresh. Request a new one.
     async with httpx.AsyncClient() as client:
         token_res = await client.post(
             GOOGLE_TOKEN_URL,
-            data={
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "refresh_token": refresh_token,
-                "grant_type": "refresh_token",
-            }
+            data={"client_id": GOOGLE_CLIENT_ID, "client_secret": GOOGLE_CLIENT_SECRET, "refresh_token": refresh_token, "grant_type": "refresh_token"}
         )
         
     if token_res.status_code != 200:
-        raise HTTPException(status_code=401, detail="Google rejected token refresh. User must re-authenticate.")
+        raise HTTPException(status_code=401, detail="Google rejected token refresh.")
 
     token_data = token_res.json()
     new_access_token = token_data["access_token"]
-    
     update_data = {
         "access_token": new_access_token,
         "token_expires_at": now + int(token_data.get("expires_in", 3600)),
         "updated_at": get_utc_now()
     }
-    
-    # Google rarely sends a new refresh token, but if they do, save it
-    if "refresh_token" in token_data:
-        update_data["refresh_token"] = token_data["refresh_token"]
-
-    supabase.table("streamers").update(update_data).eq("handle", user).execute()
+    if "refresh_token" in token_data: update_data["refresh_token"] = token_data["refresh_token"]
+    supabase.table("streamers").update(update_data).eq("handle", handle.lower()).execute()
     return new_access_token
 
-async def fetch_youtube_api(handle: str, url: str, params: dict):
-    """Wrapper that automatically handles 401 Expired Tokens mid-stream."""
-    token = await get_valid_access_token(handle)
-    async with httpx.AsyncClient() as client:
-        res = await client.get(url, params=params, headers={"Authorization": f"Bearer {token}"})
-        
-        # If Google suddenly rejects the token mid-stream, force a refresh and try exactly once more
-        if res.status_code == 401:
-            token = await get_valid_access_token(handle, force_refresh=True)
-            res = await client.get(url, params=params, headers={"Authorization": f"Bearer {token}"})
-            
-        return res
 
 # ==========================================
-# 5. AUTHENTICATION ROUTES
+# 6. AUTHENTICATION ROUTES
 # ==========================================
 @app.get("/login")
 async def login(request: Request):
-    redirect_uri = str(request.url_for('auth_callback')).replace("127.0.0.1", "localhost")
-    if "localhost" not in redirect_uri:
-        redirect_uri = redirect_uri.replace("http://", "https://")
-    
-    # access_type and prompt guarantee we get the crucial offline refresh_token
-    return await oauth.google.authorize_redirect(
-        request, 
-        redirect_uri,
-        access_type='offline',
-        prompt='consent'
-    )
+    redirect_uri = str(request.url_for('auth_callback')).replace("127.0.0.1", "localhost").replace("http://", "https://")
+    return await oauth.google.authorize_redirect(request, redirect_uri, access_type='offline', prompt='consent')
 
 @app.get("/auth/callback")
 async def auth_callback(request: Request):
@@ -181,199 +250,114 @@ async def auth_callback(request: Request):
         token = await oauth.google.authorize_access_token(request)
     except Exception as e:
         return {"error": "Google Auth Denied", "details": str(e)}
-        
-    access_token = token.get('access_token')
-    refresh_token = token.get('refresh_token')
+
+    access_token, refresh_token = token.get('access_token'), token.get('refresh_token')
     expires_at = token.get('expires_at', int(time.time()) + 3600)
 
     async with httpx.AsyncClient() as client:
-        res = await client.get(
-            "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
+        res = await client.get("https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true", headers={"Authorization": f"Bearer {access_token}"})
         data = res.json()
 
-    if not data.get("items"):
-        return RedirectResponse(url="/dashboard?error=no_channel")
+    if not data.get("items"): return RedirectResponse(url="/dashboard?error=no_channel")
 
     channel = data["items"][0]
     handle = channel["snippet"].get("customUrl", channel["snippet"]["title"]).replace("@", "").lower()
-    thumbnails = channel["snippet"].get("thumbnails", {})
-    avatar_url = thumbnails.get("medium", thumbnails.get("default", {})).get("url", "")
+    avatar_url = channel["snippet"].get("thumbnails", {}).get("medium", {}).get("url", "")
 
     record = {
-        "handle": handle,
-        "channel_id": channel["id"],
-        "title": channel["snippet"]["title"],
-        "avatar": avatar_url,
-        "access_token": access_token,
-        "token_expires_at": expires_at,
-        "current_subs": int(channel["statistics"].get("subscriberCount", 0)),
-        "updated_at": get_utc_now()
+        "handle": handle, "channel_id": channel["id"], "title": channel["snippet"]["title"],
+        "avatar": avatar_url, "access_token": access_token, "token_expires_at": expires_at,
+        "current_subs": int(channel["statistics"].get("subscriberCount", 0)), "updated_at": get_utc_now()
     }
-    if refresh_token:
-        record["refresh_token"] = refresh_token
-
-    supabase.table("streamers").upsert(record, on_conflict="handle").execute()
-    CACHE.pop(handle, None) # Clear old cache
+    if refresh_token: record["refresh_token"] = refresh_token
     
+    supabase.table("streamers").upsert(record, on_conflict="handle").execute()
+    if handle in CACHE: del CACHE[handle]
     return RedirectResponse(url=f"/dashboard?user={handle}")
 
+
 # ==========================================
-# 6. LIVE DATA & OVERLAY ROUTES (Fully Real-Time)
+# 7. LIVE DATA & OVERLAY ROUTES
 # ==========================================
 @app.get("/api/streamer/{handle}")
 async def get_live_overlay_data(handle: str, response: Response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     user = handle.strip().lower()
     now = time.time()
+
+    # Fast cache return to protect database
+    if user in CACHE and "stats_data" in CACHE[user] and CACHE[user]["stats_expires_at"] > now:
+        return CACHE[user]["stats_data"]
+
+    res = supabase.table("streamers").select("*").eq("handle", user).execute()
+    if not res.data: return {"authenticated": False}
+    profile = res.data[0]
     
-    # Init cache structure for user
-    if user not in CACHE:
-        CACHE[user] = {"data": {}, "last_fetched": 0, "last_db_update": 0}
-        
-    # Return quick cache if we fetched YouTube within the last 5 seconds (Protects Quota)
-    if (now - CACHE[user]["last_fetched"]) < STATS_REFRESH_SECONDS and CACHE[user]["data"]:
-        return CACHE[user]["data"]
-
-    # 1. Load Profile
-    db_res = supabase.table("streamers").select("*").eq("handle", user).execute()
-    if not db_res.data:
-        return {"authenticated": False}
-    profile = db_res.data[0]
-
-    # Initialize stats
     current_subs = profile.get("current_subs", 0)
-    likes = 0
+    last_likes = profile.get("last_likes", 0)
     yt_viewers = 0
     video_id = extract_youtube_video_id(profile.get("video_id", ""))
 
-    try:
-        # 2. Fetch Real-time Subscribers
-        sub_res = await fetch_youtube_api(user, "https://www.googleapis.com/youtube/v3/channels", {"part": "statistics", "mine": "true"})
-        if sub_res.status_code == 200 and sub_res.json().get("items"):
-            current_subs = int(sub_res.json()["items"][0]["statistics"].get("subscriberCount", current_subs))
+    # --- SUBS: Fetched via API only once every 60 seconds ---
+    if CACHE.get(user, {}).get("subs_expires_at", 0) < now:
+        try:
+            token = await get_valid_access_token(user)
+            async with httpx.AsyncClient() as client:
+                yt_res = await client.get("https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true", headers={"Authorization": f"Bearer {token}"})
+                if yt_res.status_code == 200 and yt_res.json().get("items"):
+                    current_subs = int(yt_res.json()["items"][0]["statistics"].get("subscriberCount", current_subs))
+            CACHE.setdefault(user, {})["subs_expires_at"] = now + SUBS_CACHE_TTL
+        except Exception:
+            pass
 
-        # 3. Auto-Detect Video ID if it's missing (Fixes the Likes = 0 bug)
-        if not video_id:
-            broadcast_res = await fetch_youtube_api(user, "https://www.googleapis.com/youtube/v3/liveBroadcasts", {"part": "snippet", "broadcastStatus": "active", "broadcastType": "all"})
-            if broadcast_res.status_code == 200 and broadcast_res.json().get("items"):
-                video_id = broadcast_res.json()["items"][0]["snippet"]["id"]
+    # --- LIKES & VIEWERS: Fetched via ZERO-QUOTA HTML Scraper ---
+    if video_id:
+        likes, yt_viewers = await scrape_video_stats(video_id, last_likes)
+    else:
+        likes = last_likes
 
-        # 4. Fetch Real-time Likes and Viewers
-        if video_id:
-            vid_res = await fetch_youtube_api(user, "https://www.googleapis.com/youtube/v3/videos", {"part": "statistics,liveStreamingDetails", "id": video_id})
-            if vid_res.status_code == 200 and vid_res.json().get("items"):
-                item = vid_res.json()["items"][0]
-                likes = int(item["statistics"].get("likeCount", 0))
-                yt_viewers = int(item.get("liveStreamingDetails", {}).get("concurrentViewers", 0))
+    # Save robust stats back to database
+    supabase.table("streamers").update({
+        "current_subs": current_subs, 
+        "last_likes": max(likes, last_likes), # Never lets likes reset to zero
+        "updated_at": get_utc_now()
+    }).eq("handle", user).execute()
 
-        # 5. Prevent Supabase Database rate-limiting by only pushing stats once every 60 seconds
-        if (now - CACHE[user]["last_db_update"]) > DB_UPDATE_SECONDS:
-            supabase.table("streamers").update({
-                "current_subs": current_subs,
-                "updated_at": get_utc_now()
-            }).eq("handle", user).execute()
-            CACHE[user]["last_db_update"] = now
+    response_data = {
+        "authenticated": True, "title": profile.get("title", ""), "avatar": profile.get("avatar", ""),
+        "subs": current_subs, "likes": max(likes, last_likes), "yt_viewers": yt_viewers,
+        "sub_goal": profile.get("sub_goal") if profile.get("sub_goal") else 5000, "video_id": video_id,
+        "ticker_text": profile.get("ticker_text", ""), "twitch_user": profile.get("twitch_user", ""), "kick_user": profile.get("kick_user", "")
+    }
 
-        # Compile final response
-        response_data = {
-            "authenticated": True,
-            "title": profile.get("title", ""),
-            "avatar": profile.get("avatar", ""),
-            "subs": current_subs,
-            "likes": likes,
-            "yt_viewers": yt_viewers,
-            "sub_goal": profile.get("sub_goal") if profile.get("sub_goal") else 5000,
-            "video_id": video_id,
-            "ticker_text": profile.get("ticker_text", ""),
-            "twitch_user": profile.get("twitch_user", ""),
-            "kick_user": profile.get("kick_user", "")
-        }
+    CACHE.setdefault(user, {})["stats_data"] = response_data
+    CACHE[user]["stats_expires_at"] = now + STATS_CACHE_TTL
+    return response_data
 
-        # Save to memory cache
-        CACHE[user]["data"] = response_data
-        CACHE[user]["last_fetched"] = now
-
-        return response_data
-        
-    except HTTPException as e:
-        return {"authenticated": False, "error": str(e.detail)}
-    except Exception as e:
-        # Fallback to cache if a random network error occurs
-        if CACHE[user]["data"]:
-            return CACHE[user]["data"]
-        return {"authenticated": False, "error": "Internal Server Error during fetch."}
 
 @app.get("/api/streamer/{handle}/chat")
 async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     user = handle.strip().lower()
     
-    db_res = supabase.table("streamers").select("video_id").eq("handle", user).execute()
-    if not db_res.data:
-        return {"error": "Not found", "pollingIntervalMillis": 10000}
-
-    video_id = extract_youtube_video_id(db_res.data[0].get("video_id", ""))
-
-    if user not in CACHE:
-        CACHE[user] = {}
-
-    live_chat_id = CACHE[user].get("live_chat_id")
+    res = supabase.table("streamers").select("video_id").eq("handle", user).execute()
+    if not res.data: return {"error": "Not found", "pollingIntervalMillis": 10000}
     
-    try:
-        # 1. Resolve Chat ID if not cached, or if the video ID changed
-        if not live_chat_id or CACHE[user].get("cached_video_id") != video_id:
-            found_chat_id = None
-            
-            # Approach A: Try using the provided video ID
-            if video_id:
-                vid_res = await fetch_youtube_api(user, "https://www.googleapis.com/youtube/v3/videos", {"part": "liveStreamingDetails", "id": video_id})
-                if vid_res.status_code == 200 and vid_res.json().get("items"):
-                    found_chat_id = vid_res.json()["items"][0].get("liveStreamingDetails", {}).get("activeLiveChatId")
+    video_id = extract_youtube_video_id(res.data[0].get("video_id", ""))
+    if not video_id: return {"error": "No Video ID", "pollingIntervalMillis": 10000}
 
-            # Approach B: Auto-detect active broadcast if video ID failed or was empty
-            if not found_chat_id:
-                broadcast_res = await fetch_youtube_api(user, "https://www.googleapis.com/youtube/v3/liveBroadcasts", {"part": "snippet", "broadcastStatus": "active", "broadcastType": "all"})
-                if broadcast_res.status_code == 200 and broadcast_res.json().get("items"):
-                    found_chat_id = broadcast_res.json()["items"][0].get("snippet", {}).get("liveChatId")
-            
-            if not found_chat_id:
-                return {"error": "Chat is disabled or stream not live", "pollingIntervalMillis": 15000}
-                
-            CACHE[user]["live_chat_id"] = found_chat_id
-            CACHE[user]["cached_video_id"] = video_id
-            live_chat_id = found_chat_id
+    # Calls the new Zero-Quota InnerTube Scraper
+    # Automatically formats perfectly for your existing chat-overlay.html
+    return await scrape_innertube_chat(video_id, pageToken)
 
-        # 2. Fetch Messages
-        params = {"liveChatId": live_chat_id, "part": "snippet,authorDetails"}
-        if pageToken:
-            params["pageToken"] = pageToken
-            
-        chat_res = await fetch_youtube_api(user, "https://www.googleapis.com/youtube/v3/liveChat/messages", params)
-        
-        if chat_res.status_code == 200:
-            return chat_res.json()
-        elif chat_res.status_code == 403:
-            return {"error": "Quota limit reached", "pollingIntervalMillis": 30000}
-        else:
-            # Clear cache to force a re-detection on the next check
-            CACHE[user].pop("live_chat_id", None)
-            return {"error": f"API Error {chat_res.status_code}", "pollingIntervalMillis": 10000}
-
-    except Exception:
-        return {"error": "Auth failed", "pollingIntervalMillis": 15000}
 
 # ==========================================
-# 7. KICK VIEWER PROXY (OBS CLOUDFLARE BYPASS)
+# 8. KICK VIEWER PROXY (OBS CLOUDFLARE BYPASS)
 # ==========================================
 @app.get("/api/kick_viewers/{username}")
 async def get_kick_viewers(username: str, response: Response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json"
-    }
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept": "application/json"}
     
     async with httpx.AsyncClient() as client:
         try:
@@ -382,57 +366,39 @@ async def get_kick_viewers(username: str, response: Response):
                 data = res.json()
                 if data and "livestream" in data:
                     return {"viewers": data["livestream"].get("viewer_count", 0) if data["livestream"] else 0}
-        except:
-            pass
-            
-        try:
-            res = await client.get(f"https://api.allorigins.win/get?url=https://kick.com/api/v1/channels/{username}", headers=headers, timeout=5.0)
-            if res.status_code == 200:
-                import json
-                data = json.loads(res.json().get("contents", "{}"))
-                if data and "livestream" in data:
-                    return {"viewers": data["livestream"].get("viewer_count", 0) if data["livestream"] else 0}
-        except:
-            pass
-
+        except: pass
     return {"viewers": 0}
 
 @app.post("/api/streamer/{handle}/settings")
 async def save_streamer_settings(handle: str, payload: SettingsPayload):
     user = handle.strip().lower()
     res = supabase.table("streamers").update({
-        "sub_goal": payload.sub_goal,
-        "video_id": payload.video_id,
-        "ticker_text": payload.ticker_text,
-        "twitch_user": payload.twitch_user,
-        "kick_user": payload.kick_user,
+        "sub_goal": payload.sub_goal, "video_id": extract_youtube_video_id(payload.video_id),
+        "ticker_text": payload.ticker_text, "twitch_user": payload.twitch_user, "kick_user": payload.kick_user,
         "updated_at": get_utc_now()
     }).eq("handle", user).execute()
-    
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Streamer profile not found.")
 
-    # Instantly clear cache so the dashboard overlay updates right away
-    CACHE.pop(user, None)
+    if not res.data: raise HTTPException(status_code=404, detail="Profile not found.")
+    
+    # Flush Cache
+    if user in CACHE:
+        if "stats_data" in CACHE[user]: del CACHE[user]["stats_data"]
+        if "subs_expires_at" in CACHE[user]: del CACHE[user]["subs_expires_at"]
+        
     return {"status": "success"}
 
+
 # ==========================================
-# 8. STATIC FILES (Vercel Fix)
+# 9. STATIC FILES (Vercel Fix)
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
-
 if os.path.exists(PUBLIC_DIR):
     @app.get("/dashboard")
-    async def serve_dashboard():
-        return FileResponse(os.path.join(PUBLIC_DIR, "dashboard.html"))
-        
+    async def serve_dashboard(): return FileResponse(os.path.join(PUBLIC_DIR, "dashboard.html"))
     @app.get("/overlay")
-    async def serve_overlay():
-        return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
-        
+    async def serve_overlay(): return FileResponse(os.path.join(PUBLIC_DIR, "overlay.html"))
     @app.get("/chat")
-    async def serve_chat():
-        return FileResponse(os.path.join(PUBLIC_DIR, "chat-overlay.html"))
+    async def serve_chat(): return FileResponse(os.path.join(PUBLIC_DIR, "chat-overlay.html"))
 
     app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
