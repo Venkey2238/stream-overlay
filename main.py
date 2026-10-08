@@ -26,10 +26,10 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
-# SMART QUOTA FIREWALL TIMERS
+# ULTRA-EFFICIENT QUOTA FIREWALL TIMERS (Saved for 12+ hours)
 CACHE = {}
-STATS_CACHE_TTL = 60  # Likes and Viewers update every 60 seconds (60 quota/hr)
-SUBS_CACHE_TTL = 300  # Subs update every 5 minutes (12 quota/hr)
+STATS_CACHE_TTL = 120  # Likes and Viewers update every 2 minutes (30 quota/hr)
+SUBS_CACHE_TTL = 600   # Subs update every 10 minutes (6 quota/hr)
 
 app = FastAPI()
 
@@ -43,9 +43,6 @@ app.add_middleware(
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ==========================================
-# 2. UTILITY FUNCTIONS
-# ==========================================
 def get_utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -57,9 +54,6 @@ def extract_youtube_video_id(url: str) -> str:
     if match: return match.group(1)
     return url 
 
-# ==========================================
-# 3. GOOGLE OAUTH 2.0 SETUP
-# ==========================================
 oauth = OAuth()
 oauth.register(
     name='google',
@@ -76,10 +70,6 @@ class SettingsPayload(BaseModel):
     twitch_user: Optional[str] = ""
     kick_user: Optional[str] = ""
 
-
-# ==========================================
-# 4. TOKEN MANAGEMENT (10-Hour Safe)
-# ==========================================
 async def get_valid_access_token(handle: str, force_refresh: bool = False) -> str:
     res = supabase.table("streamers").select("*").eq("handle", handle.lower()).execute()
     if not res.data: raise HTTPException(status_code=404, detail="Streamer not found.")
@@ -92,14 +82,12 @@ async def get_valid_access_token(handle: str, force_refresh: bool = False) -> st
         
     now = int(time.time())
     
-    # Return valid token if enough time left
     if not force_refresh and now < (expires_at - 120) and access_token:
         return access_token
 
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No refresh token available.")
 
-    # Refresh Token with Google
     async with httpx.AsyncClient() as client:
         token_res = await client.post(GOOGLE_TOKEN_URL, data={
             "client_id": GOOGLE_CLIENT_ID, "client_secret": GOOGLE_CLIENT_SECRET, 
@@ -120,9 +108,7 @@ async def get_valid_access_token(handle: str, force_refresh: bool = False) -> st
     supabase.table("streamers").update(update_data).eq("handle", handle.lower()).execute()
     return new_access_token
 
-
 async def safe_youtube_api_get(url: str, handle: str) -> httpx.Response:
-    """Wrapper that prevents app crashes during a 10-hour stream if a token suddenly expires."""
     token = await get_valid_access_token(handle)
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers={"Authorization": f"Bearer {token}"})
@@ -131,10 +117,6 @@ async def safe_youtube_api_get(url: str, handle: str) -> httpx.Response:
             res = await client.get(url, headers={"Authorization": f"Bearer {token}"})
         return res
 
-
-# ==========================================
-# 5. AUTHENTICATION ROUTES
-# ==========================================
 @app.get("/login")
 async def login(request: Request):
     redirect_uri = str(request.url_for('auth_callback')).replace("127.0.0.1", "localhost").replace("http://", "https://")
@@ -168,7 +150,6 @@ async def auth_callback(request: Request):
     if handle in CACHE: del CACHE[handle]
     return RedirectResponse(url=f"/dashboard?user={handle}")
 
-
 # ==========================================
 # 6. LIVE DATA (STATS QUOTA FIREWALL)
 # ==========================================
@@ -179,7 +160,6 @@ async def get_live_overlay_data(handle: str, response: Response):
     now = time.time()
     user_cache = CACHE.setdefault(user, {})
 
-    # Serve stats from cache if under 60 seconds
     if now < user_cache.get("stats_expires_at", 0) and "stats_data" in user_cache:
         return user_cache["stats_data"]
 
@@ -188,39 +168,38 @@ async def get_live_overlay_data(handle: str, response: Response):
     profile = res.data[0]
     
     current_subs = profile.get("current_subs") or 0
-    historical_likes = profile.get("last_likes") or 0
-    likes = historical_likes
-    yt_viewers = 0
+    likes = profile.get("last_likes") or 0
+    yt_viewers = user_cache.get("last_yt_viewers", 0)
     video_id = extract_youtube_video_id(profile.get("video_id") or "")
 
     try:
-        # SUBS: Hit API once every 5 minutes
         if now > user_cache.get("subs_expires_at", 0):
             yt_res = await safe_youtube_api_get("https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true", user)
             if yt_res.status_code == 200 and yt_res.json().get("items"):
                 current_subs = int(yt_res.json()["items"][0]["statistics"].get("subscriberCount", current_subs))
             user_cache["subs_expires_at"] = now + SUBS_CACHE_TTL
 
-        # LIKES/VIEWERS: Hit API once every 60 seconds
         if video_id:
             vid_res = await safe_youtube_api_get(f"https://www.googleapis.com/youtube/v3/videos?part=statistics,liveStreamingDetails&id={video_id}", user)
             if vid_res.status_code == 200 and vid_res.json().get("items"):
                 item = vid_res.json()["items"][0]
-                api_likes = int(item["statistics"].get("likeCount", 0))
-                likes = max(api_likes, historical_likes) # Prevent reset to zero
-                yt_viewers = int(item.get("liveStreamingDetails", {}).get("concurrentViewers", 0))
-                user_cache["live_chat_id"] = item.get("liveStreamingDetails", {}).get("activeLiveChatId")
+                likes = max(int(item["statistics"].get("likeCount", 0)), likes)
+                
+                # BUG FIX 1: Safely extract viewers and fallback to memory if YouTube stutters
+                live_details = item.get("liveStreamingDetails", {})
+                if "concurrentViewers" in live_details:
+                    yt_viewers = int(live_details["concurrentViewers"])
+                    user_cache["last_yt_viewers"] = yt_viewers
+                
+                user_cache["live_chat_id"] = live_details.get("activeLiveChatId")
 
-        # Crash-Proof Database Update
         try:
             supabase.table("streamers").update({
                 "current_subs": current_subs, "last_likes": likes, "updated_at": get_utc_now()
             }).eq("handle", user).execute()
-        except Exception:
-            pass # Fails gracefully if 'last_likes' column is missing
+        except Exception: pass
 
-    except Exception as e:
-        print(f"API Error: {e}")
+    except Exception as e: print(f"API Error: {e}")
 
     response_data = {
         "authenticated": True, "title": profile.get("title") or "", "avatar": profile.get("avatar") or "",
@@ -233,7 +212,6 @@ async def get_live_overlay_data(handle: str, response: Response):
     user_cache["stats_expires_at"] = now + STATS_CACHE_TTL
     return response_data
 
-
 # ==========================================
 # 7. LIVE CHAT (CHAT QUOTA FIREWALL)
 # ==========================================
@@ -244,34 +222,35 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
     now = time.time()
     user_cache = CACHE.setdefault(user, {})
 
-    # QUOTA FIREWALL: If frontend asks too soon, tell it to wait, return 0 messages
     next_poll = user_cache.get("chat_next_poll", 0)
     if now < next_poll:
-        remaining_ms = int((next_poll - now) * 1000)
-        return {
-            "items": [], 
-            "nextPageToken": pageToken, 
-            "pollingIntervalMillis": max(remaining_ms, 1000)
-        }
+        return {"items": [], "nextPageToken": pageToken, "pollingIntervalMillis": max(int((next_poll - now) * 1000), 1000)}
 
-    # Fetch Video ID
     res = supabase.table("streamers").select("video_id").eq("handle", user).execute()
     if not res.data: return {"error": "Not found", "pollingIntervalMillis": 10000}
     video_id = extract_youtube_video_id(res.data[0].get("video_id") or "")
     if not video_id: return {"error": "No Video ID", "pollingIntervalMillis": 10000}
 
-    # Resolve Chat ID if missing
+    # BUG FIX 2: Added MASSIVE 5-Minute Chat Resolve Cooldown to stop quota drain
     live_chat_id = user_cache.get("live_chat_id")
+    chat_resolve_cooldown = user_cache.get("chat_resolve_cooldown", 0)
+
     if not live_chat_id or user_cache.get("cached_video_id") != video_id:
+        if now < chat_resolve_cooldown:
+            return {"error": "Chat disabled or stream not live", "pollingIntervalMillis": 15000}
+            
         vid_res = await safe_youtube_api_get(f"https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id={video_id}", user)
         if vid_res.status_code == 200 and vid_res.json().get("items"):
             live_chat_id = vid_res.json()["items"][0].get("liveStreamingDetails", {}).get("activeLiveChatId")
-        if not live_chat_id: return {"error": "Chat disabled or stream not live", "pollingIntervalMillis": 15000}
-        
+            
+        if not live_chat_id: 
+            user_cache["chat_resolve_cooldown"] = now + 300 # Wait 5 FULL MINUTES to save quota
+            return {"error": "Chat disabled or stream not live", "pollingIntervalMillis": 15000}
+            
         user_cache["live_chat_id"] = live_chat_id
         user_cache["cached_video_id"] = video_id
+        user_cache["chat_resolve_cooldown"] = 0 # Reset cooldown if successful
 
-    # Make the Official YouTube Request
     chat_url = f"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={live_chat_id}&part=snippet,authorDetails"
     if pageToken: chat_url += f"&pageToken={pageToken}"
 
@@ -279,35 +258,45 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
     
     if chat_res.status_code == 200:
         data = chat_res.json()
-        # Set the next firewall allowed time based on YouTube's exact requirement
         interval_ms = data.get("pollingIntervalMillis", 6000)
         user_cache["chat_next_poll"] = time.time() + (interval_ms / 1000.0)
         return data
     elif chat_res.status_code == 403:
-        user_cache["chat_next_poll"] = time.time() + 60 # Penalty block for 60s
+        user_cache["chat_next_poll"] = time.time() + 60 
         return {"error": "Quota limit reached", "pollingIntervalMillis": 60000}
     else:
         if "live_chat_id" in user_cache: del user_cache["live_chat_id"]
         return {"error": f"API Error {chat_res.status_code}", "pollingIntervalMillis": 10000}
 
-
 # ==========================================
-# 8. KICK VIEWER PROXY & SETTINGS
+# 8. KICK VIEWER PROXY (BUG FIX: Cached)
 # ==========================================
 @app.get("/api/kick_viewers/{username}")
 async def get_kick_viewers(username: str, response: Response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     
+    now = time.time()
+    cache_key = f"kick_{username}"
+    # Keeps the viewers in memory so proxy failures don't drop it to 0
+    kick_cache = CACHE.setdefault(cache_key, {"viewers": 0, "expires": 0})
+    
+    if now < kick_cache["expires"]:
+        return {"viewers": kick_cache["viewers"]}
+        
     async with httpx.AsyncClient() as client:
         try:
             res = await client.get(f"https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/{username}", headers=headers, timeout=5.0)
             if res.status_code == 200:
                 data = res.json()
-                if data and "livestream" in data: return {"viewers": data["livestream"].get("viewer_count", 0) if data["livestream"] else 0}
+                if data and "livestream" in data and data["livestream"]:
+                    viewers = data["livestream"].get("viewer_count", 0)
+                    kick_cache["viewers"] = viewers
+                    kick_cache["expires"] = now + 60
+                    return {"viewers": viewers}
         except: pass
-    return {"viewers": 0}
-
+        
+    return {"viewers": kick_cache["viewers"]} # Returns safe fallback
 
 @app.post("/api/streamer/{handle}/settings")
 async def save_streamer_settings(handle: str, payload: SettingsPayload):
@@ -320,7 +309,6 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
 
     if not res.data: raise HTTPException(status_code=404, detail="Profile not found.")
     
-    # Flush Cache so dashboard instantly shows new video/settings
     if user in CACHE:
         if "stats_data" in CACHE[user]: del CACHE[user]["stats_data"]
         if "stats_expires_at" in CACHE[user]: del CACHE[user]["stats_expires_at"]
@@ -328,7 +316,6 @@ async def save_streamer_settings(handle: str, payload: SettingsPayload):
         if "chat_next_poll" in CACHE[user]: del CACHE[user]["chat_next_poll"]
         
     return {"status": "success"}
-
 
 # ==========================================
 # 9. STATIC FILES
