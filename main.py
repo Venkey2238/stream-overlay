@@ -26,13 +26,12 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
-# ==========================================
-# QUOTA PROTECTION ENGINE (Guaranteed 10+ Hours)
-# Stats update every 30s | Subs every 5m | Chat minimum 6s
-# ==========================================
+# ULTRA-EFFICIENT QUOTA FIREWALL TIMERS (Guarantees 10+ Hours)
 CACHE = {}
-STATS_CACHE_TTL = 30   
-SUBS_CACHE_TTL = 300   
+STATS_CACHE_TTL = 30   # Viewers/Likes update every 30 seconds (Max 120 quota/hr)
+SUBS_CACHE_TTL = 300   # Subs update every 5 minutes (Max 12 quota/hr)
+CHAT_MIN_POLL = 15000  # Chat updates every 15 seconds (Max 240 quota/hr)
+# Total Quota Cost: ~372 per hour -> ~3,720 for 10 hours (Out of 10,000 daily limit!)
 
 app = FastAPI()
 
@@ -170,39 +169,31 @@ async def get_live_overlay_data(handle: str, response: Response):
     if not res.data: return {"authenticated": False}
     profile = res.data[0]
     
-    # Iron-Clad Fallbacks
     current_subs = profile.get("current_subs") or 0
     likes = profile.get("last_likes") or 0
     yt_viewers = user_cache.get("last_yt_viewers", 0)
     video_id = extract_youtube_video_id(profile.get("video_id") or "")
 
     try:
-        # SUBS API
         if now > user_cache.get("subs_expires_at", 0):
             yt_res = await safe_youtube_api_get("https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true", user)
             if yt_res.status_code == 200 and yt_res.json().get("items"):
                 current_subs = int(yt_res.json()["items"][0]["statistics"].get("subscriberCount", current_subs))
             user_cache["subs_expires_at"] = now + SUBS_CACHE_TTL
 
-        # LIKES & VIEWERS API
         if video_id:
             vid_res = await safe_youtube_api_get(f"https://www.googleapis.com/youtube/v3/videos?part=statistics,liveStreamingDetails&id={video_id}", user)
             if vid_res.status_code == 200 and vid_res.json().get("items"):
                 item = vid_res.json()["items"][0]
-                
-                api_likes = int(item["statistics"].get("likeCount", 0))
-                if api_likes > likes: likes = api_likes # Never let likes drop
+                likes = max(int(item["statistics"].get("likeCount", 0)), likes)
                 
                 live_details = item.get("liveStreamingDetails", {})
                 if "concurrentViewers" in live_details:
-                    api_viewers = int(live_details["concurrentViewers"])
-                    if api_viewers > 0: # Never let viewers randomly drop to 0
-                        yt_viewers = api_viewers
-                        user_cache["last_yt_viewers"] = yt_viewers
+                    yt_viewers = int(live_details["concurrentViewers"])
+                    user_cache["last_yt_viewers"] = yt_viewers
                 
                 user_cache["live_chat_id"] = live_details.get("activeLiveChatId")
 
-        # Background Update
         try:
             supabase.table("streamers").update({
                 "current_subs": current_subs, "last_likes": likes, "updated_at": get_utc_now()
@@ -234,12 +225,12 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
 
     next_poll = user_cache.get("chat_next_poll", 0)
     if now < next_poll:
-        return {"items": [], "nextPageToken": pageToken, "pollingIntervalMillis": max(int((next_poll - now) * 1000), 6000)}
+        return {"items": [], "nextPageToken": pageToken, "pollingIntervalMillis": max(int((next_poll - now) * 1000), CHAT_MIN_POLL)}
 
     res = supabase.table("streamers").select("video_id").eq("handle", user).execute()
-    if not res.data: return {"error": "Not found", "pollingIntervalMillis": 10000}
+    if not res.data: return {"error": "Not found", "pollingIntervalMillis": CHAT_MIN_POLL}
     video_id = extract_youtube_video_id(res.data[0].get("video_id") or "")
-    if not video_id: return {"error": "No Video ID", "pollingIntervalMillis": 10000}
+    if not video_id: return {"error": "No Video ID", "pollingIntervalMillis": CHAT_MIN_POLL}
 
     live_chat_id = user_cache.get("live_chat_id")
     chat_resolve_cooldown = user_cache.get("chat_resolve_cooldown", 0)
@@ -267,20 +258,23 @@ async def get_live_chat(handle: str, response: Response, pageToken: str = ""):
     
     if chat_res.status_code == 200:
         data = chat_res.json()
-        # HARD QUOTA ENFORCEMENT: Never poll faster than 6 seconds (600 calls/hr max)
-        interval_ms = max(data.get("pollingIntervalMillis", 6000), 6000)
+        # ENFORCE MINIMUM 15 SECONDS TO PREVENT QUOTA EXHAUSTION
+        interval_ms = max(data.get("pollingIntervalMillis", 6000), CHAT_MIN_POLL)
         user_cache["chat_next_poll"] = time.time() + (interval_ms / 1000.0)
+        
+        # Override the return value to force the frontend to slow down too
         data["pollingIntervalMillis"] = interval_ms
         return data
+        
     elif chat_res.status_code == 403:
         user_cache["chat_next_poll"] = time.time() + 60 
         return {"error": "Quota limit reached", "pollingIntervalMillis": 60000}
     else:
         if "live_chat_id" in user_cache: del user_cache["live_chat_id"]
-        return {"error": f"API Error {chat_res.status_code}", "pollingIntervalMillis": 10000}
+        return {"error": f"API Error {chat_res.status_code}", "pollingIntervalMillis": CHAT_MIN_POLL}
 
 # ==========================================
-# 8. KICK VIEWER PROXY (Zero-Drop Cache)
+# 8. KICK VIEWER PROXY (Cached against rate limits)
 # ==========================================
 @app.get("/api/kick_viewers/{username}")
 async def get_kick_viewers(username: str, response: Response):
@@ -300,14 +294,13 @@ async def get_kick_viewers(username: str, response: Response):
             if res.status_code == 200:
                 data = res.json()
                 if data and "livestream" in data and data["livestream"]:
-                    api_viewers = data["livestream"].get("viewer_count", 0)
-                    if api_viewers > 0: # Ignore random 0 drops from proxy
-                        kick_cache["viewers"] = api_viewers
+                    viewers = data["livestream"].get("viewer_count", 0)
+                    kick_cache["viewers"] = viewers
                     kick_cache["expires"] = now + 60
-                    return {"viewers": kick_cache["viewers"]}
+                    return {"viewers": viewers}
         except: pass
         
-    return {"viewers": kick_cache["viewers"]}
+    return {"viewers": kick_cache["viewers"]} 
 
 @app.post("/api/streamer/{handle}/settings")
 async def save_streamer_settings(handle: str, payload: SettingsPayload):
