@@ -39,15 +39,9 @@
             display: flex; align-items: center; justify-content: center;
         }
 
-        .obs-safe-zone {
-            width: 1000px; height: 250px;
-            display: flex; align-items: center; justify-content: center; position: relative;
-        }
+        .obs-safe-zone { width: 1000px; height: 250px; display: flex; align-items: center; justify-content: center; position: relative; }
 
-        .scene-container {
-            position: relative; width: var(--overlay-width); height: var(--overlay-height);
-            display: flex; align-items: center; z-index: 10;
-        }
+        .scene-container { position: relative; width: var(--overlay-width); height: var(--overlay-height); display: flex; align-items: center; z-index: 10; }
 
         .master-overlay-wrapper {
             position: absolute; left: 0; top: 0; width: 100%; height: 100%;
@@ -74,32 +68,18 @@
             -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 90%);
         }
 
-        .scanlines {
-            position: absolute; inset: 0; z-index: 2; opacity: 0.15;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.5));
-            background-size: 100% 4px; pointer-events: none;
-        }
-
-        .glass-reflection {
-            position: absolute; top: 0; left: 0; width: 100%; height: 50%;
-            background: linear-gradient(180deg, var(--glass-sheen) 0%, transparent 100%);
-            border-radius: 37px 37px 0 0; z-index: 99; pointer-events: none;
-        }
-
+        .scanlines { position: absolute; inset: 0; z-index: 2; opacity: 0.15; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.5)); background-size: 100% 4px; pointer-events: none; }
+        .glass-reflection { position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(180deg, var(--glass-sheen) 0%, transparent 100%); border-radius: 37px 37px 0 0; z-index: 99; pointer-events: none; }
         #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; mix-blend-mode: screen; }
 
         .logo-sweeper {
             position: absolute; top: 50%; left: var(--sweep-progress);
             transform: translate(-50%, -50%); width: var(--logo-size); height: var(--logo-size); z-index: 100;
-            background-color: var(--void-deep); border-radius: 50%; padding: 5px;
-            filter: drop-shadow(0 0 10px rgba(162, 0, 255, 0.8));
+            background-color: var(--void-deep); border-radius: 50%; padding: 5px; filter: drop-shadow(0 0 10px rgba(162, 0, 255, 0.8));
             display: flex; justify-content: center; align-items: center; will-change: left;
         }
 
-        .logo-sweeper::before, .logo-sweeper::after {
-            content: ''; position: absolute; inset: -6px; border-radius: 50%;
-            border: 2px dashed rgba(162, 0, 255, 0.8); pointer-events: none; z-index: -1;
-        }
+        .logo-sweeper::before, .logo-sweeper::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed rgba(162, 0, 255, 0.8); pointer-events: none; z-index: -1; }
         .logo-sweeper::before { animation: spinCW 8s linear infinite; }
         .logo-sweeper::after { inset: -12px; border: 1px dotted rgba(255, 215, 0, 0.6); animation: spinCCW 12s linear infinite; }
 
@@ -112,16 +92,9 @@
         }
         .logo-inner-ring.overdrive { filter: brightness(1.5) drop-shadow(0 0 10px var(--gold-pure)); }
         
-        .brand-logo {
-            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
-            background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian);
-        }
+        .brand-logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background-color: var(--void-obsidian); border: 2px solid var(--void-obsidian); }
 
-        .data-module {
-            position: relative; z-index: 10;
-            display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-            height: 100%; min-width: 85px; 
-        }
+        .data-module { position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; height: 100%; min-width: 85px; }
 
         .data-label {
             font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
@@ -129,14 +102,9 @@
             background: var(--neon-white); padding: 3px 6px; border-radius: 2px; margin-bottom: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.8); position: relative; overflow: hidden;
         }
+        .data-label::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent); animation: glassShine 4s linear infinite; }
 
-        .data-label::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
-            animation: glassShine 4s linear infinite;
-        }
-
-        /* --- THE FIXED SLOT MACHINE CSS --- */
+        /* THE FIXED SLOT MACHINE CSS */
         .slot-machine-container {
             display: flex; font-family: 'Montserrat', sans-serif; font-size: 1.7rem; font-weight: 900;
             line-height: 1.7rem; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; 
@@ -144,7 +112,7 @@
             height: 1.7rem; overflow: hidden; position: relative;
         }
 
-        .slot-digit-window { position: relative; width: 1.1rem; height: 1.7rem; text-align: center; }
+        .slot-digit-window { position: relative; width: 1.1rem; height: 1.7rem; text-align: center; overflow: hidden; }
         .slot-digit-window.comma { width: 0.5rem; text-align: left; }
 
         .slot-strip {
@@ -152,84 +120,43 @@
             display: flex; flex-direction: column; align-items: center; will-change: transform, filter;
         }
         .slot-strip.rolling { transition: transform 1.5s var(--ease-slot), filter 1.5s var(--ease-slot); }
-        .slot-strip > span { height: 1.7rem; display: flex; justify-content: center; align-items: center; line-height: 1.7rem; }
+        .slot-strip > span { height: 1.7rem; line-height: 1.7rem; display: flex; justify-content: center; align-items: center; }
 
-        .flare-layer {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%);
-            opacity: 0; z-index: 99; pointer-events: none; mix-blend-mode: screen;
-        }
+        .flare-layer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%); opacity: 0; z-index: 99; pointer-events: none; mix-blend-mode: screen; }
         .data-module.flare-active .flare-layer { animation: quickFlare 0.5s ease-out; }
 
-        .separator {
-            position: relative; z-index: 10; width: 3px; height: 35px;
-            background: rgba(255, 255, 255, 0.1); border-radius: 2px;
-            box-shadow: inset 0 0 5px rgba(255,255,255,0.5), 0 0 10px rgba(162, 0, 255, 0.6);
-        }
+        .separator { position: relative; z-index: 10; width: 3px; height: 35px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; box-shadow: inset 0 0 5px rgba(255,255,255,0.5), 0 0 10px rgba(162, 0, 255, 0.6); }
 
-        .goal-module {
-            display: flex; flex-direction: column; justify-content: center;
-            flex-grow: 1; min-width: 220px; z-index: 10; position: relative;
-        }
-
+        .goal-module { display: flex; flex-direction: column; justify-content: center; flex-grow: 1; min-width: 220px; z-index: 10; position: relative; }
         .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
 
         .goal-title {
-            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900;
-            color: var(--void-obsidian); background: var(--gold-pure);
-            padding: 3px 6px; border-radius: 2px; letter-spacing: 0.25em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 15px rgba(255,215,0,0.5);
-            animation: pulseGold 2s infinite alternate;
+            font-family: 'Syncopate', sans-serif; font-size: 0.45rem; font-weight: 900; color: var(--void-obsidian); background: var(--gold-pure);
+            padding: 3px 6px; border-radius: 2px; letter-spacing: 0.25em; box-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 15px rgba(255,215,0,0.5); animation: pulseGold 2s infinite alternate;
         }
 
-        .goal-numbers {
-            font-size: 0.9rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1px;
-            font-variant-numeric: tabular-nums; text-shadow: 0 2px 4px rgba(0,0,0,1);
-            transition: transform 0.3s var(--ease-dopamine);
-        }
+        .goal-numbers { font-size: 0.9rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 4px rgba(0,0,0,1); transition: transform 0.3s var(--ease-dopamine); }
 
-        .progress-track {
-            position: relative; width: 100%; height: 16px;
-            background: rgba(0,0,0,0.9); overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.2); transform: skewX(-25deg); box-shadow: inset 0 3px 8px rgba(0,0,0,1);
-        }
+        .progress-track { position: relative; width: 100%; height: 16px; background: rgba(0,0,0,0.9); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.2); transform: skewX(-25deg); box-shadow: inset 0 3px 8px rgba(0,0,0,1); }
 
         .progress-fill {
             position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;
             background: linear-gradient(90deg, var(--purple-rich), var(--purple-neon), var(--gold-dark));
-            background-size: 200% 100%; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 0 20px rgba(162, 0, 255, 0.9);
-            transition: width 1.5s var(--ease-dopamine); overflow: hidden; animation: borderFlow 3s linear infinite;
+            background-size: 200% 100%; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 0 20px rgba(162, 0, 255, 0.9); transition: width 1.5s var(--ease-dopamine); overflow: hidden; animation: borderFlow 3s linear infinite;
         }
 
-        .progress-fill::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 300%; height: 100%;
-            background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.4) 8px, rgba(255,255,255,0.4) 16px);
-            animation: kineticFlow 1s linear infinite;
-        }
-
-        .progress-fill::after {
-            content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 5px;
-            background: var(--neon-white); box-shadow: -3px 0 12px var(--neon-white), 0 0 25px var(--gold-pure);
-        }
+        .progress-fill::before { content: ''; position: absolute; top: 0; left: 0; width: 300%; height: 100%; background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.4) 8px, rgba(255,255,255,0.4) 16px); animation: kineticFlow 1s linear infinite; }
+        .progress-fill::after { content: ''; position: absolute; right: 0; top: 0; height: 100%; width: 5px; background: var(--neon-white); box-shadow: -3px 0 12px var(--neon-white), 0 0 25px var(--gold-pure); }
 
         .goal-flash .progress-fill { filter: brightness(1.8); box-shadow: 0 0 40px var(--gold-pure); }
         .goal-flash .goal-numbers { transform: scale(1.2); color: var(--gold-pure); text-shadow: 0 0 20px var(--gold-pure); }
 
-        .ticker-module {
-            display: flex; align-items: center; background: rgba(0, 0, 0, 0.75); border-left: 3px solid var(--purple-neon);
-            padding: 0 15px; height: 100%; width: 250px; overflow: hidden; position: relative; z-index: 10;
-            box-shadow: inset 5px 0 15px rgba(0,0,0,0.8);
-        }
+        .ticker-module { display: flex; align-items: center; background: rgba(0, 0, 0, 0.75); border-left: 3px solid var(--purple-neon); padding: 0 15px; height: 100%; width: 250px; overflow: hidden; position: relative; z-index: 10; box-shadow: inset 5px 0 15px rgba(0,0,0,0.8); }
 
         .live-eq-container { display: flex; align-items: flex-end; gap: 3px; height: 16px; margin-right: 15px; flex-shrink: 0; }
         .eq-bar { width: 4px; background: #00ffcc; border-radius: 1px 1px 0 0; box-shadow: 0 0 10px #00ffcc; transition: height 0.08s ease; }
         .ticker-wrapper { overflow: hidden; width: 100%; position: relative; }
-        
-        .ticker-content {
-            font-size: 0.8rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1.5px; white-space: nowrap; 
-            transform: translateX(100%); will-change: transform;
-            text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 12px var(--purple-neon), 0 0 24px var(--purple-neon);
-        }
+        .ticker-content { font-size: 0.8rem; font-weight: 900; color: var(--neon-white); letter-spacing: 1.5px; white-space: nowrap; transform: translateX(100%); will-change: transform; text-shadow: 0 2px 4px rgba(0,0,0,1), 0 0 12px var(--purple-neon), 0 0 24px var(--purple-neon); }
 
         @keyframes borderFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
         @keyframes panGrid { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
@@ -251,9 +178,7 @@
         <div class="scene-container" id="scene-wrapper">
             
             <div class="logo-sweeper" id="logo-sweeper">
-                <div class="logo-inner-ring" id="logo-ring">
-                    <img src="" alt="Logo" class="brand-logo" id="brand-logo" style="display:none;">
-                </div>
+                <div class="logo-inner-ring" id="logo-ring"><img src="" alt="Logo" class="brand-logo" id="brand-logo" style="display:none;"></div>
             </div>
 
             <div class="master-overlay-wrapper" id="overlay">
@@ -283,21 +208,14 @@
                             <span class="goal-title">SUB GOAL</span>
                             <span class="goal-numbers" id="val-goal">0 / 5,000</span>
                         </div>
-                        <div class="progress-track">
-                            <div class="progress-fill" id="goal-bar"></div>
-                        </div>
+                        <div class="progress-track"><div class="progress-fill" id="goal-bar"></div></div>
                     </div>
 
                     <div class="ticker-module">
                         <div class="live-eq-container" id="live-eq">
-                            <div class="eq-bar" style="height: 4px;"></div>
-                            <div class="eq-bar" style="height: 8px;"></div>
-                            <div class="eq-bar" style="height: 6px;"></div>
-                            <div class="eq-bar" style="height: 12px;"></div>
+                            <div class="eq-bar" style="height: 4px;"></div><div class="eq-bar" style="height: 8px;"></div><div class="eq-bar" style="height: 6px;"></div><div class="eq-bar" style="height: 12px;"></div>
                         </div>
-                        <div class="ticker-wrapper">
-                            <div class="ticker-content" id="ticker-text">CONNECTING TO LIVE FEED...</div>
-                        </div>
+                        <div class="ticker-wrapper"><div class="ticker-content" id="ticker-text">CONNECTING TO LIVE FEED...</div></div>
                     </div>
 
                 </div>
@@ -415,7 +333,6 @@
             triggerRoll(newValue) {
                 const targetStr = this.format(newValue);
                 
-                // If the number expands from 10 to 100 (length change), instantly reset it without rolling to avoid glitches
                 if(targetStr.length !== this.currentString.length) {
                     this.updateDOM(targetStr);
                     this.container.style.animation = 'none';
@@ -434,8 +351,7 @@
                 const maxDelay = (targetStr.length - 1) * 0.08;
                 setTimeout(() => {
                     this.moduleParent.classList.remove('flare-active'); void this.moduleParent.offsetWidth; this.moduleParent.classList.add('flare-active');
-                    this.container.style.animation = 'none';
-                    void this.container.offsetWidth; 
+                    this.container.style.animation = 'none'; void this.container.offsetWidth; 
                     this.container.style.animation = 'pureFlash 0.5s ease-out forwards';
 
                     if(window.particleEngineInstance) {
@@ -477,12 +393,7 @@
                 this.state = { subs: 0, likes: 0, goal: 5000 };
                 this.slotSubs = new NumberSlotEngine('slot-subs');
                 this.slotLikes = new NumberSlotEngine('slot-likes');
-                this.elements = { 
-                    goalMod: document.getElementById('mod-goal'), 
-                    goalText: document.getElementById('val-goal'), 
-                    goalBar: document.getElementById('goal-bar'),
-                    logoRing: document.getElementById('logo-ring')
-                };
+                this.elements = { goalMod: document.getElementById('mod-goal'), goalText: document.getElementById('val-goal'), goalBar: document.getElementById('goal-bar'), logoRing: document.getElementById('logo-ring') };
             }
             format(num) { return (num || 0).toLocaleString('en-US'); }
             
@@ -510,9 +421,7 @@
                 this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
                 this.elements.goalBar.style.width = `${percentage}%`;
 
-                if (subChanged) { 
-                    this.triggerSubGoalAnimation(); 
-                }
+                if (subChanged) { this.triggerSubGoalAnimation(); }
             }
         }
 
@@ -567,17 +476,10 @@
                     
                     if (data.authenticated) {
                         this.state.updateData(data.subs, data.likes, data.sub_goal);
-                        
-                        if (data.ticker_text) {
-                            this.ticker.setMessages(data.ticker_text);
-                        }
-                        
+                        if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
                         if (data.avatar) {
                             const logoEl = document.getElementById('brand-logo');
-                            if (logoEl.src !== data.avatar) {
-                                logoEl.src = data.avatar;
-                                logoEl.style.display = 'block';
-                            }
+                            if (logoEl.src !== data.avatar) { logoEl.src = data.avatar; logoEl.style.display = 'block'; }
                         }
                     }
                 } catch(e) {}
