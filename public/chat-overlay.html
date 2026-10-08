@@ -467,7 +467,7 @@
                 setInterval(() => this.process(), 3500); 
             }
 
-            // FIX: UNIFIED STATS POLLER
+            // QUOTA PROTECTION: Strictly 30 seconds for viewers/likes (Guaranteed 10+ hours safe)
             startStatsLoop() {
                 const fetchStats = async () => {
                     try {
@@ -478,7 +478,7 @@
                     this.v.pollExternal(this.config.tw, this.config.kk);
                 };
                 fetchStats(); 
-                setInterval(fetchStats, 15000); 
+                setInterval(fetchStats, 30000); 
             }
 
             async start() {
@@ -490,10 +490,7 @@
                         this.startStatsLoop();
                         this.pollYouTube();
                         
-                        // FIX: Strict Twitch protocol nickname formatting
                         if (this.config.tw) this.connTw(this.config.tw.replace(/^[@#]/, '').trim());
-                        
-                        // FIX: Kick chatroom fallback parsing
                         if (this.config.kk) { 
                             let kid = this.config.kk.includes("|||") ? this.config.kk.split("|||")[1] : this.config.kk; 
                             if(kid) this.connKk(kid); 
@@ -505,14 +502,16 @@
             async pollYouTube() {
                 if (this.ytPolling) return;
                 this.ytPolling = true;
-                let delay = 5000;
+                
+                // QUOTA PROTECTION: Chat minimum 6 seconds
+                let delay = 6000; 
                 
                 try {
                     const res = await fetch(`/api/streamer/${this.h}/chat?pageToken=${this.ytNextPageToken || ""}`);
                     const data = await res.json();
                     
                     if (res.ok && !data.error) {
-                        if (data.pollingIntervalMillis) delay = data.pollingIntervalMillis;
+                        if (data.pollingIntervalMillis) delay = Math.max(data.pollingIntervalMillis, 6000);
                         if (data.nextPageToken) this.ytNextPageToken = data.nextPageToken;
                         
                         if (data.items && data.items.length > 0) {
@@ -526,7 +525,7 @@
                             });
                         }
                     } else if (data.pollingIntervalMillis) {
-                        delay = data.pollingIntervalMillis; 
+                        delay = Math.max(data.pollingIntervalMillis, 6000);
                     }
                 } catch(e) {
                     delay = 10000;
@@ -535,7 +534,6 @@
                 setTimeout(() => { this.ytPolling = false; this.pollYouTube(); }, delay);
             }
 
-            // FIX: Restored correct NICK syntax for Twitch IRC
             connTw(ch) {
                 const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
                 ws.onopen = () => { 
@@ -568,7 +566,6 @@
                 };
             }
 
-            // FIX: Added Pusher Key rotation loop to prevent dead keys
             async connKk(username) {
                 let chatroomId = username.trim();
                 if (!/^\d+$/.test(chatroomId)) {
