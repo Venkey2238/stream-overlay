@@ -9,28 +9,11 @@
     <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
 
     <style>
-        /* ================================================================
-           AUTHENTIC DBD PREMIUM OVERLAY
-           GAME-ACCURATE FX -> LIQUID REVEAL. ZERO OBS BLEEDING.
-           ================================================================ */
-
         :root {
-            --yt: #ff0033;
-            --tw: #b05cff;
-            --kk: #53fc18;
-            
-            --blood: #e30022;
-            --entity-black: #050508;
-            --aura-pink: #ff1a55;
-            --scratch-orange: #ff4500;
-            --scratch-red: #ff0000;
-
-            --ash: #9ba1a8;
-            --bronze: #e6883c;
-            --silver: #d3e1ef;
-            --gold: #ffcf33;
-            --iridescent: #ff124d;
-
+            --yt: #ff0033; --tw: #b05cff; --kk: #53fc18;
+            --blood: #e30022; --entity-black: #050508; --aura-pink: #ff1a55;
+            --scratch-orange: #ff4500; --scratch-red: #ff0000;
+            --ash: #9ba1a8; --bronze: #e6883c; --silver: #d3e1ef; --gold: #ffcf33; --iridescent: #ff124d;
             --ease-fluid: cubic-bezier(0.25, 1, 0.2, 1);
             --ease-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
             --ease-horror: cubic-bezier(0.7, 0, 0.1, 1);
@@ -38,49 +21,31 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html, body {
-            width: 100%; height: 100%; overflow: hidden;
-            background: transparent !important;
-            font-family: 'Rajdhani', sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: transparent !important; font-family: 'Rajdhani', sans-serif; -webkit-font-smoothing: antialiased; }
 
-        #master-container {
-            position: absolute; left: 0px; bottom: 20px;
-            width: 700px; display: flex; flex-direction: column; gap: 20px;
-            pointer-events: none;
-        }
-
+        #master-container { position: absolute; left: 0px; bottom: 20px; width: 700px; display: flex; flex-direction: column; gap: 20px; pointer-events: none; }
         #viewer-hud { display: flex; gap: 15px; z-index: 100; margin-left: 50px; }
 
         .hud-card {
-            display: none; align-items: center; gap: 12px;
-            padding: 10px 20px 10px 16px;
-            background: rgba(15, 15, 20, 0.5);
-            backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.6);
-            border-radius: 20px;
+            display: none; align-items: center; gap: 12px; padding: 10px 20px 10px 16px;
+            background: rgba(15, 15, 20, 0.5); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.6); border-radius: 20px;
         }
 
         .plt-icon { width: 34px; height: 34px; color: var(--plt-color); filter: drop-shadow(0 0 8px var(--plt-color)); }
         .v-count { font-family: 'Montserrat', sans-serif; font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 0 4px 12px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,1); }
 
         #chat-widget {
-            position: relative; width: 100%; height: 340px;
-            perspective: 1200px; perspective-origin: bottom center;
-            transform-style: preserve-3d;
+            position: relative; width: 100%; height: 340px; perspective: 1200px; perspective-origin: bottom center; transform-style: preserve-3d;
             overflow: hidden; contain: layout paint size;
             mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%, rgba(0,0,0,1) 100%);
             -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%, rgba(0,0,0,1) 100%);
         }
 
         .msg-node {
-            position: absolute; left: 0; bottom: 15px;
-            width: 100%; height: 115px;
-            padding-left: 60px; padding-right: 40px; 
+            position: absolute; left: 0; bottom: 15px; width: 100%; height: 115px; padding-left: 60px; padding-right: 40px; 
             transform-origin: center bottom; transform-style: preserve-3d;
-            transition: transform 0.8s var(--ease-fluid), opacity 0.8s var(--ease-fluid), filter 0.8s var(--ease-fluid);
-            will-change: transform, opacity, filter;
+            transition: transform 0.8s var(--ease-fluid), opacity 0.8s var(--ease-fluid), filter 0.8s var(--ease-fluid); will-change: transform, opacity, filter;
         }
 
         .msg-pos-1 { transform: translate3d(0, 0, 0) rotateX(0deg); opacity: 1; filter: blur(0); z-index: 10; }
@@ -88,48 +53,26 @@
         .msg-dead { transform: translate3d(0, -280px, -150px) rotateX(15deg); opacity: 0; filter: blur(8px); pointer-events: none; }
         .msg-spawn { transform: translate3d(var(--spawn-x), var(--spawn-y), var(--spawn-z)) rotateX(var(--spawn-rotX)) rotateY(var(--spawn-rotY)) scale(var(--spawn-scale)); }
 
-        .fx-layer {
-            position: absolute; inset: 0; z-index: 20;
-            display: flex; align-items: center; justify-content: center;
-            pointer-events: none; animation: fxVanish 0.2s 1.2s forwards;
-        }
+        .fx-layer { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; pointer-events: none; animation: fxVanish 0.2s 1.2s forwards; }
         @keyframes fxVanish { to { opacity: 0; visibility: hidden; } }
 
         .msg-inner {
-            display: flex; align-items: center; gap: 20px;
-            width: 100%; height: 100%; position: relative;
+            display: flex; align-items: center; gap: 20px; width: 100%; height: 100%; position: relative;
             opacity: 0; transform: scale(0.7) translateY(30px); filter: blur(15px);
             animation: chatMaterialize 0.7s var(--ease-bounce) 1.0s forwards;
         }
         @keyframes chatMaterialize { to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
 
-        /* THE 5 AUTHENTIC DBD FX ENGINES */
         .fx-skillcheck { position: relative; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; }
-        .sk-track {
-            position: absolute; inset: 0; border-radius: 50%;
-            background: conic-gradient(from -90deg, transparent 0deg, transparent 200deg, var(--blood) 200deg, var(--blood) 235deg, #fff 235deg, #fff 255deg, transparent 255deg);
-            mask: radial-gradient(transparent 60%, black 61%); -webkit-mask: radial-gradient(transparent 60%, black 61%);
-            opacity: 0; animation: skPop 0.3s var(--ease-bounce) forwards;
-        }
-        .sk-needle {
-            position: absolute; width: 4px; height: 50%; top: 0; background: #fff;
-            transform-origin: bottom center; transform: rotate(0deg);
-            box-shadow: 0 0 10px #fff, 0 0 20px #fff; opacity: 0;
-            animation: skSweep 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-        .sk-flash {
-            position: absolute; inset: -50px; border-radius: 50%; background: #fff; filter: blur(20px); opacity: 0; animation: skDing 0.6s 0.8s forwards;
-        }
+        .sk-track { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from -90deg, transparent 0deg, transparent 200deg, var(--blood) 200deg, var(--blood) 235deg, #fff 235deg, #fff 255deg, transparent 255deg); mask: radial-gradient(transparent 60%, black 61%); -webkit-mask: radial-gradient(transparent 60%, black 61%); opacity: 0; animation: skPop 0.3s var(--ease-bounce) forwards; }
+        .sk-needle { position: absolute; width: 4px; height: 50%; top: 0; background: #fff; transform-origin: bottom center; transform: rotate(0deg); box-shadow: 0 0 10px #fff, 0 0 20px #fff; opacity: 0; animation: skSweep 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .sk-flash { position: absolute; inset: -50px; border-radius: 50%; background: #fff; filter: blur(20px); opacity: 0; animation: skDing 0.6s 0.8s forwards; }
         @keyframes skPop { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
         @keyframes skSweep { 0% { opacity: 1; transform: rotate(0deg); } 100% { opacity: 1; transform: rotate(245deg); } }
         @keyframes skDing { 0% { opacity: 1; transform: scale(0.2); } 100% { opacity: 0; transform: scale(1.5); } }
 
         .fx-scratch { position: relative; width: 150px; height: 100%; transform: rotate(15deg); }
-        .sc {
-            position: absolute; background: var(--scratch-orange); border-radius: 50% 50% 50% 50% / 10% 10% 90% 90%;
-            box-shadow: 0 0 15px var(--scratch-orange), 0 0 30px var(--scratch-red);
-            transform-origin: bottom center; transform: scaleY(0); opacity: 0; filter: brightness(1.5);
-        }
+        .sc { position: absolute; background: var(--scratch-orange); border-radius: 50% 50% 50% 50% / 10% 10% 90% 90%; box-shadow: 0 0 15px var(--scratch-orange), 0 0 30px var(--scratch-red); transform-origin: bottom center; transform: scaleY(0); opacity: 0; filter: brightness(1.5); }
         .sc-1 { left: 20%; width: 8px; top: 10%; animation: burnIn 0.3s 0.1s forwards, scratchFlicker 0.1s 0.4s infinite alternate, burnOut 0.4s 1s forwards; }
         .sc-2 { left: 50%; width: 12px; top: -10%; height: 120%; animation: burnIn 0.3s 0.2s forwards, scratchFlicker 0.1s 0.5s infinite alternate, burnOut 0.4s 1s forwards; }
         .sc-3 { left: 80%; width: 8px; top: 15%; animation: burnIn 0.3s 0.3s forwards, scratchFlicker 0.1s 0.6s infinite alternate, burnOut 0.4s 1s forwards; }
@@ -164,34 +107,15 @@
         @keyframes auGlow { 0% { opacity: 0; } 30% { opacity: 0.8; transform: scale(1.1); } 100% { opacity: 0; transform: scale(0.9); } }
 
         .hologram-avatar { position: relative; width: 85px; height: 85px; flex-shrink: 0; z-index: 5; display: flex; align-items: center; justify-content: center; margin-right: 5px; }
-        .avatar-ring {
-            position: absolute; inset: -4px;
-            background: conic-gradient(from 0deg, transparent 0%, var(--rank-color) 40%, #fff 50%, var(--rank-color) 60%, transparent 100%);
-            animation: liquidMorph var(--ava-morph-speed) ease-in-out infinite alternate var(--ava-delay), spin var(--ava-spin-speed) linear infinite;
-            opacity: 0.9; filter: drop-shadow(0 0 12px var(--rank-color));
-        }
+        .avatar-ring { position: absolute; inset: -4px; background: conic-gradient(from 0deg, transparent 0%, var(--rank-color) 40%, #fff 50%, var(--rank-color) 60%, transparent 100%); animation: liquidMorph var(--ava-morph-speed) ease-in-out infinite alternate var(--ava-delay), spin var(--ava-spin-speed) linear infinite; opacity: 0.9; filter: drop-shadow(0 0 12px var(--rank-color)); }
         .avatar-img { position: relative; width: 100%; height: 100%; object-fit: cover; animation: liquidMorph var(--ava-morph-speed) ease-in-out infinite alternate-reverse var(--ava-delay); filter: contrast(1.1) grayscale(0.05) saturate(1.2); z-index: 2; }
         @keyframes liquidMorph { 0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 33% { border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%; } 66% { border-radius: 50% 50% 60% 40% / 60% 40% 70% 30%; } 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        .bp-popup {
-            position: absolute; top: -10px; left: 50%; transform: translate(-50%, 0);
-            font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.3rem; color: var(--blood);
-            text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 2px rgba(0,0,0,1); white-space: nowrap; z-index: 50; pointer-events: none;
-            opacity: 0; animation: bpFloat 1.8s var(--ease-fluid) 1.2s forwards;
-        }
+        .bp-popup { position: absolute; top: -10px; left: 50%; transform: translate(-50%, 0); font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.3rem; color: var(--blood); text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 2px rgba(0,0,0,1); white-space: nowrap; z-index: 50; pointer-events: none; opacity: 0; animation: bpFloat 1.8s var(--ease-fluid) 1.2s forwards; }
         @keyframes bpFloat { 0% { opacity: 0; transform: translate(-50%, 5px) scale(0.6); } 20% { opacity: 1; transform: translate(-50%, -15px) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -45px) scale(0.9); } }
 
-        .content-block {
-            position: relative; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: center;
-            padding: 12px 20px 16px 25px;
-            background: linear-gradient(135deg, rgba(20,20,25,0.6) 0%, rgba(10,10,15,0.9) 100%);
-            backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%);
-            border-radius: 22px;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), inset 4px 0 12px rgba(var(--rank-rgb), 0.4), 0 12px 30px rgba(0,0,0,0.7);
-            overflow: hidden; z-index: 2;
-        }
-
+        .content-block { position: relative; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 12px 20px 16px 25px; background: linear-gradient(135deg, rgba(20,20,25,0.6) 0%, rgba(10,10,15,0.9) 100%); backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%); border-radius: 22px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), inset 4px 0 12px rgba(var(--rank-rgb), 0.4), 0 12px 30px rgba(0,0,0,0.7); overflow: hidden; z-index: 2; }
         .gen-progress-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: rgba(0,0,0,0.5); border-radius: 0 0 22px 22px; overflow: hidden; }
         .gen-fill { height: 100%; background: var(--rank-color); box-shadow: 0 0 12px var(--rank-color); transition: width 1s var(--ease-fluid); position: relative; }
         .gen-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent); animation: energyFlow 2s linear infinite; }
@@ -199,21 +123,11 @@
 
         .user-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; z-index: 2; position: relative; }
         .chat-plt-icon { width: 16px; height: 16px; color: var(--plt-color); }
-        .username {
-            font-family: 'Syncopate', sans-serif; font-size: 0.85rem; font-weight: 900; color: var(--rank-color); text-transform: uppercase; letter-spacing: 1px;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .chat-text {
-            position: relative; z-index: 2; font-family: 'Montserrat', sans-serif; font-size: 1.55rem; font-weight: 800; line-height: 1.2; color: #fff;
-            text-shadow: 0 4px 12px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,1), 0 8px 24px rgba(0,0,0,0.6);
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-wrap: break-word;
-        }
+        .username { font-family: 'Syncopate', sans-serif; font-size: 0.85rem; font-weight: 900; color: var(--rank-color); text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chat-text { position: relative; z-index: 2; font-family: 'Montserrat', sans-serif; font-size: 1.55rem; font-weight: 800; line-height: 1.2; color: #fff; text-shadow: 0 4px 12px rgba(0,0,0,0.95), 0 1px 3px rgba(0,0,0,1), 0 8px 24px rgba(0,0,0,0.6); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-wrap: break-word; }
 
         .badge-container { position: absolute; right: 14px; top: 12px; display: flex; align-items: center; gap: 8px; z-index: 3; }
-        .tier-badge {
-            background: rgba(0,0,0,0.6); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.5);
-            padding: 4px 12px; border-radius: 12px; color: #fff; font-family: 'Syncopate', sans-serif; font-size: 0.6rem; font-weight: 900;
-        }
+        .tier-badge { background: rgba(0,0,0,0.6); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.5); padding: 4px 12px; border-radius: 12px; color: #fff; font-family: 'Syncopate', sans-serif; font-size: 0.6rem; font-weight: 900; }
 
         .role-1 { --rank-color: var(--ash); --rank-rgb: 155, 161, 168; }
         .role-2 { --rank-color: #b0b5bb; --rank-rgb: 176, 181, 187; }
@@ -225,7 +139,6 @@
         .role-8 { --rank-color: #ffda66; --rank-rgb: 255, 218, 102; }
         .role-9 { --rank-color: var(--iridescent); --rank-rgb: 255, 18, 77; }
         .role-10 { --rank-color: #ff3366; --rank-rgb: 255, 51, 102; }
-
     </style>
 </head>
 <body>
@@ -245,7 +158,6 @@
                 <span class="v-count" id="count-kk">0</span>
             </div>
         </div>
-
         <div id="chat-widget"></div>
     </div>
 
@@ -274,16 +186,10 @@
 
             getRoleData(username) {
                 const key = String(username).trim().toLowerCase();
-                
-                if (!this.viewerProfiles.has(key)) {
-                    this.viewerProfiles.set(key, { msgs: 0, idx: 0, fx: ANIMATIONS[Math.floor(Math.random() * ANIMATIONS.length)] });
-                }
-                
+                if (!this.viewerProfiles.has(key)) { this.viewerProfiles.set(key, { msgs: 0, idx: 0, fx: ANIMATIONS[Math.floor(Math.random() * ANIMATIONS.length)] }); }
                 const p = this.viewerProfiles.get(key); p.msgs++;
-                let nIdx = 0;
-                for (let i = 0; i < DBD_ROLES.length; i++) { if (p.msgs >= DBD_ROLES[i].limit) nIdx = i + 1; else break; }
+                let nIdx = 0; for (let i = 0; i < DBD_ROLES.length; i++) { if (p.msgs >= DBD_ROLES[i].limit) nIdx = i + 1; else break; }
                 if(nIdx >= DBD_ROLES.length) nIdx = DBD_ROLES.length - 1;
-                
                 const currLimit = nIdx === 0 ? 0 : DBD_ROLES[nIdx-1].limit;
                 const progress = ((p.msgs - currLimit) / (DBD_ROLES[nIdx].limit - currLimit)) * 100;
                 return { role: DBD_ROLES[nIdx], progress: Math.min(progress, 100), fx: p.fx };
@@ -296,8 +202,7 @@
                     case 'eff-bloodweb': return `<div class="fx-bloodweb"><div class="bw-line bw-l1" style="--rot:-135deg;"></div><div class="bw-line bw-l2" style="--rot:110deg;"></div><div class="bw-line bw-l3" style="--rot:-10deg;"></div><div class="bw-node bw-n-center"></div><div class="bw-node bw-n1"></div><div class="bw-node bw-n2"></div><div class="bw-node bw-n3"></div></div>`;
                     case 'eff-aura': return `<div class="fx-aura"><div class="au-scan"></div><div class="au-silhouette"></div></div>`;
                     case 'eff-entity': return `<div class="fx-entity"><div class="ent-claw ent-top" style="--dir:-100%;"></div><div class="ent-claw ent-bot" style="--dir:100%;"></div></div>`;
-                }
-                return '';
+                } return '';
             }
 
             escape(val) { return String(val ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -310,7 +215,6 @@
                 const bpEarned = Math.floor(Math.random() * 200) + 50;
                 
                 const node = document.createElement('div');
-                
                 node.style.setProperty('--spawn-x', `${(Math.random() * 40 - 20)}px`);
                 node.style.setProperty('--spawn-y', `${(Math.random() * 30 + 10)}px`);
                 node.style.setProperty('--spawn-z', `${(Math.random() * 60 + 60)}px`);
@@ -378,7 +282,6 @@
                 setInterval(() => this.process(), 3500); 
             }
 
-            // FIX: UNIFIED STATS POLLER
             startStatsLoop() {
                 const fetchStats = async () => {
                     try {
@@ -397,58 +300,44 @@
                     const r = await fetch(`/api/streamer/${this.h}`); const d = await r.json();
                     if (d.authenticated) {
                         this.config.tw = d.twitch_user; this.config.kk = d.kick_user;
-                        
                         this.startStatsLoop();
                         this.pollYouTube();
-                        
-                        // FIX: Strict Twitch protocol
                         if (this.config.tw) this.connTw(this.config.tw.replace(/^[@#]/, '').trim());
-                        
-                        // FIX: Kick chatroom parser
-                        if (this.config.kk) { 
-                            let kid = this.config.kk.includes("|||") ? this.config.kk.split("|||")[1] : this.config.kk; 
-                            if(kid) this.connKk(kid); 
-                        }
+                        if (this.config.kk) { let kid = this.config.kk.includes("|||") ? this.config.kk.split("|||")[1] : this.config.kk; if(kid) this.connKk(kid); }
                     }
                 } catch(e) {}
             }
 
+            // FIX: InnerTube Chat Payload now completely bypasses the strict Google Data API
             async pollYouTube() {
                 if (this.ytPolling) return;
                 this.ytPolling = true;
-                let delay = 15000; // Hard minimum to protect quota
+                let delay = 3000;
                 
                 try {
                     const res = await fetch(`/api/streamer/${this.h}/chat?pageToken=${this.ytNextPageToken || ""}`);
                     const data = await res.json();
                     
                     if (res.ok && !data.error) {
-                        // Math.max guarantees it will NEVER poll faster than 15 seconds, saving your tokens!
-                        if (data.pollingIntervalMillis) delay = Math.max(data.pollingIntervalMillis, 15000);
+                        if (data.pollingIntervalMillis) delay = Math.max(data.pollingIntervalMillis, 3000);
                         if (data.nextPageToken) this.ytNextPageToken = data.nextPageToken;
                         
                         if (data.items && data.items.length > 0) {
                             data.items.forEach(item => {
-                                this.q.push({
-                                    u: item.authorDetails.displayName, m: item.snippet.displayMessage,
-                                    a: item.authorDetails.profileImageUrl, p: 'yt'
-                                });
+                                // Simplified push format matched to python InnerTube backend
+                                this.q.push({ u: item.u, m: item.m, a: item.a, p: item.p });
                             });
                         }
-                    } else if (data.pollingIntervalMillis) { delay = Math.max(data.pollingIntervalMillis, 15000); }
-                } catch(e) { delay = 15000; }
+                    } else if (data.pollingIntervalMillis) { delay = Math.max(data.pollingIntervalMillis, 3000); }
+                } catch(e) { delay = 10000; }
                 
                 setTimeout(() => { this.ytPolling = false; this.pollYouTube(); }, delay);
             }
 
-            // FIX: Restored correct NICK syntax for Twitch IRC
+            // FIX: Twitch IRC strictly formatted
             connTw(ch) {
                 const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-                ws.onopen = () => { 
-                    ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); 
-                    ws.send(`NICK justinfan${Math.floor(Math.random() * 100000)}`); 
-                    ws.send(`JOIN #${ch.toLowerCase()}`); 
-                };
+                ws.onopen = () => { ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); ws.send(`NICK justinfan${Math.floor(Math.random() * 100000)}`); ws.send(`JOIN #${ch.toLowerCase()}`); };
                 ws.onmessage = (e) => {
                     const lines = e.data.split('\r\n');
                     for (let l of lines) {
@@ -457,28 +346,25 @@
                             let nm = l.match(/display-name=([^;]*)/); let username = (nm && nm[1]) ? nm[1] : null;
                             if (!username) { let un = l.match(/:([^!]+)!/); if (un) username = un[1]; }
                             const m = l.match(/PRIVMSG #[^:]+:(.+)/);
-                            if(username && m) {
-                                this.q.push({ u: username, m: m[1].trim(), p: 'tw', a: `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true` });
-                            }
+                            if(username && m) { this.q.push({ u: username, m: m[1].trim(), p: 'tw', a: `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&bold=true` }); }
                         }
                     }
                 };
             }
 
-            // FIX: Kick Pusher keys mapped correctly to bypass offline kicks
+            // FIX: AllOrigins Cloudflare bypass for Kick Pushers
             async connKk(username) {
                 let chatroomId = username.trim();
                 if (!/^\d+$/.test(chatroomId)) {
                     try {
-                        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://kick.com/api/v1/channels/${chatroomId}`);
-                        const data = await res.json();
+                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://kick.com/api/v2/channels/${chatroomId}`)}`);
+                        const proxyData = await res.json();
+                        const data = JSON.parse(proxyData.contents);
                         if (data && data.chatroom && data.chatroom.id) { chatroomId = data.chatroom.id.toString(); } else return;
                     } catch(e) { return; }
                 }
-
                 const pusherKeys = ['eb1d5f283081a78b932c', '32cbd69e4b950bf97679', '1bb076ec966b931dd264'];
                 let keyIndex = 0;
-                
                 const tryConnect = () => {
                     if (keyIndex >= pusherKeys.length) return;
                     const p = new Pusher(pusherKeys[keyIndex], { cluster: 'us2', forceTLS: true });
@@ -491,23 +377,7 @@
 
             process() { if (this.q.length > 0) { const msg = this.q.shift(); this.c.addMessage(msg.u, msg.m, msg.a, msg.p); } }
             
-            demo() {
-                ['yt','tw','kk'].forEach(p => document.getElementById(`node-${p}`).style.display = 'flex');
-                setInterval(() => {
-                    this.v.update('yt', Math.floor(Math.random()*50)+1200);
-                    this.v.update('tw', Math.floor(Math.random()*20)+400);
-                    this.v.update('kk', Math.floor(Math.random()*100)+2000);
-                }, 5000);
-                
-                const bot = () => {
-                    const plts = ['yt','tw','kk']; const plt = plts[Math.floor(Math.random()*3)];
-                    const users = ['Entity_Prey', 'Meg_Main', 'Hex_Ruin', 'Boon_User', 'Nancy_AI'];
-                    const msgs = ["The Entity demands a sacrifice.", "Gen rushing again?", "Looping shack all day.", "Dropped a god pallet!", "Hit a great skill check!!"];
-                    const u = users[Math.floor(Math.random()*users.length)]; const m = msgs[Math.floor(Math.random()*msgs.length)];
-                    this.q.push({ u: u, m: m, a: `https://ui-avatars.com/api/?name=${u}&background=random&color=fff&bold=true`, p: plt });
-                    setTimeout(bot, Math.random()*2500 + 1500);
-                }; setTimeout(bot, 1000);
-            }
+            demo() {}
         }
 
         document.addEventListener('DOMContentLoaded', () => {
