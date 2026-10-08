@@ -136,15 +136,15 @@
             animation: glassShine 4s linear infinite;
         }
 
-        /* NEW BULLETPROOF SLOT MACHINE CSS */
+        /* --- THE FIXED SLOT MACHINE CSS --- */
         .slot-machine-container {
             display: flex; font-family: 'Montserrat', sans-serif; font-size: 1.7rem; font-weight: 900;
-            line-height: 1; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; 
+            line-height: 1.7rem; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; 
             color: var(--neon-white); text-shadow: 0 3px 5px rgba(0, 0, 0, 1), 0 0 15px rgba(255, 255, 255, 0.5);
             height: 1.7rem; overflow: hidden; position: relative;
         }
 
-        .slot-digit-window { position: relative; width: 1.1rem; height: 100%; text-align: center; }
+        .slot-digit-window { position: relative; width: 1.1rem; height: 1.7rem; text-align: center; }
         .slot-digit-window.comma { width: 0.5rem; text-align: left; }
 
         .slot-strip {
@@ -152,7 +152,7 @@
             display: flex; flex-direction: column; align-items: center; will-change: transform, filter;
         }
         .slot-strip.rolling { transition: transform 1.5s var(--ease-slot), filter 1.5s var(--ease-slot); }
-        .slot-strip > span { height: 1.7rem; display: flex; justify-content: center; align-items: center; }
+        .slot-strip > span { height: 1.7rem; display: flex; justify-content: center; align-items: center; line-height: 1.7rem; }
 
         .flare-layer {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -357,76 +357,85 @@
         }
 
         // ==============================================================
-        // THE FIX: BUG-FREE NUMBER SLOT ENGINE 
-        // Handles length changes (9 to 10) seamlessly without "01" bugs
+        // FIX 1: The Zero-Math Bug in Slot Machine
+        // Uses strict absolute `rem` values so it never lands between digits
         // ==============================================================
         class SlotMachineDigit {
-            constructor(startChar, targetChar, delayOffset) {
+            constructor(char, delayOffset) {
                 this.element = document.createElement('div');
-                this.element.className = startChar === ',' ? 'slot-digit-window comma' : 'slot-digit-window';
-                this.strip = document.createElement('div'); 
-                this.strip.className = 'slot-strip';
+                this.element.className = char === ',' ? 'slot-digit-window comma' : 'slot-digit-window';
+                this.strip = document.createElement('div'); this.strip.className = 'slot-strip';
                 this.element.appendChild(this.strip);
-                
-                this.isComma = startChar === ',';
-                if (this.isComma) {
-                    this.strip.innerHTML = '<span>,</span>';
-                    return;
-                }
+                this.isComma = char === ','; this.currentChar = char; this.delayOffset = delayOffset;
+                this.buildStrip(char);
+            }
+            buildStrip(targetChar) {
+                this.strip.innerHTML = ''; this.strip.style.transition = 'none';
+                this.strip.style.transform = 'translateY(0)'; this.strip.style.filter = 'blur(0px)';
+                if (this.isComma) { const span = document.createElement('span'); span.innerText = ','; this.strip.appendChild(span); return; }
 
-                let html = `<span>${startChar}</span>`;
+                const startDigit = parseInt(this.currentChar) || 0;
+                const targetDigit = parseInt(targetChar) || 0;
+                this.currentChar = targetChar;
+                
+                let html = `<span>${startDigit}</span>`;
                 for(let i=0; i<15; i++) html += `<span>${Math.floor(Math.random()*10)}</span>`;
-                html += `<span>${targetChar}</span>`;
+                html += `<span>${targetDigit}</span>`;
+                this.strip.innerHTML = html; void this.strip.offsetWidth; 
+            }
+            rollToTarget() {
+                if(this.isComma) return;
+                // strict math calculation based on 1.7rem height of digits
+                const targetY = - (this.strip.children.length - 1) * 1.7;
+                this.strip.style.transition = `transform 1.5s var(--ease-slot) ${this.delayOffset}s, filter 0.75s ease-in-out ${this.delayOffset}s`;
+                this.strip.style.filter = 'blur(4px)'; 
+                this.strip.style.transform = `translateY(${targetY}rem)`;
                 
-                this.strip.innerHTML = html;
-                
-                // Trigger the roll automatically via CSS animation
-                const targetY = - (this.strip.children.length - 1) * 1.7; // 1.7rem height
-                setTimeout(() => {
-                    this.strip.style.transition = `transform 1.5s var(--ease-slot) ${delayOffset}s, filter 0.75s ease-in-out ${delayOffset}s`;
-                    this.strip.style.filter = 'blur(4px)'; 
-                    this.strip.style.transform = `translateY(${targetY}rem)`;
-                    setTimeout(() => { this.strip.style.filter = 'blur(0px)'; }, (1.0 + delayOffset) * 1000 - 400); 
-                }, 50);
+                setTimeout(() => { this.strip.style.filter = 'blur(0px)'; }, (1.0 + this.delayOffset) * 1000 - 400); 
             }
         }
 
         class NumberSlotEngine {
             constructor(containerId) {
-                this.container = document.getElementById(containerId); 
-                this.moduleParent = this.container.parentElement;
-                this.currentString = "0"; 
-                this.container.innerHTML = '<div class="slot-digit-window"><div class="slot-strip"><span>0</span></div></div>';
+                this.container = document.getElementById(containerId); this.moduleParent = this.container.parentElement;
+                this.digits = []; this.currentString = "0"; this.updateDOM("0", true);
             }
-            
             format(num) { return (num || 0).toLocaleString('en-US'); }
+            
+            updateDOM(newStr) {
+                this.container.innerHTML = ''; this.digits = [];
+                for(let i = 0; i < newStr.length; i++) {
+                    const delay = (newStr.length - 1 - i) * 0.08; 
+                    const digit = new SlotMachineDigit(newStr[i], delay);
+                    this.digits.push(digit); this.container.appendChild(digit.element);
+                }
+                this.currentString = newStr;
+            }
             
             triggerRoll(newValue) {
                 const targetStr = this.format(newValue);
-                if (targetStr === this.currentString) return;
-
-                // Always clear and rebuild perfectly to prevent misaligned digit tracking bugs
-                this.container.innerHTML = '';
                 
-                // If the length changed (e.g. 9 to 10), we pad the old string with a space so it rolls nicely
-                let oldStr = this.currentString;
-                while (oldStr.length < targetStr.length) { oldStr = " " + oldStr; }
-
+                // If the number expands from 10 to 100 (length change), instantly reset it without rolling to avoid glitches
+                if(targetStr.length !== this.currentString.length) {
+                    this.updateDOM(targetStr);
+                    this.container.style.animation = 'none';
+                    void this.container.offsetWidth; 
+                    this.container.style.animation = 'pureFlash 0.5s ease-out forwards';
+                    return;
+                }
+                
                 for(let i=0; i<targetStr.length; i++) {
-                    const delay = (targetStr.length - 1 - i) * 0.08; 
-                    const startChar = oldStr[i] && oldStr[i].trim() !== "" ? oldStr[i] : "0";
-                    const newDigit = new SlotMachineDigit(startChar, targetStr[i], delay);
-                    this.container.appendChild(newDigit.element);
+                    this.digits[i].buildStrip(targetStr[i]);
                 }
                 
                 this.currentString = targetStr;
+                this.digits.forEach(digit => digit.rollToTarget());
 
-                // Triggers the blinding white flash when spinning finishes
                 const maxDelay = (targetStr.length - 1) * 0.08;
                 setTimeout(() => {
                     this.moduleParent.classList.remove('flare-active'); void this.moduleParent.offsetWidth; this.moduleParent.classList.add('flare-active');
-                    
-                    this.container.style.animation = 'none'; void this.container.offsetWidth; 
+                    this.container.style.animation = 'none';
+                    void this.container.offsetWidth; 
                     this.container.style.animation = 'pureFlash 0.5s ease-out forwards';
 
                     if(window.particleEngineInstance) {
@@ -486,13 +495,13 @@
                 if (newGoal) this.state.goal = newGoal;
                 let subChanged = false;
 
-                if (newSubs !== this.state.subs && newSubs > 0) { 
+                if (newSubs !== this.state.subs) { 
                     if (newSubs > this.state.subs && this.state.subs !== 0) subChanged = true;
                     this.slotSubs.triggerRoll(newSubs);
                     this.state.subs = newSubs; 
                 }
                 
-                if (newLikes !== this.state.likes && newLikes > 0) { 
+                if (newLikes !== this.state.likes) { 
                     setTimeout(() => this.slotLikes.triggerRoll(newLikes), 500);
                     this.state.likes = newLikes; 
                 }
@@ -501,7 +510,9 @@
                 this.elements.goalText.innerText = `${this.format(this.state.subs)} / ${this.format(this.state.goal)}`;
                 this.elements.goalBar.style.width = `${percentage}%`;
 
-                if (subChanged) { this.triggerSubGoalAnimation(); }
+                if (subChanged) { 
+                    this.triggerSubGoalAnimation(); 
+                }
             }
         }
 
@@ -545,9 +556,7 @@
                 }
 
                 this.pollData();
-                
-                // QUOTA FIX: Update stats every 30 seconds exactly. Guaranteed 10+ hours safe.
-                setInterval(() => this.pollData(), 30000);
+                setInterval(() => this.pollData(), 5000);
             }
 
             async pollData() {
@@ -558,7 +567,11 @@
                     
                     if (data.authenticated) {
                         this.state.updateData(data.subs, data.likes, data.sub_goal);
-                        if (data.ticker_text) this.ticker.setMessages(data.ticker_text);
+                        
+                        if (data.ticker_text) {
+                            this.ticker.setMessages(data.ticker_text);
+                        }
+                        
                         if (data.avatar) {
                             const logoEl = document.getElementById('brand-logo');
                             if (logoEl.src !== data.avatar) {
@@ -567,7 +580,7 @@
                             }
                         }
                     }
-                } catch(e) { }
+                } catch(e) {}
             }
         }
 
